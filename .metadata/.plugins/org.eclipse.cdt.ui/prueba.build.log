@@ -1,0 +1,15 @@
+19:36:49 **** Build of configuration Debug for project prueba ****
+make all 
+Building file: ../src/prueba.c
+Invoking: GCC C Compiler
+gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/prueba.d" -MT"src/prueba.d" -o "src/prueba.o" "../src/prueba.c"
+Finished building: ../src/prueba.c
+ 
+Building target: prueba
+Invoking: GCC C Linker
+gcc  -o "prueba"  ./src/prueba.o   
+Finished building target: prueba
+ 
+
+19:36:50 Build Finished (took 475ms)
+
