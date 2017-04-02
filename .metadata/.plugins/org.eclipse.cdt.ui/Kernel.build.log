@@ -10,3 +10,6 @@ Invoking: GCC C Linker
 gcc  -o "Kernel"  ./src/Kernel.o   
 Finished building target: Kernel
  
+
+20:24:28 Build Finished (took 84ms)
+
