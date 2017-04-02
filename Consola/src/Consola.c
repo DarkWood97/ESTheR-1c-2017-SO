@@ -1,6 +1,6 @@
 /*
  ============================================================================
- Name        : Kernel.c
+ Name        : Consola.c
  Author      : 
  Version     :
  Copyright   : Your copyright notice

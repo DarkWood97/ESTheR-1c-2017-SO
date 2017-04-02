@@ -10,3 +10,6 @@ Invoking: GCC C Linker
 gcc  -o "Consola"  ./src/Consola.o   
 Finished building target: Consola
  
+
+20:34:43 Build Finished (took 101ms)
+
