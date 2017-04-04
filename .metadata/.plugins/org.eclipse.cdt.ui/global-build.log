@@ -1,0 +1,16 @@
+23:18:22 **** Incremental Build of configuration Debug for project Memoria ****
+make all 
+Building file: ../src/Memoria.c
+Invoking: GCC C Compiler
+gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/Memoria.d" -MT"src/Memoria.d" -o "src/Memoria.o" "../src/Memoria.c"
+../src/Memoria.c: In function ‘inicializarMemoria’:
+../src/Memoria.c:34:12: warning: unused variable ‘configuracionMemoria’ [-Wunused-variable]
+  t_config *configuracionMemoria;
+            ^
+Finished building: ../src/Memoria.c
+ 
+Building target: Memoria
+Invoking: GCC C Linker
+gcc  -o "Memoria"  ./src/Memoria.o   -lcommons
+Finished building target: Memoria
+ 
