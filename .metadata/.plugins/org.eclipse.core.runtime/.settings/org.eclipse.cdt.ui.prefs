@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 asm_directive=255,0,127
 asm_label=207,191,173
 c_comment_task_tag=255,255,255
@@ -30,6 +31,10 @@ semanticHighlighting.namespace.color=82,227,246
 semanticHighlighting.staticField.color=207,191,173
 semanticHighlighting.staticMethod.color=167,236,33
 semanticHighlighting.typedef.color=82,227,246
+=======
+content_assist_disabled_computers=org.eclipse.cdt.ui.parserProposalCategory\u0000org.eclipse.cdt.ui.textProposalCategory\u0000
+eclipse.preferences.version=1
+>>>>>>> 5418c6a00a6f0dc7966f078ac4fdcc5fc8d806e4
 spelling_locale_initialized=true
 useAnnotationsPrefPage=true
 useQuickDiffPrefPage=true
