@@ -34,19 +34,18 @@ memoria memoriaCrear(t_config *configuracion){
 	char *marcos_size = strcpy(marcos_size, "MARCOS_SIZE");
 	char *cache_x_proc = strcpy(cache_x_proc, "CACHE_X_PROC");
 	char *retardo_memoria = strcpy(retardo_memoria, "RETARDO_MEMORIA");
-	memoriaAuxiliar.puerto = config_get_int_value(configuracion, puerto);
-	memoriaAuxiliar.marcos = config_get_int_value(configuracion, marcos);
-	memoriaAuxiliar.marco_size = config_get_int_value (configuracion, marcos_size);
-	memoriaAuxiliar.cache_x_proc = config_get_int_value (configuracion, cache_x_proc);
-	memoriaAuxiliar.retardo_memoria = config_get_int_value(configuracion, retardo_memoria);
+	memoriaAuxiliar.puerto = config_get_int_value(*configuracion, puerto);
+	memoriaAuxiliar.marcos = config_get_int_value(*configuracion, *marcos);
+	memoriaAuxiliar.marco_size = config_get_int_value (*configuracion, *marcos_size);
+	memoriaAuxiliar.cache_x_proc = config_get_int_value (*configuracion, *cache_x_proc);
+	memoriaAuxiliar.retardo_memoria = config_get_int_value(*configuracion, *retardo_memoria);
 	return memoriaAuxiliar;
 }
 
-memoria inicializarMemoria(char *path){
-	t_config *configuracionMemoria = malloc(sizeof(t_config));
-	*configuracionMemoria = *config_create(path);
-	memoria memoriaSistema = memoriaCrear(configuracionMemoria);
-	return memoriaSistema;
+void inicializarMemoria(char *path){
+	t_config *configuracionMemoria = malloc(t_config);
+	*configuracionMemoria = *config_create(*path);
+	memoria memoriaSistema = memoriaCrear(*configuracionMemoria);
 	free(configuracionMemoria);
 }
 
