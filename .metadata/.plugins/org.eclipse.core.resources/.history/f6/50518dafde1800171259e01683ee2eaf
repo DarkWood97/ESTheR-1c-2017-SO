@@ -1,0 +1,45 @@
+/*
+ ============================================================================
+ Name        : Memoria.c
+ Author      : 
+ Version     :
+ Copyright   : Your copyright notice
+ Description : Hello World in C, Ansi-style
+ ============================================================================
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <commons/log.h>
+#include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
+
+typedef struct {
+	char *path;
+	t_dictionary *properties;
+}t_config;
+
+struct {
+	int puerto;
+	int marcos;
+	int marco_size;
+	int entradas_cache;
+	int cache_x_proc;
+	int retardo_memoria;
+}memoria;
+
+
+
+void inicializarMemoria(char *path){
+	t_config *configuracionMemoria;
+	
+	
+
+
+
+}
+
+int main(void) {
+	puts("!!!Hello World!!!"); /* prints !!!Hello World!!! */
+	return EXIT_SUCCESS;
+}
