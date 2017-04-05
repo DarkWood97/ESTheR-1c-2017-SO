@@ -42,7 +42,7 @@ consola iniciarConsola(char *path)
 {
 	t_config *configuracion = malloc(sizeof(t_config));
 	*configuracion = *config_create(path);
-	consola nueva_consola=consola_crear(configuracion);
+	consola nueva_consola=consola_crear(*configuracion);
 	free(configuracion);
 	return nueva_consola;
 }
@@ -50,7 +50,7 @@ void mostrar_consola(consola aMostrar)
 {
 	printf("IP=%s\n",aMostrar.ip_Kernel.numero);
 	printf("Puerto=%i\n",aMostrar.puerto_kernel);
-	system("pause");
+	getche();
 }
 int main(int argc,char *argv[])
 {
