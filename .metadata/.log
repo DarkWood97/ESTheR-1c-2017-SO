@@ -179,3 +179,371 @@ Binding(CTRL+SHIFT+H,
 
 !ENTRY org.eclipse.cdt.core 1 0 2017-04-05 01:50:57.908
 !MESSAGE Indexed 'FileSystem' (1 sources, 37 headers) in 0,972 sec: 1.040 declarations; 1.908 references; 0 unresolved inclusions; 0 syntax errors; 0 unresolved names (0%)
+!SESSION 2017-04-05 01:55:33.178 -----------------------------------------------
+eclipse.buildId=4.4.1.M20140925-0400
+java.version=1.7.0_75
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86, WS=gtk, NL=es_AR
+Framework arguments:  -product org.eclipse.epp.package.cpp.product
+Command-line arguments:  -os linux -ws gtk -arch x86 -product org.eclipse.epp.package.cpp.product
+
+!ENTRY org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for ALT+CTRL+I:
+Binding(ALT+CTRL+I,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.open.include.browser,Open Include Browser,
+		Open an include browser on the selected element,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@c3c72f,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(ALT+CTRL+I,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.open.include.browser,Open Include Browser,
+		Open an include browser on the selected element,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@c3c72f,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for ALT+SHIFT+R:
+Binding(ALT+SHIFT+R,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.text.rename.element,Rename - Refactoring ,
+		Renames the selected element,
+		Category(org.eclipse.cdt.ui.category.refactoring,Refactor - C++,C/C++ Refactorings,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@14a0c30,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(ALT+SHIFT+R,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.text.rename.element,Rename - Refactoring ,
+		Renames the selected element,
+		Category(org.eclipse.cdt.ui.category.refactoring,Refactor - C++,C/C++ Refactorings,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@14a0c30,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for F3:
+Binding(F3,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.opendecl,Open Declaration,
+		Opens an editor on the selected element's declaration(s),
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@663255,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(F3,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.opendecl,Open Declaration,
+		Opens an editor on the selected element's declaration(s),
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@663255,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for CTRL+SHIFT+T:
+Binding(CTRL+SHIFT+T,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.navigate.opentype,Open Element,
+		Open an element in an Editor,
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@1729fff,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(CTRL+SHIFT+T,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.navigate.opentype,Open Element,
+		Open an element in an Editor,
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@1729fff,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for F4:
+Binding(F4,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.open.type.hierarchy,Open Type Hierarchy,
+		Open a type hierarchy on the selected element,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@66253e,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(F4,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.open.type.hierarchy,Open Type Hierarchy,
+		Open a type hierarchy on the selected element,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@66253e,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for CTRL+G:
+Binding(CTRL+G,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.search.finddecl,Declaration,
+		Searches for declarations of the selected element in the workspace,
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@173ae3,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(CTRL+G,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.search.finddecl,Declaration,
+		Searches for declarations of the selected element in the workspace,
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@173ae3,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for CTRL+SHIFT+G:
+Binding(CTRL+SHIFT+G,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.search.findrefs,References,
+		Searches for references to the selected element in the workspace,
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@11b372f,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(CTRL+SHIFT+G,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.search.findrefs,References,
+		Searches for references to the selected element in the workspace,
+		Category(org.eclipse.cdt.ui.category.source,Source,Source commands,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@11b372f,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for ALT+CTRL+H:
+Binding(ALT+CTRL+H,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.open.call.hierarchy,Open Call Hierarchy,
+		Opens the call hierarchy for the selected element,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@1c429b2,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(ALT+CTRL+H,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.edit.open.call.hierarchy,Open Call Hierarchy,
+		Opens the call hierarchy for the selected element,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@1c429b2,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+!SUBENTRY 1 org.eclipse.jface 2 0 2017-04-05 01:55:48.938
+!MESSAGE A conflict occurred for CTRL+SHIFT+H:
+Binding(CTRL+SHIFT+H,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.navigate.open.type.in.hierarchy,Open Type in Hierarchy,
+		Open a type in the type hierarchy view,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@18da6a6,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cEditorScope,,,system)
+Binding(CTRL+SHIFT+H,
+	ParameterizedCommand(Command(org.eclipse.cdt.ui.navigate.open.type.in.hierarchy,Open Type in Hierarchy,
+		Open a type in the type hierarchy view,
+		Category(org.eclipse.ui.category.navigate,Navigate,null,true),
+		org.eclipse.ui.internal.WorkbenchHandlerServiceHandler@18da6a6,
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.cdt.ui.cViewScope,,,system)
+
+!ENTRY org.eclipse.core.resources 4 568 2017-04-05 02:00:39.642
+!MESSAGE Could not write metadata for '/RemoteSystemsTempFiles'.
+!STACK 0
+java.io.FileNotFoundException: /home/utnso/workspace/tp-2017-1c-Caia/.metadata/.plugins/org.eclipse.core.resources/.projects/RemoteSystemsTempFiles/.markers.snap (No existe el archivo o el directorio)
+	at java.io.FileOutputStream.open(Native Method)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:221)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:142)
+	at org.eclipse.core.internal.localstore.SafeChunkyOutputStream.<init>(SafeChunkyOutputStream.java:45)
+	at org.eclipse.core.internal.localstore.SafeChunkyOutputStream.<init>(SafeChunkyOutputStream.java:41)
+	at org.eclipse.core.internal.resources.SaveManager.visitAndSnap(SaveManager.java:1745)
+	at org.eclipse.core.internal.resources.SaveManager.visitAndSnap(SaveManager.java:1828)
+	at org.eclipse.core.internal.resources.SaveManager.save(SaveManager.java:1202)
+	at org.eclipse.core.internal.resources.SaveManager.save(SaveManager.java:1144)
+	at org.eclipse.core.internal.resources.DelayedSnapshotJob.run(DelayedSnapshotJob.java:51)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:54)
+
+!ENTRY org.eclipse.core.resources 4 568 2017-04-05 02:32:06.617
+!MESSAGE Could not write metadata for '/RemoteSystemsTempFiles'.
+!STACK 0
+java.io.FileNotFoundException: /home/utnso/workspace/tp-2017-1c-Caia/.metadata/.plugins/org.eclipse.core.resources/.projects/RemoteSystemsTempFiles/.markers.snap (No existe el archivo o el directorio)
+	at java.io.FileOutputStream.open(Native Method)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:221)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:142)
+	at org.eclipse.core.internal.localstore.SafeChunkyOutputStream.<init>(SafeChunkyOutputStream.java:45)
+	at org.eclipse.core.internal.localstore.SafeChunkyOutputStream.<init>(SafeChunkyOutputStream.java:41)
+	at org.eclipse.core.internal.resources.SaveManager.visitAndSnap(SaveManager.java:1745)
+	at org.eclipse.core.internal.resources.SaveManager.visitAndSnap(SaveManager.java:1828)
+	at org.eclipse.core.internal.resources.SaveManager.save(SaveManager.java:1202)
+	at org.eclipse.core.internal.resources.SaveManager.save(SaveManager.java:1144)
+	at org.eclipse.core.internal.resources.DelayedSnapshotJob.run(DelayedSnapshotJob.java:51)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:54)
+
+!ENTRY org.eclipse.core.resources 4 2 2017-04-05 02:58:58.018
+!MESSAGE Problems occurred when invoking code from plug-in: "org.eclipse.core.resources".
+!STACK 1
+org.eclipse.core.internal.resources.ResourceException: Resource '/FileSystem/Debug/sources.mk' does not exist.
+	at org.eclipse.core.internal.resources.Resource.checkExists(Resource.java:341)
+	at org.eclipse.core.internal.resources.Resource.checkAccessible(Resource.java:215)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:358)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:465)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.save(GnuMakefileGenerator.java:838)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.populateSourcesMakefile(GnuMakefileGenerator.java:1167)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.generateMakefiles(GnuMakefileGenerator.java:676)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performMakefileGeneration(CommonBuilder.java:1008)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performPrebuildGeneration(CommonBuilder.java:873)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:748)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:510)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:459)
+	at org.eclipse.core.internal.events.BuildManager$2.run(BuildManager.java:734)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:206)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:246)
+	at org.eclipse.core.internal.events.BuildManager$1.run(BuildManager.java:299)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:302)
+	at org.eclipse.core.internal.events.BuildManager.basicBuildLoop(BuildManager.java:358)
+	at org.eclipse.core.internal.events.BuildManager.build(BuildManager.java:381)
+	at org.eclipse.core.internal.resources.Workspace.buildInternal(Workspace.java:496)
+	at org.eclipse.core.internal.resources.Workspace.build(Workspace.java:415)
+	at org.eclipse.ui.actions.BuildAction$1.runInWorkspace(BuildAction.java:305)
+	at org.eclipse.core.internal.resources.InternalWorkspaceJob.run(InternalWorkspaceJob.java:38)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:54)
+!SUBENTRY 1 org.eclipse.core.resources 4 368 2017-04-05 02:58:58.027
+!MESSAGE Resource '/FileSystem/Debug/sources.mk' does not exist.
+!SUBENTRY 1 org.eclipse.core.resources 4 368 2017-04-05 02:58:58.028
+!MESSAGE Resource '/FileSystem/Debug/sources.mk' does not exist.
+
+!ENTRY org.eclipse.core.resources 4 75 2017-04-05 02:58:58.126
+!MESSAGE Errors occurred during the build.
+!SUBENTRY 1 org.eclipse.cdt.managedbuilder.core 4 75 2017-04-05 02:58:58.126
+!MESSAGE Errors running builder 'CDT Builder' on project 'FileSystem'.
+!STACK 1
+org.eclipse.core.internal.resources.ResourceException: Resource '/FileSystem/Debug/sources.mk' does not exist.
+	at org.eclipse.core.internal.resources.Resource.checkExists(Resource.java:341)
+	at org.eclipse.core.internal.resources.Resource.checkAccessible(Resource.java:215)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:358)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:465)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.save(GnuMakefileGenerator.java:838)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.populateSourcesMakefile(GnuMakefileGenerator.java:1167)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.generateMakefiles(GnuMakefileGenerator.java:676)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performMakefileGeneration(CommonBuilder.java:1008)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performPrebuildGeneration(CommonBuilder.java:873)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:748)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:510)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:459)
+	at org.eclipse.core.internal.events.BuildManager$2.run(BuildManager.java:734)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:206)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:246)
+	at org.eclipse.core.internal.events.BuildManager$1.run(BuildManager.java:299)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:302)
+	at org.eclipse.core.internal.events.BuildManager.basicBuildLoop(BuildManager.java:358)
+	at org.eclipse.core.internal.events.BuildManager.build(BuildManager.java:381)
+	at org.eclipse.core.internal.resources.Workspace.buildInternal(Workspace.java:496)
+	at org.eclipse.core.internal.resources.Workspace.build(Workspace.java:415)
+	at org.eclipse.ui.actions.BuildAction$1.runInWorkspace(BuildAction.java:305)
+	at org.eclipse.core.internal.resources.InternalWorkspaceJob.run(InternalWorkspaceJob.java:38)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:54)
+!SUBENTRY 2 org.eclipse.core.resources 4 368 2017-04-05 02:58:58.126
+!MESSAGE Resource '/FileSystem/Debug/sources.mk' does not exist.
+!SUBENTRY 1 org.eclipse.core.resources 4 368 2017-04-05 02:58:58.126
+!MESSAGE Resource '/FileSystem/Debug/sources.mk' does not exist.
+
+!ENTRY org.eclipse.core.resources 4 2 2017-04-05 02:59:03.505
+!MESSAGE Problems occurred when invoking code from plug-in: "org.eclipse.core.resources".
+!STACK 1
+org.eclipse.core.internal.resources.ResourceException: Resource '/FileSystem/Debug/makefile' does not exist.
+	at org.eclipse.core.internal.resources.Resource.checkExists(Resource.java:341)
+	at org.eclipse.core.internal.resources.Resource.checkAccessible(Resource.java:215)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:358)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:465)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.save(GnuMakefileGenerator.java:838)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.populateTopMakefile(GnuMakefileGenerator.java:1198)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.generateMakefiles(GnuMakefileGenerator.java:741)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performMakefileGeneration(CommonBuilder.java:1008)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performPrebuildGeneration(CommonBuilder.java:873)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:748)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:510)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:459)
+	at org.eclipse.core.internal.events.BuildManager$2.run(BuildManager.java:734)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:206)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:246)
+	at org.eclipse.core.internal.events.BuildManager$1.run(BuildManager.java:299)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:302)
+	at org.eclipse.core.internal.events.BuildManager.basicBuildLoop(BuildManager.java:358)
+	at org.eclipse.core.internal.events.BuildManager.build(BuildManager.java:381)
+	at org.eclipse.core.internal.resources.Workspace.buildInternal(Workspace.java:496)
+	at org.eclipse.core.internal.resources.Workspace.build(Workspace.java:415)
+	at org.eclipse.ui.actions.BuildAction$1.runInWorkspace(BuildAction.java:305)
+	at org.eclipse.core.internal.resources.InternalWorkspaceJob.run(InternalWorkspaceJob.java:38)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:54)
+!SUBENTRY 1 org.eclipse.core.resources 4 368 2017-04-05 02:59:03.505
+!MESSAGE Resource '/FileSystem/Debug/makefile' does not exist.
+!SUBENTRY 1 org.eclipse.core.resources 4 368 2017-04-05 02:59:03.505
+!MESSAGE Resource '/FileSystem/Debug/makefile' does not exist.
+
+!ENTRY org.eclipse.core.resources 4 75 2017-04-05 02:59:03.538
+!MESSAGE Errors occurred during the build.
+!SUBENTRY 1 org.eclipse.cdt.managedbuilder.core 4 75 2017-04-05 02:59:03.538
+!MESSAGE Errors running builder 'CDT Builder' on project 'FileSystem'.
+!STACK 1
+org.eclipse.core.internal.resources.ResourceException: Resource '/FileSystem/Debug/makefile' does not exist.
+	at org.eclipse.core.internal.resources.Resource.checkExists(Resource.java:341)
+	at org.eclipse.core.internal.resources.Resource.checkAccessible(Resource.java:215)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:358)
+	at org.eclipse.core.internal.resources.File.setContents(File.java:465)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.save(GnuMakefileGenerator.java:838)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.populateTopMakefile(GnuMakefileGenerator.java:1198)
+	at org.eclipse.cdt.managedbuilder.makegen.gnu.GnuMakefileGenerator.generateMakefiles(GnuMakefileGenerator.java:741)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performMakefileGeneration(CommonBuilder.java:1008)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.performPrebuildGeneration(CommonBuilder.java:873)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:748)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:510)
+	at org.eclipse.cdt.managedbuilder.internal.core.CommonBuilder.build(CommonBuilder.java:459)
+	at org.eclipse.core.internal.events.BuildManager$2.run(BuildManager.java:734)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:206)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:246)
+	at org.eclipse.core.internal.events.BuildManager$1.run(BuildManager.java:299)
+	at org.eclipse.core.runtime.SafeRunner.run(SafeRunner.java:42)
+	at org.eclipse.core.internal.events.BuildManager.basicBuild(BuildManager.java:302)
+	at org.eclipse.core.internal.events.BuildManager.basicBuildLoop(BuildManager.java:358)
+	at org.eclipse.core.internal.events.BuildManager.build(BuildManager.java:381)
+	at org.eclipse.core.internal.resources.Workspace.buildInternal(Workspace.java:496)
+	at org.eclipse.core.internal.resources.Workspace.build(Workspace.java:415)
+	at org.eclipse.ui.actions.BuildAction$1.runInWorkspace(BuildAction.java:305)
+	at org.eclipse.core.internal.resources.InternalWorkspaceJob.run(InternalWorkspaceJob.java:38)
+	at org.eclipse.core.internal.jobs.Worker.run(Worker.java:54)
+!SUBENTRY 2 org.eclipse.core.resources 4 368 2017-04-05 02:59:03.538
+!MESSAGE Resource '/FileSystem/Debug/makefile' does not exist.
+!SUBENTRY 1 org.eclipse.core.resources 4 368 2017-04-05 02:59:03.538
+!MESSAGE Resource '/FileSystem/Debug/makefile' does not exist.
+
+!ENTRY org.eclipse.ui.ide 4 4 2017-04-05 02:59:30.076
+!MESSAGE Problems saving workspace
+
+!ENTRY org.eclipse.ui.ide 4 1 2017-04-05 02:59:30.076
+!MESSAGE Problems occurred while trying to save the state of the workbench.
+!SUBENTRY 1 org.eclipse.core.resources 4 568 2017-04-05 02:59:30.076
+!MESSAGE Could not write metadata for '/RemoteSystemsTempFiles'.
+!STACK 0
+java.io.FileNotFoundException: /home/utnso/workspace/tp-2017-1c-Caia/.metadata/.plugins/org.eclipse.core.resources/.projects/RemoteSystemsTempFiles/.markers (No existe el archivo o el directorio)
+	at java.io.FileOutputStream.open(Native Method)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:221)
+	at java.io.FileOutputStream.<init>(FileOutputStream.java:171)
+	at org.eclipse.core.internal.localstore.SafeFileOutputStream.<init>(SafeFileOutputStream.java:51)
+	at org.eclipse.core.internal.resources.SaveManager.visitAndSave(SaveManager.java:1635)
+	at org.eclipse.core.internal.resources.SaveManager.visitAndSave(SaveManager.java:1716)
+	at org.eclipse.core.internal.resources.SaveManager.save(SaveManager.java:1177)
+	at org.eclipse.core.internal.resources.Workspace.save(Workspace.java:2344)
+	at org.eclipse.ui.internal.ide.application.IDEWorkbenchAdvisor$5.run(IDEWorkbenchAdvisor.java:509)
+	at org.eclipse.jface.operation.ModalContext$ModalContextThread.run(ModalContext.java:122)

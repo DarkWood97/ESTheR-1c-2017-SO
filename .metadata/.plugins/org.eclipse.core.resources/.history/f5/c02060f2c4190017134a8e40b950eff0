@@ -16,41 +16,6 @@
 #include <commons/config.h>
 #include <string.h>
 
-typedef struct
-{
-	int port;
-	char *punto_montaje;
-}FileSystem;
-
-bool validarArchivo (char* path)
-{
-	FILE* f = fopen( path, " r " );
-	if(!f)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
-void crearArchivo(char* path)
-{
-	bool permisoCreacion = true; //Bitmap?
-	if(validarArchivo(path)&&permisoCreacion)
-	{
-		FILE* f = fopen(path, "w");
-	}
-}
-
-void borraArchivo(char* path)
-{
-	remove(path); //Bipmap?
-}
-
-
-
 int main(void) {
 	puts("!!!Hello World!!!"); /* prints !!!Hello World!!! */
 	return EXIT_SUCCESS;
