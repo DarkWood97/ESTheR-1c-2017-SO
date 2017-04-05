@@ -1,6 +1,6 @@
-00:08:55 **** Incremental Build of configuration Debug for project Memoria ****
+23:51:51 **** Incremental Build of configuration Debug for project Memoria ****
 make all 
 make: No se hace nada para «all».
 
-00:08:55 Build Finished (took 72ms)
+23:51:51 Build Finished (took 65ms)
 
