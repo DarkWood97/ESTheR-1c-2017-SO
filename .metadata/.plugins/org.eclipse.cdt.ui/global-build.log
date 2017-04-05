@@ -1,22 +1,16 @@
-01:10:27 **** Incremental Build of configuration Debug for project Consola ****
+01:40:28 **** Incremental Build of configuration Debug for project Memoria ****
 make all 
-Building file: ../src/Consola.c
+Building file: ../src/Memoria.c
 Invoking: GCC C Compiler
-gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/Consola.d" -MT"src/Consola.d" -o "src/Consola.o" "../src/Consola.c"
-../src/Consola.c: In function ‘mostrar_consola’:
-../src/Consola.c:53:8: error: request for member ‘pause’ in something not a structure or union
-  system.pause();
-        ^
-make: *** [src/Consola.o] Error 1
-01:10:34 **** Incremental Build of configuration Debug for project Consola ****
-make all 
-Building file: ../src/Consola.c
-Invoking: GCC C Compiler
-gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/Consola.d" -MT"src/Consola.d" -o "src/Consola.o" "../src/Consola.c"
-Finished building: ../src/Consola.c
+gcc -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"src/Memoria.d" -MT"src/Memoria.d" -o "src/Memoria.o" "../src/Memoria.c"
+../src/Memoria.c: In function ‘inicializarMemoria’:
+../src/Memoria.c:44:24: warning: ‘configuracionMemoria’ is used uninitialized in this function [-Wuninitialized]
+  *configuracionMemoria = generarT_ConfigParaCargar(path);
+                        ^
+Finished building: ../src/Memoria.c
  
-Building target: Consola
+Building target: Memoria
 Invoking: GCC C Linker
-gcc  -o "Consola"  ./src/Consola.o   -lcommons
-Finished building target: Consola
+gcc  -o "Memoria"  ./src/Memoria.o   -lcommons
+Finished building target: Memoria
  

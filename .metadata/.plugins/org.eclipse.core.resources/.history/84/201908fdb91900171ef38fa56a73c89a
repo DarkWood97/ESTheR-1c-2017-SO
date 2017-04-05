@@ -1,3 +1,13 @@
+/*
+ ============================================================================
+ Name        : Memoria.c
+ Author      : 
+ Version     :
+ Copyright   : Your copyright notice
+ Description : Hello World in C, Ansi-style
+ ============================================================================
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <commons/log.h>
@@ -15,22 +25,12 @@ typedef struct {
 	int entradas_cache;
 	int cache_x_proc;
 	int retardo_memoria;
-	int cantidadDeVariables;
 }memoria;
 
 
-t_config generarT_ConfigParaCargar(char *path){
-	t_config *configuracionDelComponente = malloc (sizeof(t_config));
-	configuracionDelComponente = config_create(path);
-	return *configuracionDelComponente;
-	free(configuracionDelComponente);
-}
 
 memoria memoriaCrear(t_config *configuracion){
 	memoria memoriaAuxiliar;
-	if(dictionary_size(configuracion->properties)!=6){
-		perror("Faltan parametros para inicializar memoria");
-	}
 	memoriaAuxiliar.puerto = config_get_int_value(configuracion, "PUERTO");
 	memoriaAuxiliar.marcos = config_get_int_value(configuracion, "MARCOS");
 	memoriaAuxiliar.marco_size = config_get_int_value (configuracion, "MARCOS_SIZE");
@@ -40,26 +40,14 @@ memoria memoriaCrear(t_config *configuracion){
 }
 
 memoria inicializarMemoria(char *path){
-	t_config *configuracionMemoria;
-	*configuracionMemoria = generarT_ConfigParaCargar(path);
+	t_config *configuracionMemoria = malloc(sizeof(t_config));
+	*configuracionMemoria = *config_create(path);
 	memoria memoriaSistema = memoriaCrear(configuracionMemoria);
 	return memoriaSistema;
 	free(configuracionMemoria);
 }
 
-void mostrarConfiguracionesMemoria(memoria memoria){
-	printf("PUERTO=%d\n", memoria.puerto);
-	printf("MARCOS=%d\n", memoria.marcos);
-	printf("MARCO_SIZE=%d\n", memoria.marco_size);
-	printf("ENTRADAS_CACHE=%d\n", memoria.entradas_cache);
-	printf("CACHE_X_PROC=%d\n", memoria.cache_x_proc);
-	printf("RETARDO_MEMORIA=%d\n", memoria.retardo_memoria);
-}
-int main(int argc, char *argv[]) {
-	if(argc!=1){
-		perror("Faltan parametros");
-	}
-	memoria memoria = inicializarMemoria(argv[0]);
-	mostrarConfiguracionesMemoria(memoria);
+int main(void) {
+	puts("!!!Hello World!!!"); /* prints !!!Hello World!!! */
 	return EXIT_SUCCESS;
 }
