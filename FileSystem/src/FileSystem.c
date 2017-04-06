@@ -20,7 +20,25 @@ typedef struct
 {
 	int port;
 	char *punto_montaje;
-}FileSystem;
+}fileSystem;
+
+fileSystem fileSystemCrear(t_config *configuracion){
+	fileSystem fileSystemAuxiliar;
+	if(dictionary_size(configuracion->properties)!=2){
+			perror("Faltan parametros para inicializar el fileSystem");
+	}
+	fileSystemAuxiliar.port = config_get_int_value(configuracion, "PORT");
+	fileSystemAuxiliar.punto_montaje = config_get_string_value(configuracion, "PUNTO_MONTAJE");
+	return fileSystemAuxiliar;
+}
+
+fileSystem inicializarFileSystem(char *path){
+	t_config *configuracionFileSystem;
+	*configuracionFileSystem = generarT_ConfigParaCargar(path);
+	fileSystem fileSystemSistema = fileSystemCrear(configuracionFileSystem);
+	return fileSystemSistema;
+	free(configuracionFileSystem);
+}
 
 bool validarArchivo (char* path)
 {
@@ -46,12 +64,19 @@ void crearArchivo(char* path)
 
 void borraArchivo(char* path)
 {
-	remove(path); //Bipmap?
+	remove(path); //Bitmap?
 }
 
+void mostrarConfiguracionesFileSystem(fileSystem fileSystem){
+	printf("PORT=%d\n", fileSystem.port);
+	printf("PUNTO_MONTAJE=%s\n", fileSystem.punto_montaje);
+}
 
-
-int main(void) {
-	puts("!!!Hello World!!!"); /* prints !!!Hello World!!! */
+int main(int argc, char *argv[]) {
+	if(argc!=1){
+		perror("Faltan parametros");
+	}
+	fileSystem fileSystem = inicializarFileSystem(argv[0]);
+	mostrarConfiguracionesFileSystem(fileSystem);
 	return EXIT_SUCCESS;
 }
