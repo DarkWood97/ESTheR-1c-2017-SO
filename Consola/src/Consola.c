@@ -54,6 +54,7 @@ void mostrar_consola(consola aMostrar)
 }
 int main(int argc,char *argv[])
 {
+	puts("hola");
 
 	consola nuevaConsola=iniciarConsola(*argv);
 	mostrar_consola(nuevaConsola);
