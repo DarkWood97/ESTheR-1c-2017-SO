@@ -27,7 +27,7 @@
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
 
-#define backlog 10 //fijarse las conexiones que queremos
+#define backlog 10 //cantidad de conexiones en la cola
 
 typedef struct {
 	int puerto;
@@ -43,7 +43,10 @@ int verificarErrorSocket(int socket) {
 		perror("Error de socket");
 		return -1;
 	}
-	return NULL;
+	else
+	{
+	return 0;
+	}
 }
 int verificarErrorSetsockopt(int socket) {
 	int yes = 1;
@@ -51,21 +54,30 @@ int verificarErrorSetsockopt(int socket) {
 		perror("Error de setsockopt");
 		return -1;
 	}
-	return NULL;
+	else
+		{
+		return 0;
+		}
 }
 int verificarErrorBind(int socket, struct sockaddr_in mySocket) {
 	if (bind(socket, (struct sockaddr *) &mySocket, sizeof(mySocket)) == -1) {
 		perror("Error de bind");
 		return -1;
 	}
-	return NULL;
+	else
+		{
+		return 0;
+		}
 }
 int verificarErrorListen(int socket) {
 	if (listen(socket, backlog) == -1) {
 		perror("Error de listen");
 		return -1;
 	}
-	return NULL;
+	else
+		{
+		return 0;
+		}
 }
 int ponerseAEscuchar(int puerto, int protocolo) {
 	struct sockaddr_in mySocket;
@@ -127,7 +139,7 @@ int conectarServer(char * ip, int puerto) {
 	//Guardo datos del server
 	direccion_server.sin_family = AF_INET;
 	direccion_server.sin_port = htons(puerto);
-	direccion_server.sin_addr = *((struct in_addr *)info_server->h_addr); //Error
+	direccion_server.sin_addr = *((struct in_addr*)info_server->h_addr); //Error
 	memset(&(direccion_server.sin_zero), 0, 8);
 
 	//Conecto con servidor, si hay error finalizo
