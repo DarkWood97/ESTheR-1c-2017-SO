@@ -37,6 +37,8 @@ typedef struct {
 	void (*fn_connectionClosed)();
 	void * data;
 } arg_escucharclientes;
+
+
 int verificarErrorSocket(int socket)
 {
 	if (socket == -1)
@@ -83,17 +85,23 @@ int ponerseAEscuchar(int puerto, int protocolo) {
 	memset(&(mySocket.sin_zero), '\0', 8);
 	verificarErrorBind (socketListener,mySocket);
 	verificarErrorListen(socketListener);
-
-
-
-	//Falta eliminar procesos muertos xD
-
-	arg_escucharclientes *args = malloc(sizeof(arg_escucharclientes));
-	args->puerto = puerto;
-	args->socket_cliente = socketListener;
-
-	return 1;
+//	return 1;
+	return socketListener;
 }
+
+int aceptarConexion(int socketListener){
+	int socketAceptador;
+	struct sockaddr_in su_addr;
+	int sin_size;
+	while(1){
+		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
+		if((socketAceptador = accept(socketListener, (struct sockaddr *)&su_addr, &sin_size)) == -1){
+			perror("Error de accept");
+		}
+	}
+	return socketAceptador;
+}
+
 
 bool enviarMensaje(int socket,char* mensaje){
 
