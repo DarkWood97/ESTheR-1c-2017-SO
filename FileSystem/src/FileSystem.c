@@ -8,13 +8,7 @@
  ============================================================================
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <commons/log.h>
-#include <commons/collections/list.h>
-#include <commons/collections/dictionary.h>
-#include <commons/config.h>
-#include <string.h>
+#include "funcionesGenericas.h"
 
 typedef struct
 {

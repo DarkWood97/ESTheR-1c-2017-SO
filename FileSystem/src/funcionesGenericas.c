@@ -1,3 +1,10 @@
+/*
+ * funcionesGenericas.c
+ *
+ *  Created on: 6/4/2017
+ *      Author: utnso
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <commons/log.h>
@@ -12,3 +19,5 @@ t_config generarT_ConfigParaCargar(char *path){
 	return *configuracionDelComponente;
 	free(configuracionDelComponente);
 }
+
+

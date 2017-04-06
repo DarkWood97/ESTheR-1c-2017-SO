@@ -10,8 +10,6 @@
 
 #include "funcionesGenericas.h"
 
-
-
 typedef struct {
 	int puerto_Prog;
 	int puerto_Cpu;
@@ -59,7 +57,7 @@ kernel inicializarKernel (char *path){
 	free(configuracionKernel);
 }
 
-void mostrarConfiguracionesMemoria(kernel kernel){
+void mostrarConfiguracionesKernel(kernel kernel){
 	printf("PUERTO_PROG=%d\n", kernel.puerto_Prog);
 	printf("PUERTO_CPU=%d\n", kernel.puerto_Cpu);
 	printf("IP_FS=%s\n", kernel.ip_FS);
@@ -84,7 +82,6 @@ int main(int argc, char *argv[]) {
 		perror("Faltan parametros");
 	}
 	kernel kernel = inicializarKernel(argv[0]);
-	mostrarConfiguracionesMemoria(kernel);
+	mostrarConfiguracionesKernel(kernel);
 	return EXIT_SUCCESS;
 }
-

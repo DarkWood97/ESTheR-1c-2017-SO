@@ -8,14 +8,7 @@
  ============================================================================
  */
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <commons/log.h>
-#include <commons/collections/list.h>
-#include <commons/collections/dictionary.h>
-#include <commons/config.h>
-#include <string.h>
+#include "funcionesGenericas.h"
 
 typedef struct
 {
@@ -54,8 +47,6 @@ void mostrar_consola(consola aMostrar)
 }
 int main(int argc,char *argv[])
 {
-
-
 	consola nuevaConsola=iniciarConsola(*argv);
 	mostrar_consola(nuevaConsola);
 
