@@ -37,41 +37,60 @@ typedef struct {
 	void (*fn_connectionClosed)();
 	void * data;
 } arg_escucharclientes;
-
-int ponerseAEscuchar(int puerto, int protocolo) {
-	struct sockaddr_in mySocket;
-	int yes = 1;
-	int socketListenner = socket(AF_INET, SOCK_STREAM, protocolo);
-	if (socketListenner == -1) {
+int verificarErrorSocket(int socket)
+{
+	if (socket == -1)
+	{
 		perror("Error de socket");
 		return -1;
 	}
-	if (setsockopt(socketListenner, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))
-			== -1) {
-		perror("Error de setsockopt");
-		return -1;
-	}
+	return NULL;
+}
+int verificarErrorSetsockopt(int socket)
+{
+	int yes = 1;
+	if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))== -1) {
+			perror("Error de setsockopt");
+			return -1;
+		}
+	return NULL;
+}
+int verificarErrorBind (int socket, struct sockaddr_in mySocket)
+{
+	if (bind(socket, (struct sockaddr *) &mySocket, sizeof(mySocket))
+				== -1) {
+			perror("Error de bind");
+			return -1;
+		}
+	return NULL;
+}
+int verificarErrorListen (int socket)
+{
+	if (listen(socket, backlog) == -1) {
+			perror("Error de listen");
+			return -1;
+		}
+	return NULL;
+}
+int ponerseAEscuchar(int puerto, int protocolo) {
+	struct sockaddr_in mySocket;
+	int socketListener = socket(AF_INET, SOCK_STREAM, protocolo);
+	verificarErrorSocket(socketListener);
+	verificarErrorSetsockopt(socketListener);
 	mySocket.sin_family = AF_INET;
 	mySocket.sin_port = htons(puerto);
 	mySocket.sin_addr.s_addr = htonl(INADDR_ANY); //Ver htonl
 	memset(&(mySocket.sin_zero), '\0', 8);
+	verificarErrorBind (socketListener,mySocket);
+	verificarErrorListen(socketListener);
 
-	if (bind(socketListenner, (struct sockaddr *) &mySocket, sizeof(mySocket))
-			== -1) {
-		perror("Error de bind");
-		return -1;
-	}
 
-	if (listen(socketListenner, backlog) == -1) {
-		perror("Error de listen");
-		return -1;
-	}
 
 	//Falta eliminar procesos muertos xD
 
 	arg_escucharclientes *args = malloc(sizeof(arg_escucharclientes));
 	args->puerto = puerto;
-	args->socket_cliente = socketListenner;
+	args->socket_cliente = socketListener;
 
 	return 1;
 }
@@ -94,4 +113,8 @@ bool enviarMensaje(int socket,char* mensaje){
 
 void aceptarMensaje(int socket){
 
+}
+int main ()
+{
+	return EXIT_SUCCESS;
 }
