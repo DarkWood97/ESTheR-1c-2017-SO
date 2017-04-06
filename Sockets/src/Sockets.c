@@ -38,40 +38,33 @@ typedef struct {
 	void * data;
 } arg_escucharclientes;
 
-
-int verificarErrorSocket(int socket)
-{
-	if (socket == -1)
-	{
+int verificarErrorSocket(int socket) {
+	if (socket == -1) {
 		perror("Error de socket");
 		return -1;
 	}
 	return NULL;
 }
-int verificarErrorSetsockopt(int socket)
-{
+int verificarErrorSetsockopt(int socket) {
 	int yes = 1;
-	if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))== -1) {
-			perror("Error de setsockopt");
-			return -1;
-		}
+	if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+		perror("Error de setsockopt");
+		return -1;
+	}
 	return NULL;
 }
-int verificarErrorBind (int socket, struct sockaddr_in mySocket)
-{
-	if (bind(socket, (struct sockaddr *) &mySocket, sizeof(mySocket))
-				== -1) {
-			perror("Error de bind");
-			return -1;
-		}
+int verificarErrorBind(int socket, struct sockaddr_in mySocket) {
+	if (bind(socket, (struct sockaddr *) &mySocket, sizeof(mySocket)) == -1) {
+		perror("Error de bind");
+		return -1;
+	}
 	return NULL;
 }
-int verificarErrorListen (int socket)
-{
+int verificarErrorListen(int socket) {
 	if (listen(socket, backlog) == -1) {
-			perror("Error de listen");
-			return -1;
-		}
+		perror("Error de listen");
+		return -1;
+	}
 	return NULL;
 }
 int ponerseAEscuchar(int puerto, int protocolo) {
@@ -83,32 +76,32 @@ int ponerseAEscuchar(int puerto, int protocolo) {
 	mySocket.sin_port = htons(puerto);
 	mySocket.sin_addr.s_addr = htonl(INADDR_ANY); //Ver htonl
 	memset(&(mySocket.sin_zero), '\0', 8);
-	verificarErrorBind (socketListener,mySocket);
+	verificarErrorBind(socketListener, mySocket);
 	verificarErrorListen(socketListener);
 //	return 1;
 	return socketListener;
 }
 
-int aceptarConexion(int socketListener){
+int aceptarConexion(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
 	int sin_size;
-	while(1){
+	while (1) {
 		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
-		if((socketAceptador = accept(socketListener, (struct sockaddr *)&su_addr, &sin_size)) == -1){
+		if ((socketAceptador = accept(socketListener,
+				(struct sockaddr *) &su_addr, &sin_size)) == -1) {
 			perror("Error de accept");
 		}
 	}
 	return socketAceptador;
 }
 
-
-bool enviarMensaje(int socket,char* mensaje){
+bool enviarMensaje(int socket, char* mensaje) {
 
 	int longitud = string_length(mensaje);
 	int i = 0;
-	for(;i<longitud;i++){
-		if(send(socket,mensaje,longitud,0)==-1){
+	for (; i < longitud; i++) {
+		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
 			return false;
@@ -119,10 +112,36 @@ bool enviarMensaje(int socket,char* mensaje){
 	return true;
 }
 
-void aceptarMensaje(int socket){
+int conectarServer(char * ip, int puerto) {
+
+	int socket_server = socket(AF_INET, SOCK_STREAM, 0);
+	struct hostent *info_server;
+	struct sockaddr_in direccion_server; // información del server
+
+	//Obtengo info del server
+	if ((info_server = gethostbyname(ip)) == NULL) {
+		perror("Error al obtener datos del server.");
+		return -1;
+	}
+
+	//Guardo datos del server
+	direccion_server.sin_family = AF_INET;
+	direccion_server.sin_port = htons(puerto);
+	direccion_server.sin_addr = *((struct in_addr *)info_server->h_addr); //Error
+	memset(&(direccion_server.sin_zero), 0, 8);
+
+	//Conecto con servidor, si hay error finalizo
+	if (connect(socket_server, (struct sockaddr *) &direccion_server,
+			sizeof(struct sockaddr)) == -1) {
+		perror("Error al conectar con el servidor.");
+		return -1;
+	}
+
+	return socket_server;
 
 }
-int main ()
-{
+
+int main() {
+
 	return EXIT_SUCCESS;
 }
