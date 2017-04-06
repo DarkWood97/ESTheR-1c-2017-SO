@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <commons/log.h>
-#include <commons/collections/list.h>
-#include <commons/collections/dictionary.h>
-#include <commons/config.h>
-#include <string.h>
-
+#include "funcionesGenericas.h"
 
 
 typedef struct {
@@ -15,16 +8,7 @@ typedef struct {
 	int entradas_cache;
 	int cache_x_proc;
 	int retardo_memoria;
-	int cantidadDeVariables;
 }memoria;
-
-
-t_config generarT_ConfigParaCargar(char *path){
-	t_config *configuracionDelComponente = malloc (sizeof(t_config));
-	configuracionDelComponente = config_create(path);
-	return *configuracionDelComponente;
-	free(configuracionDelComponente);
-}
 
 memoria memoriaCrear(t_config *configuracion){
 	memoria memoriaAuxiliar;
@@ -34,6 +18,7 @@ memoria memoriaCrear(t_config *configuracion){
 	memoriaAuxiliar.puerto = config_get_int_value(configuracion, "PUERTO");
 	memoriaAuxiliar.marcos = config_get_int_value(configuracion, "MARCOS");
 	memoriaAuxiliar.marco_size = config_get_int_value (configuracion, "MARCOS_SIZE");
+	memoriaAuxiliar.entradas_cache = config_get_int_value(configuracion, "ENTRADAS_CACHE");
 	memoriaAuxiliar.cache_x_proc = config_get_int_value (configuracion, "CACHE_X_PROC");
 	memoriaAuxiliar.retardo_memoria = config_get_int_value(configuracion, "RETARDO_MEMORIA");
 	return memoriaAuxiliar;
@@ -55,6 +40,8 @@ void mostrarConfiguracionesMemoria(memoria memoria){
 	printf("CACHE_X_PROC=%d\n", memoria.cache_x_proc);
 	printf("RETARDO_MEMORIA=%d\n", memoria.retardo_memoria);
 }
+
+
 int main(int argc, char *argv[]) {
 	if(argc!=1){
 		perror("Faltan parametros");
