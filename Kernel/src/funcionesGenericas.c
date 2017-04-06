@@ -12,3 +12,10 @@ t_config generarT_ConfigParaCargar(char *path){
 	return *configuracionDelComponente;
 	free(configuracionDelComponente);
 }
+
+int cantidadElementosArray (unsigned char *array){
+	int i=0;
+	for(i;i;i++){
+
+	}
+}
