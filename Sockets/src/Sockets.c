@@ -101,15 +101,64 @@ int ponerseAEscuchar(int puerto, int protocolo) {
 int aceptarConexion(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
-	int sin_size;
+	socklen_t sin_size;
 	while (1) {
 		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
 		if ((socketAceptador = accept(socketListener,(struct sockaddr *) &su_addr, &sin_size)) == -1) {
 			perror("Error de accept");
 		}
+		else{
+			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
+		}
 	}
 	return socketAceptador;
 }
+
+void seleccionarYAceptarSockets(int socketListener){
+	int fdmax = socketListener, socketAceptador, nbytes;
+	fd_set master, read_fds;
+	struct sockaddr_in addr_Cliente;
+	socklen_t addrLongitud;
+	char buff[256];
+	FD_ZERO(&master);
+	FD_ZERO(&read_fds);
+	FD_SET(socketListener, &master);
+	int i;
+	while(1){
+		read_fds = master;
+		if(select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1){
+			perror("Error de select");
+			exit(1);
+		}
+		for(i = 0; i <= fdmax; i++){
+			if(FD_ISSET(i,&read_fds)){
+				if(i == socketListener){
+					addrLongitud = sizeof(addr_Cliente);
+					if((socketAceptador = accept(socketListener, (struct sockaddr *) &addr_Cliente, &addrLongitud)) == -1){
+						perror("Error de accept");
+						exit(-1);
+					}
+					else{
+						FD_SET(socketAceptador,&master);
+						if(socketAceptador > fdmax){
+							fdmax = socketAceptador;
+						}
+					}
+				}
+				else{
+
+
+
+					}
+				}
+			}
+		}
+
+
+
+	}
+}
+
 
 bool enviarMensaje(int socket, char* mensaje) {
 
