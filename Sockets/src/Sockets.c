@@ -102,24 +102,23 @@ int aceptarConexion(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
 	socklen_t sin_size;
-	while (1) {
+//	while (1) {
 		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
 		if ((socketAceptador = accept(socketListener,(struct sockaddr *) &su_addr, &sin_size)) == -1) {
 			perror("Error de accept");
+			exit(-1);
 		}
 		else{
 			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
+//		}
 		}
-	}
 	return socketAceptador;
 }
 
 void seleccionarYAceptarSockets(int socketListener){
 	int fdmax = socketListener, socketAceptador, nbytes;
 	fd_set master, read_fds;
-	struct sockaddr_in addr_Cliente;
-	socklen_t addrLongitud;
-	char buff[256];
+	char* buff = malloc(sizeof(char *));
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);
@@ -133,31 +132,35 @@ void seleccionarYAceptarSockets(int socketListener){
 		for(i = 0; i <= fdmax; i++){
 			if(FD_ISSET(i,&read_fds)){
 				if(i == socketListener){
-					addrLongitud = sizeof(addr_Cliente);
-					if((socketAceptador = accept(socketListener, (struct sockaddr *) &addr_Cliente, &addrLongitud)) == -1){
-						perror("Error de accept");
-						exit(-1);
-					}
-					else{
-						FD_SET(socketAceptador,&master);
-						if(socketAceptador > fdmax){
-							fdmax = socketAceptador;
-						}
+					socketAceptador = aceptarConexion(socketListener);
+					FD_SET(socketAceptador,&master);
+					if(socketAceptador > fdmax){
+						fdmax = socketAceptador;
 					}
 				}
 				else{
+						if((nbytes = recv(i, *buff, sizeof(*buff),0)) <= 0){
+							if(nbytes == 0){
+								printf("El socket %d corto", i);
+							}
+							else{
+								perror("Error de recv");
+							}
+							close(i);
+							FD_CLR(i,&master);
+						}
+						else{
+
+						}
 
 
-
+						}
 					}
-				}
 			}
+
 		}
 
-
-
 	}
-}
 
 
 bool enviarMensaje(int socket, char* mensaje) {
