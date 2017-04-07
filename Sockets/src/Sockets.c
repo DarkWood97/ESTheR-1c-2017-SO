@@ -139,7 +139,7 @@ void seleccionarYAceptarSockets(int socketListener){
 					}
 				}
 				else{
-						if((nbytes = recv(i, *buff, sizeof(*buff),0)) <= 0){
+						if((nbytes = recv(i, buff, sizeof(buff),0)) <= 0){
 							if(nbytes == 0){
 								printf("El socket %d corto", i);
 							}
@@ -150,7 +150,11 @@ void seleccionarYAceptarSockets(int socketListener){
 							FD_CLR(i,&master);
 						}
 						else{
-
+							/*
+							 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
+							 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
+							 * va a ser de tamaño variable. Ver!
+							 */
 						}
 
 
@@ -174,7 +178,6 @@ bool enviarMensaje(int socket, char* mensaje) {
 			return false;
 		}
 	}
-
 	free(mensaje);
 	return true;
 }
