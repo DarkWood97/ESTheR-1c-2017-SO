@@ -26,8 +26,12 @@
 #include <commons/string.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+#include <netdb.h>
+
+
 
 #define backlog 10 //cantidad de conexiones en la cola
+
 
 typedef struct {
 	int puerto;
@@ -100,8 +104,7 @@ int aceptarConexion(int socketListener) {
 	int sin_size;
 	while (1) {
 		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
-		if ((socketAceptador = accept(socketListener,
-				(struct sockaddr *) &su_addr, &sin_size)) == -1) {
+		if ((socketAceptador = accept(socketListener,(struct sockaddr *) &su_addr, &sin_size)) == -1) {
 			perror("Error de accept");
 		}
 	}
@@ -127,11 +130,11 @@ bool enviarMensaje(int socket, char* mensaje) {
 int conectarServer(char * ip, int puerto) {
 
 	int socket_server = socket(AF_INET, SOCK_STREAM, 0);
-	struct hostent *info_server;
+	struct hostent *infoDelServer;
 	struct sockaddr_in direccion_server; // información del server
 
 	//Obtengo info del server
-	if ((info_server = gethostbyname(ip)) == NULL) {
+	if ((infoDelServer = gethostbyname(ip)) == NULL) {
 		perror("Error al obtener datos del server.");
 		return -1;
 	}
@@ -139,7 +142,7 @@ int conectarServer(char * ip, int puerto) {
 	//Guardo datos del server
 	direccion_server.sin_family = AF_INET;
 	direccion_server.sin_port = htons(puerto);
-	direccion_server.sin_addr = *((struct in_addr*)info_server->h_addr); //Error
+	direccion_server.sin_addr = *(struct in_addr *)infoDelServer->h_addr; //h_addr apunta al primer elemento h_addr_lista
 	memset(&(direccion_server.sin_zero), 0, 8);
 
 	//Conecto con servidor, si hay error finalizo
