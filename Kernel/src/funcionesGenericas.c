@@ -1,13 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <commons/log.h>
-#include <commons/collections/list.h>
-#include <commons/collections/dictionary.h>
-#include <commons/config.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <pthread.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include <netdb.h>
+#include <commons/log.h>
+#include <commons/string.h>
+#include <commons/config.h>
+#include <commons/collections/dictionary.h>
+#include <commons/collections/list.h>
 
-t_config generarT_ConfigParaCargar(char *path){
-	t_config *configuracionDelComponente = malloc (sizeof(t_config));
+t_config generarT_ConfigParaCargar(char *path) {
+	t_config *configuracionDelComponente = malloc(sizeof(t_config));
 	configuracionDelComponente = config_create(path);
 	return *configuracionDelComponente;
 	free(configuracionDelComponente);

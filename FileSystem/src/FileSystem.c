@@ -10,23 +10,22 @@
 
 #include "funcionesGenericas.h"
 
-typedef struct
-{
+typedef struct {
 	int port;
 	char *punto_montaje;
-}fileSystem;
+} fileSystem;
 
-fileSystem fileSystemCrear(t_config *configuracion){
+fileSystem fileSystemCrear(t_config *configuracion) {
 	fileSystem fileSystemAuxiliar;
-	if(dictionary_size(configuracion->properties)!=2){
-			perror("Faltan parametros para inicializar el fileSystem");
+	if (dictionary_size(configuracion->properties) != 2) {
+		perror("Faltan parametros para inicializar el fileSystem");
 	}
 	fileSystemAuxiliar.port = config_get_int_value(configuracion, "PORT");
-	fileSystemAuxiliar.punto_montaje = config_get_string_value(configuracion, "PUNTO_MONTAJE");
+	fileSystemAuxiliar.punto_montaje = config_get_string_value(configuracion,"PUNTO_MONTAJE");
 	return fileSystemAuxiliar;
 }
 
-fileSystem inicializarFileSystem(char *path){
+fileSystem inicializarFileSystem(char *path) {
 	t_config *configuracionFileSystem;
 	*configuracionFileSystem = generarT_ConfigParaCargar(path);
 	fileSystem fileSystemSistema = fileSystemCrear(configuracionFileSystem);
@@ -34,40 +33,33 @@ fileSystem inicializarFileSystem(char *path){
 	free(configuracionFileSystem);
 }
 
-bool validarArchivo (char* path)
-{
-	FILE* f = fopen( path, " r " );
-	if(!f)
-	{
+bool validarArchivo(char* path) {
+	FILE* f = fopen(path, " r ");
+	if (!f) {
 		return true;
-	}
-	else
-	{
+	} else {
 		return false;
 	}
 }
 
-void crearArchivo(char* path)
-{
+void crearArchivo(char* path) {
 	bool permisoCreacion = true; //Bitmap?
-	if(validarArchivo(path)&&permisoCreacion)
-	{
+	if (validarArchivo(path) && permisoCreacion) {
 		FILE* f = fopen(path, "w");
 	}
 }
 
-void borraArchivo(char* path)
-{
+void borraArchivo(char* path) {
 	remove(path); //Bitmap?
 }
 
-void mostrarConfiguracionesFileSystem(fileSystem fileSystem){
+void mostrarConfiguracionesFileSystem(fileSystem fileSystem) {
 	printf("PORT=%d\n", fileSystem.port);
 	printf("PUNTO_MONTAJE=%s\n", fileSystem.punto_montaje);
 }
 
 int main(int argc, char *argv[]) {
-	if(argc!=1){
+	if (argc != 1) {
 		perror("Faltan parametros");
 	}
 	fileSystem fileSystem = inicializarFileSystem(argv[0]);
