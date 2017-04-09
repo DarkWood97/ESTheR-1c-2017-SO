@@ -1,7 +1,7 @@
 /*
  ============================================================================
  Name        : Sockets.c
- Author      : 
+ Author      :
  Version     :
  Copyright   : Your copyright notice
  Description : Hello World in C, Ansi-style
@@ -87,6 +87,8 @@ void seleccionarYAceptarSockets(int socketListener) {
 						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
 						 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
 						 * va a ser de tamaño variable. Ver!
+						 * Solucion: implementar el while 1 en el main de kernel, modularizar la parte de select y recive para que sea
+						 * funcional para las proximas entregas.
 						 */
 					}
 
@@ -113,7 +115,7 @@ bool enviarMensaje(int socket, char* mensaje) {
 	return true;
 }
 
-int conectarServer(char * ip, int puerto) {
+int conectarServer(char *ip, int puerto) {
 
 	int socket_server = socket(AF_INET, SOCK_STREAM, 0);
 	struct hostent *infoDelServer;
@@ -142,7 +144,3 @@ int conectarServer(char * ip, int puerto) {
 
 }
 
-int main() {
-
-	return EXIT_SUCCESS;
-}

@@ -1,4 +1,5 @@
-#include "funcionesGenericas.h"
+#include "src/funcionesGenericas.h"
+#include "src/socket.h"
 
 typedef struct {
 	int puerto;

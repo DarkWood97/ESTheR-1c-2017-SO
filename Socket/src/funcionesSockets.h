@@ -1,10 +1,3 @@
-/*
- * funcionesGenericas.h
- *
- *  Created on: 6/4/2017
- *      Author: utnso
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,6 +23,14 @@
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 
-t_config generarT_ConfigParaCargar(char *);
+#define backlog 10 //cantidad de conexiones en la cola
+
+int verificarErrorSocket(int);
+
+int verificarErrorSetsockopt(int);
+
+int verificarErrorBind(int, struct sockaddr_in);
+
+int verificarErrorListen(int);
 
 #endif /* FUNCIONESGENERICAS_H_ */
