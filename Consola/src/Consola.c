@@ -11,9 +11,6 @@
 #include "src/funcionesGenericas.h"
 #include "src/socket.h"
 
-typedef struct {
-	char *numero;
-}ip;
 
 typedef struct {
 	ip ip_Kernel;

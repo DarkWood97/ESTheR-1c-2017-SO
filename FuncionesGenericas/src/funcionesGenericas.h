@@ -30,6 +30,11 @@
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 
+typedef struct {
+	char *numero;
+}ip;
+
+
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
 
