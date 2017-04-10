@@ -47,5 +47,8 @@ int main(int argc, char *argv[]) {
 	}
 	memoria memoria = inicializarMemoria(argv[0]);
 	mostrarConfiguracionesMemoria(memoria);
+	int socketAceptadorMemoria, socketListenerMemoria;
+	socketListenerMemoria = ponerseAEscuchar(memoria.puerto, 0);
+	socketAceptadorMemoria = aceptarConexion(socketListenerMemoria);
 	return EXIT_SUCCESS;
 }

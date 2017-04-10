@@ -10,11 +10,10 @@
 
 #include "src/funcionesGenericas.h"
 #include "src/socket.h"
-//Como hacer include sin necesidad de importar las carpetas de src del otro proyecto
 
 typedef struct {
 	char *numero;
-} ip;
+}ip;
 
 typedef struct {
 	ip ip_Kernel;
@@ -59,7 +58,9 @@ int main(int argc, char *argv[]) {
 	bool llegoMensaje;
 	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	char *mensajeAEnviar = recibirMensaje();
-	llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar);
+	if((llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
+		perror("No se pudo enviar el mensaje");
+	}
 	return EXIT_SUCCESS;
 
 }

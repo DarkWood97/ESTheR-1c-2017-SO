@@ -81,6 +81,8 @@ int main(int argc, char *argv[]) {
 	}
 	kernel kernel = inicializarKernel(argv[0]);
 	mostrarConfiguracionesKernel(kernel);
-
+	int socketMemoria, socketFileSystem;
+	socketMemoria = conectarServer(kernel.ip_Memoria, kernel.puerto_Memoria);
+	socketFileSystem = conectarServer(kernel.ip_FS, kernel.puerto_FS);
 	return EXIT_SUCCESS;
 }
