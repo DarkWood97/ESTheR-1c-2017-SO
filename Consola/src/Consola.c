@@ -30,7 +30,7 @@ consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 
 consola iniciarConsola(char *path) {
 	t_config *configuracion = malloc(sizeof(t_config));
-	*configuracion = *config_create(path);
+	*configuracion = generarT_ConfigParaCargar(path);
 	consola nueva_consola = consola_crear(configuracion);
 	free(configuracion);
 	return nueva_consola;
@@ -61,6 +61,7 @@ int main(int argc, char *argv[]) {
 	if((llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
 		perror("No se pudo enviar el mensaje");
 	}
+	recibirMensajeDeKernel(socketKernel);
 	return EXIT_SUCCESS;
 
 }

@@ -68,5 +68,6 @@ int main(int argc, char *argv[]) {
 	int socketAceptadorFS, socketListenerFS;
 	socketListenerFS = ponerseAEscuchar(fileSystem.port, 0);
 	socketAceptadorFS = aceptarConexion(socketListenerFS);
+	recibirMensajeDeKernel(socketAceptadorFS);
 	return EXIT_SUCCESS;
 }

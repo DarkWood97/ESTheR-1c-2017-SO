@@ -82,7 +82,11 @@ int main(int argc, char *argv[]) {
 	kernel kernel = inicializarKernel(argv[0]);
 	mostrarConfiguracionesKernel(kernel);
 	int socketMemoria, socketFileSystem;
+	int socketListener = ponerseAEscuchar(kernel.puerto_Prog, 0);
+	int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
+	int socketAceptador = aceptarConexion(socketListener);
 	socketMemoria = conectarServer(kernel.ip_Memoria, kernel.puerto_Memoria);
 	socketFileSystem = conectarServer(kernel.ip_FS, kernel.puerto_FS);
+	seleccionarYAceptarSockets(socketListener);
 	return EXIT_SUCCESS;
 }

@@ -31,5 +31,6 @@
 #define FUNCIONESGENERICAS_H_
 
 t_config generarT_ConfigParaCargar(char *);
+void recibirMensajeDeKernel(int);
 
 #endif /* FUNCIONESGENERICAS_H_ */

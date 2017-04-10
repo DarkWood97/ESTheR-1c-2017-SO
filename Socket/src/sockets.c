@@ -57,8 +57,8 @@ void seleccionarYAceptarSockets(int socketListener) {
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);
-	int i;
-/*	while (1) {*/
+	int i, j;
+	while (1) {
 		read_fds = master;
 		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Error de select");
@@ -82,6 +82,18 @@ void seleccionarYAceptarSockets(int socketListener) {
 						close(i);
 						FD_CLR(i, &master);
 					} else {
+							//atenderPeticion(SocketQuePide, buff);
+							for(j = 0; j<=fdmax; j++){
+								if(FD_ISSET(j, &master)){
+									if(j !=socketListener && j != i){
+										if(send(j,buff,nbytes,0)==-1){
+											perror("Error de send");
+										}
+									}
+								}
+							}
+
+
 
 						/*
 						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
@@ -96,7 +108,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 			}
 		}
 
-	/*}*/
+	}
 
 }
 

@@ -50,5 +50,6 @@ int main(int argc, char *argv[]) {
 	int socketAceptadorMemoria, socketListenerMemoria;
 	socketListenerMemoria = ponerseAEscuchar(memoria.puerto, 0);
 	socketAceptadorMemoria = aceptarConexion(socketListenerMemoria);
+	recibirMensajeDeKernel(socketAceptadorMemoria);
 	return EXIT_SUCCESS;
 }
