@@ -32,7 +32,7 @@
 
 typedef struct {
 	char *numero;
-}ip;
+}_ip;
 
 
 t_config generarT_ConfigParaCargar(char *);

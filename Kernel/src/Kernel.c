@@ -11,12 +11,14 @@
 #include "src/funcionesGenericas.h"
 #include "src/socket.h"
 
+typedef struct _ip ip;
+
 typedef struct {
 	int puerto_Prog;
 	int puerto_Cpu;
-	char *ip_FS;
+	ip ip_FS;
 	int puerto_Memoria;
-	char *ip_Memoria;
+	ip ip_Memoria;
 	int puerto_FS;
 	int quantum;
 	int quantum_Sleep;
