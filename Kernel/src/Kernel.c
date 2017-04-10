@@ -81,5 +81,6 @@ int main(int argc, char *argv[]) {
 	}
 	kernel kernel = inicializarKernel(argv[0]);
 	mostrarConfiguracionesKernel(kernel);
+
 	return EXIT_SUCCESS;
 }

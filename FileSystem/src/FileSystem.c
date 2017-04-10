@@ -65,5 +65,6 @@ int main(int argc, char *argv[]) {
 	}
 	fileSystem fileSystem = inicializarFileSystem(argv[0]);
 	mostrarConfiguracionesFileSystem(fileSystem);
+
 	return EXIT_SUCCESS;
 }

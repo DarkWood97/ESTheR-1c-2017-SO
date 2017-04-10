@@ -87,7 +87,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
 						 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
 						 * va a ser de tamaño variable. Ver!
-						 * Solucion: implementar el while 1 en el main de kernel, modularizar la parte de select y recive para que sea
+						 * Solucion: implementar el while 1 en el main de kernel, modularizar la parte de select y receive para que sea
 						 * funcional para las proximas entregas.
 						 */
 					}

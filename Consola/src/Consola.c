@@ -45,7 +45,7 @@ void mostrar_consola(consola aMostrar) {
 char * recibirMensaje(){
 	char *mensajeARecibir;
 	puts("Mensaje:");
-	scanf("%s", &mensajeARecibir);
+	scanf("%s", mensajeARecibir);
 	return mensajeARecibir;
 }
 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 	mostrar_consola(nuevaConsola);
 	int socketKernel;
 	bool llegoMensaje;
-	socketKernel = conectarServer(nuevaConsola.ip_Kernel, nuevaConsola.puerto_kernel); //Revisar implementacion de ip
+	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	char *mensajeAEnviar = recibirMensaje();
 	llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar);
 	return EXIT_SUCCESS;
