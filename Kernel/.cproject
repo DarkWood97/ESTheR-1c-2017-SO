@@ -40,8 +40,8 @@
 									<listOptionValue builtIn="false" value="Socket"/>
 								</option>
 								<option id="gnu.c.link.option.paths.1652381870" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket/Debug}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/FuncionesGenericas/Debug}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket/src}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/FuncionesGenericas/src}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.881163873" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>

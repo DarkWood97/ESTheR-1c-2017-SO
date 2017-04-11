@@ -11,7 +11,9 @@
 #include "src/funcionesGenericas.h"
 #include "src/socket.h"
 
-typedef struct _ip ip;
+typedef struct
+{_ip  numero;
+}ip;
 
 typedef struct {
 	int puerto_Prog;
@@ -37,9 +39,9 @@ kernel kernelCrear(t_config *configuracion) {
 	}
 	kernelAuxiliar.puerto_Prog = config_get_int_value(configuracion,"PUERTO_PROG");
 	kernelAuxiliar.puerto_Cpu = config_get_int_value(configuracion,"PUERTO_CPU");
-	kernelAuxiliar.ip_FS = config_get_string_value(configuracion, "IP_FS");
+	kernelAuxiliar.ip_FS.numero = config_get_string_value(configuracion, "IP_FS");
 	kernelAuxiliar.puerto_Memoria = config_get_int_value(configuracion,"PUERTO_MEMORIA");
-	kernelAuxiliar.ip_Memoria = config_get_string_value(configuracion,"IP_MEMORIA");
+	kernelAuxiliar.ip_Memoria.numero = config_get_string_value(configuracion,"IP_MEMORIA");
 	kernelAuxiliar.puerto_FS = config_get_int_value(configuracion, "PUERTO_FS");
 	kernelAuxiliar.quantum = config_get_int_value(configuracion, "QUANTUM");
 	kernelAuxiliar.quantum_Sleep = config_get_int_value(configuracion,"QUANTUM_SLEEP");
@@ -63,9 +65,9 @@ kernel inicializarKernel(char *path) {
 void mostrarConfiguracionesKernel(kernel kernel) {
 	printf("PUERTO_PROG=%d\n", kernel.puerto_Prog);
 	printf("PUERTO_CPU=%d\n", kernel.puerto_Cpu);
-	printf("IP_FS=%s\n", kernel.ip_FS);
+	printf("IP_FS=%s\n", kernel.ip_FS.numero);
 	printf("PUERTO_FS=%d\n", kernel.puerto_FS);
-	printf("IP_MEMORIA=%s\n", kernel.ip_Memoria);
+	printf("IP_MEMORIA=%s\n", kernel.ip_Memoria.numero);
 	printf("PUERTO_MEMORIA=%d\n", kernel.puerto_Memoria);
 	printf("QUANTUM=%d\n", kernel.quantum);
 	printf("QUANTUM_SLEEP=%d\n", kernel.quantum_Sleep);
@@ -87,8 +89,8 @@ int main(int argc, char *argv[]) {
 	int socketListener = ponerseAEscuchar(kernel.puerto_Prog, 0);
 	int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
 	int socketAceptador = aceptarConexion(socketListener);
-	socketMemoria = conectarServer(kernel.ip_Memoria, kernel.puerto_Memoria);
-	socketFileSystem = conectarServer(kernel.ip_FS, kernel.puerto_FS);
+	socketMemoria = conectarServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
+	socketFileSystem = conectarServer(kernel.ip_FS.numero, kernel.puerto_FS);
 	seleccionarYAceptarSockets(socketListener);
 	return EXIT_SUCCESS;
 }

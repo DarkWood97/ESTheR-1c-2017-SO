@@ -29,7 +29,7 @@ all: Kernel
 Kernel: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C Linker'
-	gcc -L"/home/utnso/workspace/tp-2017-1c-Caia/FuncionesGenericas/Debug" -o "Kernel" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L"/home/utnso/workspace/tp-2017-1c-caia/Socket/src" -L"/home/utnso/workspace/tp-2017-1c-caia/FuncionesGenericas/src" -o "Kernel" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
