@@ -9,8 +9,8 @@
  */
 
 
-#include "src/funcionesGenericas.h"
-#include "src/socket.h"
+#include "funcionesGenericas.h"
+#include "socket.h"
 
 typedef struct {
 	_ip ipKernel;
@@ -52,4 +52,5 @@ int main(int argc, char *argv[]) {
 	int socketParaMemoria, socketParaKernel;
 	socketParaMemoria = conectarServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
 	socketParaKernel = conectarServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
+	return EXIT_SUCCESS;
 }

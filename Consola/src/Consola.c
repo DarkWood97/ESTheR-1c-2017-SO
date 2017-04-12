@@ -8,8 +8,8 @@
  ============================================================================
  */
 
-#include "src/funcionesGenericas.h"
-#include "src/socket.h"
+#include "funcionesGenericas.h"
+#include "socket.h"
 
 
 typedef struct {

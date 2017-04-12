@@ -1,26 +1,13 @@
-/*
- ============================================================================
- Name        : Kernel.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
+#include "funcionesGenericas.h"
+#include "socket.h"
 
-#include "src/funcionesGenericas.h"
-#include "src/socket.h"
-
-typedef struct
-{_ip  numero;
-}ip;
 
 typedef struct {
 	int puerto_Prog;
 	int puerto_Cpu;
-	ip ip_FS;
+	_ip ip_FS; /* Se pone _ para que lo tome de la libreria */
 	int puerto_Memoria;
-	ip ip_Memoria;
+	_ip ip_Memoria;
 	int puerto_FS;
 	int quantum;
 	int quantum_Sleep;
