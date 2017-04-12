@@ -49,6 +49,20 @@ kernel inicializarKernel(char *path) {
 	free(configuracionKernel);
 }
 
+void imprimirArrayDeChar(char* arrayDeChar[]){
+	int i = 0;
+	for(; arrayDeChar[i]!=NULL; i++){
+		printf("%s/n",arrayDeChar[i]);
+	}
+}
+
+void imprimirArrayDeInt(int arrayDeInt[]){
+	int i = 0;
+	for(; arrayDeInt[i]!=NULL; i++){
+		printf("%d/n",arrayDeInt[i]);
+	}
+}
+
 void mostrarConfiguracionesKernel(kernel kernel) {
 	printf("PUERTO_PROG=%d\n", kernel.puerto_Prog);
 	printf("PUERTO_CPU=%d\n", kernel.puerto_Cpu);
@@ -60,9 +74,12 @@ void mostrarConfiguracionesKernel(kernel kernel) {
 	printf("QUANTUM_SLEEP=%d\n", kernel.quantum_Sleep);
 	printf("ALGORITMO=%s\n", kernel.algoritmo);
 	printf("GRADO_MULTIPROG=%d\n", kernel.grado_Multiprog);
-	printf("SEM_IDS=%s\n", kernel.sem_Ids);
-	printf("SEM_INIT=%d\n", kernel.sem_Init);
-	printf("SHARED_VARS=%s\n", kernel.shared_Vars);
+	puts("SEM_IDS=");
+	imprimirArrayDeChar(kernel.sem_Ids);
+	puts("SEM_INIT=");
+	imprimirArrayDeInt(kernel.sem_Init);
+	puts("SHARED_VARS=");
+	imprimirArrayDeChar(kernel.shared_Vars);
 	printf("STACK_SIZE=%d\n", kernel.stack_Size);
 }
 
@@ -75,7 +92,7 @@ int main(int argc, char *argv[]) {
 	int socketMemoria, socketFileSystem;
 	int socketListener = ponerseAEscuchar(kernel.puerto_Prog, 0);
 	int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
-	int socketAceptador = aceptarConexion(socketListener);
+//	int socketAceptador = aceptarConexion(socketListener);
 	socketMemoria = conectarServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
 	socketFileSystem = conectarServer(kernel.ip_FS.numero, kernel.puerto_FS);
 	seleccionarYAceptarSockets(socketListener);

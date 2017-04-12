@@ -82,16 +82,19 @@ void seleccionarYAceptarSockets(int socketListener) {
 						close(i);
 						FD_CLR(i, &master);
 					} else {
-//							//atenderPeticion(SocketQuePide, buff);
+							//atenderPeticion(SocketQuePide, buff);
 							for(j = 0; j<=fdmax; j++){
 								if(FD_ISSET(j, &master)){
-									if(j !=socketListener){
+									if(j !=socketListener && j != i){
 										if(send(j,buff,nbytes,0)==-1){
 											perror("Error de send");
 										}
 									}
 								}
 							}
+
+
+
 						/*
 						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
 						 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
@@ -100,13 +103,16 @@ void seleccionarYAceptarSockets(int socketListener) {
 						 * funcional para las proximas entregas.
 						 */
 					}
+
 				}
 			}
 		}
+
 	}
+
 }
 
-bool enviarMensaje(int socket, char* mensaje) { //Socket que envia y mensaje
+bool enviarMensaje(int socket, char* mensaje) {
 
 	int longitud = string_length(mensaje);
 	int i = 0;
@@ -117,10 +123,11 @@ bool enviarMensaje(int socket, char* mensaje) { //Socket que envia y mensaje
 			return false;
 		}
 	}
+	free(mensaje);
 	return true;
 }
 
-int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto
+int conectarServer(char *ip, int puerto) {
 
 	int socket_server = socket(AF_INET, SOCK_STREAM, 0);
 	struct hostent *infoDelServer;
@@ -129,7 +136,7 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 	//Obtengo info del server
 	if ((infoDelServer = gethostbyname(ip)) == NULL) {
 		perror("Error al obtener datos del server.");
-		exit(-1);
+		return -1;
 	}
 
 	//Guardo datos del server
@@ -142,8 +149,7 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 	if (connect(socket_server, (struct sockaddr *) &direccion_server,
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
-		close(socket_server);
-		exit(-1);
+		return -1;
 	}
 
 	return socket_server;

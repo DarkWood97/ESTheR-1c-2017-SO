@@ -41,15 +41,17 @@ void mostrarConfiguracionesMemoria(memoria memoria) {
 	printf("RETARDO_MEMORIA=%d\n", memoria.retardo_memoria);
 }
 
-int main(int argc, char *argv[]) {
-	if (argc != 1) {
-		perror("Faltan parametros");
-	}
-	memoria memoria = inicializarMemoria(argv[0]);
-	mostrarConfiguracionesMemoria(memoria);
-	int socketAceptadorMemoria, socketListenerMemoria;
-	socketListenerMemoria = ponerseAEscuchar(memoria.puerto, 0);
-	socketAceptadorMemoria = aceptarConexion(socketListenerMemoria);
-	recibirMensajeDeKernel(socketAceptadorMemoria);
+//int main(int argc, char *argv[]) {
+//	if (argc != 1) {
+//		perror("Faltan parametros");
+//	}
+//	memoria memoria = inicializarMemoria(argv[0]);
+//	mostrarConfiguracionesMemoria(memoria);
+//	int socketAceptadorMemoria, socketListenerMemoria;
+//	socketListenerMemoria = ponerseAEscuchar(memoria.puerto, 0);
+//	socketAceptadorMemoria = aceptarConexion(socketListenerMemoria);
+//	recibirMensajeDeKernel(socketAceptadorMemoria);
+int main (void){
+	puts("HOla");
 	return EXIT_SUCCESS;
 }
