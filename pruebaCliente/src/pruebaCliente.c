@@ -30,6 +30,7 @@ int main(void) {
 		exit(-1);
 	}
 	printf("%s\n",buff);
+	close(socketDeConexion);
 	return 0;
 	free(mensaje);
 	free(buff);

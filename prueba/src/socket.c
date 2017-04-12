@@ -72,7 +72,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 				} else {
 					if ((nbytes = recv(i, buff, sizeof(buff), 0)) <= 0) {
 						if (nbytes == 0) {
-							printf("El socket %d corto", i);
+							printf("El socket %d corto\n", i);
 						} else {
 							perror("Error de recv");
 						}
@@ -82,7 +82,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 							//atenderPeticion(SocketQuePide, buff);
 							for(j = 0; j<=fdmax; j++){
 								if(FD_ISSET(j, &master)){
-									if(j !=socketListener && j != i){
+									if(j !=socketListener){
 										if(send(j,buff,nbytes,0)==-1){
 											perror("Error de send");
 										}

@@ -22,21 +22,21 @@ void imprimirArrayDeChar(char* arrayDeChar[]){
 }
 
 int main(void) {
-	int socketListener, socketAceptador;
-	char *buff = malloc(16);
+	int socketListener;
+//	char *buff = malloc(16);
 	socketListener = ponerseAEscuchar(PORT,0);
-	socketAceptador = aceptarConexion(socketListener);
-	if((recv(socketAceptador,buff,sizeof(buff),0))==-1){
-		perror("Error al recibir");
-		exit(-1);
-	}
-	else{
-		puts("Recibido");
-	}
-	printf("%s\n",buff);
-	if(!(enviarMensaje(socketAceptador,buff))){
-		perror("Error al reenviar");
-		exit(-1);
-	}
+	seleccionarYAceptarSockets(socketListener);
+//	if((recv(socketAceptador,buff,sizeof(buff),0))==-1){
+//		perror("Error al recibir");
+//		exit(-1);
+//	}
+//	else{
+//		puts("Recibido");
+//	}
+//	printf("%s\n",buff);
+//	if(!(enviarMensaje(socketAceptador,buff))){
+//		perror("Error al reenviar");
+//		exit(-1);
+//	}
 	return 0;
 }

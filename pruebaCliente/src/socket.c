@@ -85,7 +85,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 							//atenderPeticion(SocketQuePide, buff);
 							for(j = 0; j<=fdmax; j++){
 								if(FD_ISSET(j, &master)){
-									if(j !=socketListener && j != i){
+									if(j !=socketListener){
 										if(send(j,buff,nbytes,0)==-1){
 											perror("Error de send");
 										}
