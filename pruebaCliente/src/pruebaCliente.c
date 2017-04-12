@@ -17,16 +17,19 @@
 
 int main(void) {
 	int socketDeConexion;
-	char *mensaje = malloc(16);
-	char *buff=malloc(sizeof(mensaje));
-	strcpy(mensaje,"HOLA COMO ESTAS");
+	char *mensaje = malloc(5);
+	char *buff=malloc(5);
+	strcpy(mensaje,"HOLA");
 	socketDeConexion = conectarServer(IP,PORT);
 	if(!(enviarMensaje(socketDeConexion, mensaje))){
 		perror("Error al enviar");
 		exit(-1);
 	}
-	recv(socketDeConexion,buff,16,0);
-	printf("%s",buff);
+	if((recv(socketDeConexion,buff,sizeof(buff),0))==-1){
+		perror("Error al recibir");
+		exit(-1);
+	}
+	printf("%s\n",buff);
 	return 0;
 	free(mensaje);
 	free(buff);

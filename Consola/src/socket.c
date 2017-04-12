@@ -114,6 +114,7 @@ bool enviarMensaje(int socket, char* mensaje) { //Socket que envia y mensaje
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
+			exit(-1);
 			return false;
 		}
 	}
@@ -129,6 +130,10 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 	//Obtengo info del server
 	if ((infoDelServer = gethostbyname(ip)) == NULL) {
 		perror("Error al obtener datos del server.");
+		exit(-1);
+	}
+	if((verificarErrorSetsockopt(socket_server))==-1){
+		perror("Error");
 		exit(-1);
 	}
 

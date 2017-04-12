@@ -37,16 +37,13 @@ int aceptarConexion(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
 	socklen_t sin_size;
-/*	while (1) {*/
 		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
-		if ((socketAceptador = accept(socketListener,
-				(struct sockaddr *) &su_addr, &sin_size)) == -1) {
+		if ((socketAceptador = accept(socketListener,(struct sockaddr *) &su_addr, &sin_size)) == -1) {
 			perror("Error de accept");
 			exit(-1);
 		} else {
 			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
 		}
-	/*}*/
 	return socketAceptador;
 }
 
@@ -120,10 +117,10 @@ bool enviarMensaje(int socket, char* mensaje) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
+			exit(-1);
 			return false;
 		}
 	}
-	free(mensaje);
 	return true;
 }
 

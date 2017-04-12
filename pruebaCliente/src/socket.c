@@ -120,10 +120,10 @@ bool enviarMensaje(int socket, char* mensaje) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
+			exit(-1);
 			return false;
 		}
 	}
-	free(mensaje);
 	return true;
 }
 
@@ -149,6 +149,7 @@ int conectarServer(char *ip, int puerto) {
 	if (connect(socket_server, (struct sockaddr *) &direccion_server,
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
+
 		return -1;
 	}
 
