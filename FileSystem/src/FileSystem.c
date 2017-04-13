@@ -20,6 +20,7 @@ fileSystem fileSystemCrear(t_config *configuracion) {
 	fileSystem fileSystemAuxiliar;
 	if (dictionary_size(configuracion->properties) != 2) {
 		perror("Faltan parametros para inicializar el fileSystem");
+		exit(-1);
 	}
 	fileSystemAuxiliar.port = config_get_int_value(configuracion, "PORT");
 	fileSystemAuxiliar.punto_montaje = config_get_string_value(configuracion,"PUNTO_MONTAJE");
@@ -62,6 +63,7 @@ void mostrarConfiguracionesFileSystem(fileSystem fileSystem) {
 int main(int argc, char *argv[]) {
 	if (argc != 1) {
 		perror("Faltan parametros");
+		exit(-1);
 	}
 	fileSystem fileSystem = inicializarFileSystem(argv[0]);
 	mostrarConfiguracionesFileSystem(fileSystem);

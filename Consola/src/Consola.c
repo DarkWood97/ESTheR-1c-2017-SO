@@ -58,6 +58,7 @@ int main(int argv, char *argc[]) {
 	char *mensajeAEnviar = recibirMensaje();
 	if((llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
 		perror("No se pudo enviar el mensaje");
+		exit(-1);
 	}
 	recibirMensajeDeKernel(socketKernel);
 	return EXIT_SUCCESS;
