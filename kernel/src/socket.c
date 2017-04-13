@@ -26,7 +26,7 @@ int ponerseAEscuchar(int puerto, int protocolo) {
 	verificarErrorSetsockopt(socketListener);
 	mySocket.sin_family = AF_INET;
 	mySocket.sin_port = htons(puerto);
-	mySocket.sin_addr.s_addr = htonl(INADDR_ANY); //Ver htonl
+	mySocket.sin_addr.s_addr = INADDR_ANY;
 	memset(&(mySocket.sin_zero), '\0', 8);
 	verificarErrorBind(socketListener, mySocket);
 	verificarErrorListen(socketListener);
@@ -37,16 +37,13 @@ int aceptarConexion(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
 	socklen_t sin_size;
-/*	while (1) {*/
 		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
-		if ((socketAceptador = accept(socketListener,
-				(struct sockaddr *) &su_addr, &sin_size)) == -1) {
+		if ((socketAceptador = accept(socketListener,(struct sockaddr *) &su_addr, &sin_size)) == -1) {
 			perror("Error de accept");
 			exit(-1);
 		} else {
 			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
 		}
-	/*}*/
 	return socketAceptador;
 }
 
@@ -62,7 +59,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 		read_fds = master;
 		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Error de select");
-			exit(-1);
+			exit(1);
 		}
 		for (i = 0; i <= fdmax; i++) {
 			if (FD_ISSET(i, &read_fds)) {
@@ -75,10 +72,9 @@ void seleccionarYAceptarSockets(int socketListener) {
 				} else {
 					if ((nbytes = recv(i, buff, sizeof(buff), 0)) <= 0) {
 						if (nbytes == 0) {
-							printf("El socket %d corto", i);
+							printf("El socket %d corto\n", i);
 						} else {
 							perror("Error de recv");
-							exit(-1);
 						}
 						close(i);
 						FD_CLR(i, &master);
@@ -86,10 +82,9 @@ void seleccionarYAceptarSockets(int socketListener) {
 							//atenderPeticion(SocketQuePide, buff);
 							for(j = 0; j<=fdmax; j++){
 								if(FD_ISSET(j, &master)){
-									if(j !=socketListener && j != i){
+									if(j !=socketListener){
 										if(send(j,buff,nbytes,0)==-1){
 											perror("Error de send");
-											exit(-1);
 										}
 									}
 								}
@@ -121,12 +116,11 @@ bool enviarMensaje(int socket, char* mensaje) {
 	for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
-			exit(-1);
 			close(socket);
+			exit(-1);
 			return false;
 		}
 	}
-	free(mensaje);
 	return true;
 }
 
@@ -158,4 +152,3 @@ int conectarServer(char *ip, int puerto) {
 	return socket_server;
 
 }
-

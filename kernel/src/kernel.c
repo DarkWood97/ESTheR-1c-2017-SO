@@ -5,7 +5,7 @@
 typedef struct {
 	int puerto_Prog;
 	int puerto_Cpu;
-	_ip ip_FS; /* Se pone _ para que lo tome de la libreria */
+	_ip ip_FS;
 	int puerto_Memoria;
 	_ip ip_Memoria;
 	int puerto_FS;
@@ -43,7 +43,7 @@ kernel kernelCrear(t_config *configuracion) {
 }
 
 kernel inicializarKernel(char *path) {
-	t_config *configuracionKernel;
+	t_config *configuracionKernel = malloc(sizeof(t_config));
 	*configuracionKernel = generarT_ConfigParaCargar(path);
 	kernel kernelSistema = kernelCrear(configuracionKernel);
 	return kernelSistema;
@@ -52,16 +52,20 @@ kernel inicializarKernel(char *path) {
 
 void imprimirArrayDeChar(char* arrayDeChar[]){
 	int i = 0;
+	printf("[");
 	for(; arrayDeChar[i]!=NULL; i++){
-		printf("%s/n",arrayDeChar[i]);
+		printf("%s ",arrayDeChar[i]);
 	}
+	puts("]");
 }
 
 void imprimirArrayDeInt(int arrayDeInt[]){
 	int i = 0;
+	printf("[");
 	for(; arrayDeInt[i]!=NULL; i++){
-		printf("%d/n",arrayDeInt[i]);
+		printf("%d ",arrayDeInt[i]);
 	}
+	puts("]");
 }
 
 void mostrarConfiguracionesKernel(kernel kernel) {
@@ -75,25 +79,26 @@ void mostrarConfiguracionesKernel(kernel kernel) {
 	printf("QUANTUM_SLEEP=%d\n", kernel.quantum_Sleep);
 	printf("ALGORITMO=%s\n", kernel.algoritmo);
 	printf("GRADO_MULTIPROG=%d\n", kernel.grado_Multiprog);
-	puts("SEM_IDS=");
+	printf("SEM_IDS=");
 	imprimirArrayDeChar(kernel.sem_Ids);
-	puts("SEM_INIT=");
+	printf("SEM_INIT=");
 	imprimirArrayDeInt(kernel.sem_Init);
-	puts("SHARED_VARS=");
+	printf("SHARED_VARS=");
 	imprimirArrayDeChar(kernel.shared_Vars);
 	printf("STACK_SIZE=%d\n", kernel.stack_Size);
 }
 
 int main(int argc, char *argv[]) {
-	if (argc != 1) {
+	if (argc != 2) {
 		perror("Faltan parametros");
 		exit(-1);
 	}
-	kernel kernel = inicializarKernel(argv[0]);
+	//char *path = "Debug/Kernel.config";
+	kernel kernel = inicializarKernel(argv[1]);
 	mostrarConfiguracionesKernel(kernel);
 	int socketMemoria, socketFileSystem;
 	int socketListener = ponerseAEscuchar(kernel.puerto_Prog, 0);
-	int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
+	//int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
 //	int socketAceptador = aceptarConexion(socketListener);
 	socketMemoria = conectarServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
 	socketFileSystem = conectarServer(kernel.ip_FS.numero, kernel.puerto_FS);

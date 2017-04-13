@@ -29,7 +29,7 @@ cpu cpuCrear(t_config *configuracionCPU){
 }
 
 cpu inicializarCPU(char *path){
-	t_config *configuracionCPU;
+	t_config *configuracionCPU = malloc(sizeof(t_config));
 	*configuracionCPU = generarT_ConfigParaCargar(path);
 	cpu cpuSistemas = cpuCrear(configuracionCPU);
 	return cpuSistemas;
@@ -43,12 +43,14 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
 
+
+
 int main(int argc, char *argv[]) {
-	if(argc != 1){
+	if(argc != 2){
 		perror("Faltan parametros");
 		exit(-1);
 	}
-	cpu cpuDelSistema = inicializarCPU(argv[0]);
+	cpu cpuDelSistema = inicializarCPU(argv[1]);
 	mostrarConfiguracionCPU(cpuDelSistema);
 	int socketParaMemoria, socketParaKernel;
 	socketParaMemoria = conectarServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);

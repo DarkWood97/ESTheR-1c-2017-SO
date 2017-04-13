@@ -12,7 +12,7 @@
 #include "socket.h"
 
 typedef struct {
-	int port;
+	int puerto;
 	char *punto_montaje;
 } fileSystem;
 
@@ -22,13 +22,13 @@ fileSystem fileSystemCrear(t_config *configuracion) {
 		perror("Faltan parametros para inicializar el fileSystem");
 		exit(-1);
 	}
-	fileSystemAuxiliar.port = config_get_int_value(configuracion, "PORT");
+	fileSystemAuxiliar.puerto = config_get_int_value(configuracion, "PUERTO");
 	fileSystemAuxiliar.punto_montaje = config_get_string_value(configuracion,"PUNTO_MONTAJE");
 	return fileSystemAuxiliar;
 }
 
 fileSystem inicializarFileSystem(char *path) {
-	t_config *configuracionFileSystem;
+	t_config *configuracionFileSystem = malloc(sizeof(t_config));
 	*configuracionFileSystem = generarT_ConfigParaCargar(path);
 	fileSystem fileSystemSistema = fileSystemCrear(configuracionFileSystem);
 	return fileSystemSistema;
@@ -56,19 +56,19 @@ void borraArchivo(char* path) {
 }
 
 void mostrarConfiguracionesFileSystem(fileSystem fileSystem) {
-	printf("PORT=%d\n", fileSystem.port);
+	printf("PUERTO=%d\n", fileSystem.puerto);
 	printf("PUNTO_MONTAJE=%s\n", fileSystem.punto_montaje);
 }
 
 int main(int argc, char *argv[]) {
-	if (argc != 1) {
+	if (argc != 2) {
 		perror("Faltan parametros");
 		exit(-1);
 	}
-	fileSystem fileSystem = inicializarFileSystem(argv[0]);
+	fileSystem fileSystem = inicializarFileSystem(argv[1]);
 	mostrarConfiguracionesFileSystem(fileSystem);
 	int socketAceptadorFS, socketListenerFS;
-	socketListenerFS = ponerseAEscuchar(fileSystem.port, 0);
+	socketListenerFS = ponerseAEscuchar(fileSystem.puerto, 0);
 	socketAceptadorFS = aceptarConexion(socketListenerFS);
 	recibirMensajeDeKernel(socketAceptadorFS);
 	return EXIT_SUCCESS;
