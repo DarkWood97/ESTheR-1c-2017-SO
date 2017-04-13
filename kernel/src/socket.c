@@ -50,7 +50,7 @@ int aceptarConexion(int socketListener) {
 void seleccionarYAceptarSockets(int socketListener) {
 	int fdmax = socketListener, socketAceptador, nbytes;
 	fd_set master, read_fds;
-	char* buff = malloc(sizeof(char *));
+	char* buff = malloc(16);
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);

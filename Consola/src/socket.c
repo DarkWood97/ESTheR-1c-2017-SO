@@ -106,7 +106,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 	}
 }
 
-bool enviarMensaje(int socket, char* mensaje) { //Socket que envia y mensaje
+bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
 	int longitud = string_length(mensaje);
 	int i = 0;

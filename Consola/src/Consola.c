@@ -38,10 +38,11 @@ void mostrar_consola(consola aMostrar) {
 }
 
 char * recibirMensaje(){
-	char *mensajeARecibir;
+	char *mensajeARecibir=malloc(16);//buscar la manera que aparezca vacio
 	puts("Mensaje:");
 	scanf("%s", mensajeARecibir);
 	return mensajeARecibir;
+	free(mensajeARecibir);
 }
 
 int main(int argc, char *argv[]) {
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
 	bool llegoMensaje;
 	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	char *mensajeAEnviar = recibirMensaje();
-	if((llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
+	if(!(llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
 		perror("No se pudo enviar el mensaje");
 		exit(-1);
 	}
