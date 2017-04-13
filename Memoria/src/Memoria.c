@@ -14,6 +14,7 @@ memoria memoriaCrear(t_config *configuracion) {
 	memoria memoriaAuxiliar;
 	if (dictionary_size(configuracion->properties) != 6) {
 		perror("Faltan parametros para inicializar memoria");
+		exit(-1);
 	}
 	memoriaAuxiliar.puerto = config_get_int_value(configuracion, "PUERTO");
 	memoriaAuxiliar.marcos = config_get_int_value(configuracion, "MARCOS");

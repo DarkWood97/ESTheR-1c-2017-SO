@@ -48,6 +48,7 @@ char * recibirMensaje(){
 int main(int argc, char *argv[]) {
 	if(argc!= 1){
 		perror("Faltan parametros");
+		exit(-1);
 	}
 	consola nuevaConsola = iniciarConsola(*argv);
 	mostrar_consola(nuevaConsola);
@@ -57,6 +58,7 @@ int main(int argc, char *argv[]) {
 	char *mensajeAEnviar = recibirMensaje();
 	if((llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
 		perror("No se pudo enviar el mensaje");
+		exit(-1);
 	}
 	recibirMensajeDeKernel(socketKernel);
 	return EXIT_SUCCESS;

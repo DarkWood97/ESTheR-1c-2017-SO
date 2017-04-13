@@ -23,6 +23,7 @@ kernel kernelCrear(t_config *configuracion) {
 	kernel kernelAuxiliar;
 	if (dictionary_size(configuracion->properties) != 14) {
 		perror("Faltan parametros para inicializar el kernel");
+		exit(-1);
 	}
 	kernelAuxiliar.puerto_Prog = config_get_int_value(configuracion,"PUERTO_PROG");
 	kernelAuxiliar.puerto_Cpu = config_get_int_value(configuracion,"PUERTO_CPU");
@@ -86,6 +87,7 @@ void mostrarConfiguracionesKernel(kernel kernel) {
 int main(int argc, char *argv[]) {
 	if (argc != 1) {
 		perror("Faltan parametros");
+		exit(-1);
 	}
 	kernel kernel = inicializarKernel(argv[0]);
 	mostrarConfiguracionesKernel(kernel);

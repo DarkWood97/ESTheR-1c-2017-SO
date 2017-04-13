@@ -62,7 +62,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 		read_fds = master;
 		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
 			perror("Error de select");
-			exit(1);
+			exit(-1);
 		}
 		for (i = 0; i <= fdmax; i++) {
 			if (FD_ISSET(i, &read_fds)) {
@@ -78,6 +78,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 							printf("El socket %d corto", i);
 						} else {
 							perror("Error de recv");
+							exit(-1);
 						}
 						close(i);
 						FD_CLR(i, &master);
@@ -88,6 +89,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 									if(j !=socketListener && j != i){
 										if(send(j,buff,nbytes,0)==-1){
 											perror("Error de send");
+											exit(-1);
 										}
 									}
 								}
@@ -119,6 +121,7 @@ bool enviarMensaje(int socket, char* mensaje) {
 	for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
+			exit(-1);
 			close(socket);
 			return false;
 		}
