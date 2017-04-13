@@ -46,7 +46,7 @@ void recibirMensajeDeKernel(int socketKernel){
 		free(buff);
 		exit(-1);
 	}
-	printf("%s",buff);
+	printf("%s\n",buff);
 	free(buff);
 }
 

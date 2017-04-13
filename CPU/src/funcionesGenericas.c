@@ -42,9 +42,10 @@ void recibirMensajeDeKernel(int socketKernel){
 	int tamanioBuff = sizeof(buff);
 	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
 		perror("Error de receive");
+		free(buff);
 		exit(-1);
 	}
-	printf("%s",buff);
+	printf("%s\n",buff);
 	free(buff);
 }
 

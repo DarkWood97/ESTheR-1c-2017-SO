@@ -150,7 +150,7 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
 		close(socket_server);
-		exit(-1);
+		//	exit(-1);	Sacar cuando la conexion a memoria este hecha
 	}
 
 	return socket_server;
