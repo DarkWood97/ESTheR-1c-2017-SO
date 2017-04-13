@@ -44,13 +44,12 @@ char * recibirMensaje(){
 	return mensajeARecibir;
 }
 
-int main(int argv, char *argc[]) {
-	if(argv!=2){
+int main(int argc, char *argv[]) {
+	if(argc!=2){
 		perror("Faltan parametros");
 		exit(-1);
 	}
-	char *path = argc[1];
-	consola nuevaConsola = iniciarConsola(path);
+	consola nuevaConsola = iniciarConsola(argv[1]);
 	mostrar_consola(nuevaConsola);
 	int socketKernel;
 	bool llegoMensaje;

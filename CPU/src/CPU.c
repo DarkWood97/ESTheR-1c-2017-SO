@@ -55,5 +55,6 @@ int main(int argc, char *argv[]) {
 	int socketParaMemoria, socketParaKernel;
 	socketParaMemoria = conectarServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
 	socketParaKernel = conectarServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
+	recibirMensajeDeKernel(socketParaKernel);
 	return EXIT_SUCCESS;
 }
