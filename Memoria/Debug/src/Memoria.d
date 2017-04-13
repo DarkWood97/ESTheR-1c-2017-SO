@@ -1,10 +1,8 @@
-src/Memoria.d: ../src/Memoria.c \
- /home/utnso/workspace/tp-2017-1c-caia/FuncionesGenericas/src/funcionesGenericas.h \
- /home/utnso/workspace/tp-2017-1c-caia/Socket/src/socket.h \
- /home/utnso/workspace/tp-2017-1c-caia/Socket/src/funcionesSockets.h
+src/Memoria.d: ../src/Memoria.c ../src/funcionesGenericas.h \
+ ../src/socket.h ../src/funcionesSockets.h
 
-/home/utnso/workspace/tp-2017-1c-caia/FuncionesGenericas/src/funcionesGenericas.h:
+../src/funcionesGenericas.h:
 
-/home/utnso/workspace/tp-2017-1c-caia/Socket/src/socket.h:
+../src/socket.h:
 
-/home/utnso/workspace/tp-2017-1c-caia/Socket/src/funcionesSockets.h:
+../src/funcionesSockets.h:

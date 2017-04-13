@@ -26,7 +26,7 @@ int ponerseAEscuchar(int puerto, int protocolo) {
 	verificarErrorSetsockopt(socketListener);
 	mySocket.sin_family = AF_INET;
 	mySocket.sin_port = htons(puerto);
-	mySocket.sin_addr.s_addr = htonl(INADDR_ANY); //Ver htonl
+	mySocket.sin_addr.s_addr = INADDR_ANY;
 	memset(&(mySocket.sin_zero), '\0', 8);
 	verificarErrorBind(socketListener, mySocket);
 	verificarErrorListen(socketListener);
@@ -37,23 +37,25 @@ int aceptarConexion(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
 	socklen_t sin_size;
-/*	while (1) {*/
-		sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
-		if ((socketAceptador = accept(socketListener,
-				(struct sockaddr *) &su_addr, &sin_size)) == -1) {
-			perror("Error de accept");
-			exit(-1);
-		} else {
-			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
-		}
-	/*}*/
+	sin_size = sizeof(struct sockaddr_in); //VER COMO IMPLEMENTAR SELECT!!
+
+	//while (1) {
+	if ((socketAceptador = accept(socketListener, (struct sockaddr *) &su_addr,
+			&sin_size)) == -1) {
+		perror("Error de accept");
+		exit(-1);
+	} else {
+		printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
+	}
+	//}
+
 	return socketAceptador;
 }
 
 void seleccionarYAceptarSockets(int socketListener) {
 	int fdmax = socketListener, socketAceptador, nbytes;
 	fd_set master, read_fds;
-	char* buff = malloc(sizeof(char *));
+	char* buff = (char*) malloc(16);
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);
@@ -78,20 +80,23 @@ void seleccionarYAceptarSockets(int socketListener) {
 							printf("El socket %d corto", i);
 						} else {
 							perror("Error de recv");
+							exit(-1);
 						}
 						close(i);
 						FD_CLR(i, &master);
 					} else {
-//							//atenderPeticion(SocketQuePide, buff);
-							for(j = 0; j<=fdmax; j++){
-								if(FD_ISSET(j, &master)){
-									if(j !=socketListener){
-										if(send(j,buff,nbytes,0)==-1){
-											perror("Error de send");
-										}
+						//atenderPeticion(SocketQuePide, buff);
+						for (j = 0; j <= fdmax; j++) {
+							if (FD_ISSET(j, &master)) {
+								if (j != socketListener) {
+									if (send(j, buff, nbytes, 0) == -1) {
+										perror("Error de send");
+										close(j);
+										exit(-1);
 									}
 								}
 							}
+						}
 						/*
 						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
 						 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
@@ -115,7 +120,6 @@ bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 			perror("Error de send");
 			close(socket);
 			exit(-1);
-			return false;
 		}
 	}
 	return true;
@@ -132,10 +136,8 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 		perror("Error al obtener datos del server.");
 		exit(-1);
 	}
-	if((verificarErrorSetsockopt(socket_server))==-1){
-		perror("Error");
-		exit(-1);
-	}
+
+	verificarErrorSetsockopt(socket_server);
 
 	//Guardo datos del server
 	direccion_server.sin_family = AF_INET;
@@ -154,4 +156,3 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 	return socket_server;
 
 }
-

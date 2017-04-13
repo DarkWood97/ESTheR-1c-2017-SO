@@ -1,5 +1,5 @@
-#include "src/funcionesGenericas.h"
-#include "src/socket.h"
+#include "funcionesGenericas.h"
+#include "socket.h"
 
 typedef struct {
 	int puerto;
@@ -28,7 +28,7 @@ memoria memoriaCrear(t_config *configuracion) {
 }
 
 memoria inicializarMemoria(char *path) {
-	t_config *configuracionMemoria = malloc(sizeof(t_config));
+	t_config *configuracionMemoria = (t_config*)malloc(sizeof(t_config));
 	*configuracionMemoria = generarT_ConfigParaCargar(path);
 	memoria memoriaSistema = memoriaCrear(configuracionMemoria);
 	return memoriaSistema;
@@ -55,6 +55,6 @@ int main(int argc, char *argv[]) {
 	int socketAceptadorMemoria, socketListenerMemoria;
 	socketListenerMemoria = ponerseAEscuchar(memoria.puerto, 0);
 	seleccionarYAceptarSockets(socketListenerMemoria);
-	//recibirMensajeDeKernel(socketAceptadorMemoria);
+	recibirMensajeDeKernel(socketAceptadorMemoria);
 	return EXIT_SUCCESS;
 }

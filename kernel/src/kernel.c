@@ -43,7 +43,7 @@ kernel kernelCrear(t_config *configuracion) {
 }
 
 kernel inicializarKernel(char *path) {
-	t_config *configuracionKernel = malloc(sizeof(t_config));
+	t_config *configuracionKernel = (t_config*)malloc(sizeof(t_config));
 	*configuracionKernel = generarT_ConfigParaCargar(path);
 	kernel kernelSistema = kernelCrear(configuracionKernel);
 	return kernelSistema;
@@ -93,15 +93,17 @@ int main(int argc, char *argv[]) {
 		perror("Faltan parametros");
 		exit(-1);
 	}
-	//char *path = "Debug/Kernel.config";
 	kernel kernel = inicializarKernel(argv[1]);
 	mostrarConfiguracionesKernel(kernel);
 	int socketMemoria, socketFileSystem;
 	int socketListener = ponerseAEscuchar(kernel.puerto_Prog, 0);
-	//int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
-//	int socketAceptador = aceptarConexion(socketListener);
+	int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
+	//int socketAceptador = aceptarConexion(socketListener);
+	//int socketAceptadorCPU = aceptarConexion(socketListenerCPU);
 	socketMemoria = conectarServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
 	socketFileSystem = conectarServer(kernel.ip_FS.numero, kernel.puerto_FS);
 	seleccionarYAceptarSockets(socketListener);
+	seleccionarYAceptarSockets(socketListenerCPU);
 	return EXIT_SUCCESS;
 }
+

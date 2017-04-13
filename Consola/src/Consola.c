@@ -26,7 +26,7 @@ consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 }
 
 consola iniciarConsola(char *path) {
-	t_config *configuracion = malloc(sizeof(t_config));
+	t_config *configuracion = (t_config*)malloc(sizeof(t_config));
 	*configuracion = generarT_ConfigParaCargar(path);
 	consola nueva_consola = consola_crear(configuracion);
 	free(configuracion);
@@ -38,7 +38,7 @@ void mostrar_consola(consola aMostrar) {
 }
 
 char * recibirMensaje(){
-	char *mensajeARecibir=malloc(16);//buscar la manera que aparezca vacio
+	char* mensajeARecibir= (char*)malloc(16);//buscar la manera que aparezca vacio
 	puts("Mensaje:");
 	scanf("%s", mensajeARecibir);
 	return mensajeARecibir;
@@ -55,11 +55,14 @@ int main(int argc, char *argv[]) {
 	int socketKernel;
 	bool llegoMensaje;
 	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char *mensajeAEnviar = recibirMensaje();
+	char* mensajeAEnviar= (char*)malloc(16);
+	mensajeAEnviar = recibirMensaje();
 	if(!(llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
 		perror("No se pudo enviar el mensaje");
+		free(mensajeAEnviar);
 		exit(-1);
 	}
+	free(mensajeAEnviar);
 	recibirMensajeDeKernel(socketKernel);
 	return EXIT_SUCCESS;
 

@@ -28,7 +28,7 @@ fileSystem fileSystemCrear(t_config *configuracion) {
 }
 
 fileSystem inicializarFileSystem(char *path) {
-	t_config *configuracionFileSystem = malloc(sizeof(t_config));
+	t_config *configuracionFileSystem = (t_config*)malloc(sizeof(t_config));
 	*configuracionFileSystem = generarT_ConfigParaCargar(path);
 	fileSystem fileSystemSistema = fileSystemCrear(configuracionFileSystem);
 	return fileSystemSistema;
@@ -45,8 +45,7 @@ bool validarArchivo(char* path) {
 }
 
 void crearArchivo(char* path) {
-	bool permisoCreacion = true; //Bitmap?
-	if (validarArchivo(path) && permisoCreacion) {
+	if (validarArchivo(path)) {
 		FILE* f = fopen(path, "w");
 	}
 }

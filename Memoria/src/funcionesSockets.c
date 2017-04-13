@@ -32,7 +32,7 @@
 int verificarErrorSocket(int socket) {
 	if (socket == -1) {
 		perror("Error de socket");
-		return -1;
+		exit(-1);
 	} else {
 		return 0;
 	}
@@ -41,7 +41,7 @@ int verificarErrorSetsockopt(int socket) {
 	int yes = 1;
 	if (setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
 		perror("Error de setsockopt");
-		return -1;
+		exit(-1);
 	} else {
 		return 0;
 	}
@@ -49,7 +49,7 @@ int verificarErrorSetsockopt(int socket) {
 int verificarErrorBind(int socket, struct sockaddr_in mySocket) {
 	if (bind(socket, (struct sockaddr *) &mySocket, sizeof(mySocket)) == -1) {
 		perror("Error de bind");
-		return -1;
+		exit(-1);
 	} else {
 		return 0;
 	}
@@ -57,7 +57,7 @@ int verificarErrorBind(int socket, struct sockaddr_in mySocket) {
 int verificarErrorListen(int socket) {
 	if (listen(socket, backlog) == -1) {
 		perror("Error de listen");
-		return -1;
+		exit(-1);
 	} else {
 		return 0;
 	}

@@ -28,9 +28,10 @@
 #include <commons/collections/list.h>
 
 t_config generarT_ConfigParaCargar(char *path) {
-	t_config *configuracionDelComponente = malloc(sizeof(t_config));
+	t_config *configuracionDelComponente = (t_config*)malloc(sizeof(t_config));
 	if((configuracionDelComponente = config_create(path)) == NULL){
 		perror("Error de ruta de archivo de configuracion");
+		free(configuracionDelComponente);
 		exit(-1);
 	}
 	return *configuracionDelComponente;
@@ -38,10 +39,11 @@ t_config generarT_ConfigParaCargar(char *path) {
 }
 
 void recibirMensajeDeKernel(int socketKernel){
-	char *buff = malloc(16);
+	char *buff = (char*)malloc(16);
 	int tamanioBuff = sizeof(buff);
 	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
 		perror("Error de receive");
+		free(buff);
 		exit(-1);
 	}
 	printf("%s",buff);

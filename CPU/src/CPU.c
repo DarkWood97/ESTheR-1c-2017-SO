@@ -29,7 +29,7 @@ cpu cpuCrear(t_config *configuracionCPU){
 }
 
 cpu inicializarCPU(char *path){
-	t_config *configuracionCPU = malloc(sizeof(t_config));
+	t_config *configuracionCPU = (t_config*)malloc(sizeof(t_config));
 	*configuracionCPU = generarT_ConfigParaCargar(path);
 	cpu cpuSistemas = cpuCrear(configuracionCPU);
 	return cpuSistemas;
@@ -38,7 +38,7 @@ cpu inicializarCPU(char *path){
 
 void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("PUERTO_KERNEL=%d\n",cpuAMostrar.puertoKernel);
-	printf("IP_KENEL=%s\n",cpuAMostrar.ipKernel.numero);
+	printf("IP_KERNEL=%s\n",cpuAMostrar.ipKernel.numero);
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
