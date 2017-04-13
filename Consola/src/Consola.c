@@ -34,8 +34,7 @@ consola iniciarConsola(char *path) {
 }
 void mostrar_consola(consola aMostrar) {
 	printf("IP=%s\n", aMostrar.ip_Kernel.numero);
-	printf("Puerto=%i\n", aMostrar.puerto_kernel);
-	system("pause");
+	printf("PUERTO=%i\n", aMostrar.puerto_kernel);
 }
 
 char * recibirMensaje(){
@@ -45,11 +44,13 @@ char * recibirMensaje(){
 	return mensajeARecibir;
 }
 
-int main(int argc, char *argv[]) {
-	if(argc!= 1){
+int main(int argv, char *argc[]) {
+	if(argv!=2){
 		perror("Faltan parametros");
+		exit(-1);
 	}
-	consola nuevaConsola = iniciarConsola(*argv);
+	char *path = argc[1];
+	consola nuevaConsola = iniciarConsola(path);
 	mostrar_consola(nuevaConsola);
 	int socketKernel;
 	bool llegoMensaje;
