@@ -85,8 +85,6 @@ void seleccionarYAceptarSockets(int socketListener) {
 						close(i);
 						FD_CLR(i, &master);
 					} else {
-						//atenderPeticion(SocketQuePide, buff);
-
 						for (j = 0; j <= fdmax; j++) {
 							if (FD_ISSET(j, &master)) {
 								if (j != socketListener) {
@@ -115,7 +113,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
-	int longitud = string_length(mensaje)+1; //sino no lee \0
+	int longitud =	sizeof(mensaje)+1; //sino no lee \0
 	int i = 0;
 	//for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {

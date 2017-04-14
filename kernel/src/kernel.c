@@ -85,10 +85,14 @@ void imprimirArrayDeInt(int arrayDeInt[]){
 	puts("]");
 }
 
+//-----------------------------------------------------------------------------------------------
+
 
 int main(int argc, char *argv[]) {
-	verificarParametrosInicio(argc);
-	kernel kernel = inicializarKernel(argv[1]);
+//	verificarParametrosInicio(argc);
+	char *path = "Debug/kernel.config";
+	kernel kernel = inicializarKernel(path);
+//	kernel kernel = inicializarKernel(argv[1]);
 	mostrarConfiguracionesKernel(kernel);
 	int socketParaMemoria, socketParaFileSystem;
 	int socketListener = ponerseAEscucharClientes(kernel.puerto_Prog, 0);

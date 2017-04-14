@@ -40,7 +40,8 @@ void mostrar_consola(consola aMostrar) {
 char * recibirMensajePorTeclado(){
 	char* mensajeARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
 	puts("Mensaje:");
-	scanf("%s", mensajeARecibir);
+//	scanf("%s", mensajeARecibir);
+	fgets(mensajeARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
 	return mensajeARecibir;
 }
 void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
@@ -53,9 +54,13 @@ void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 		}
 }
 
+//------------------------------------------------------------------------------------------------------------------
+
 int main(int argc, char *argv[]) {
-	verificarParametrosInicio(argc);
-	consola nuevaConsola = inicializarConsola(argv[1]);
+//	verificarParametrosInicio(argc);
+	char *path = "Debug/consola.config";
+	consola nuevaConsola = inicializarConsola(path);
+//	consola nuevaConsola = inicializarConsola(argv[1]);
 	mostrar_consola(nuevaConsola);
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
