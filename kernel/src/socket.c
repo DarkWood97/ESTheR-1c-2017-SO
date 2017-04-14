@@ -54,7 +54,8 @@ int aceptarConexion(int socketListener) {
 void seleccionarYAceptarSockets(int socketListener) {
 	int fdmax = socketListener, socketAceptador, nbytes;
 	fd_set master, read_fds;
-	char* buff = (char*) malloc(16);
+	int tam_buff=sizeof(char)*16;//tamanio del buffer
+	char* buff = malloc(tam_buff);
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);
@@ -69,26 +70,29 @@ void seleccionarYAceptarSockets(int socketListener) {
 			if (FD_ISSET(i, &read_fds)) {
 				if (i == socketListener) {
 					socketAceptador = aceptarConexion(socketListener);
+					printf("socket aceptador: %d",socketAceptador);
 					FD_SET(socketAceptador, &master);
 					if (socketAceptador > fdmax) {
 						fdmax = socketAceptador;
 					}
 				} else {
-					if ((nbytes = recv(i, buff, sizeof(buff), 0)) <= 0) {
+					if ((nbytes = recv(i, buff, tam_buff, 0)) <= 0) {
 						if (nbytes == 0) {
 							printf("El socket %d corto", i);
 						} else {
-							perror("Error de recv");
+							printf("error-func: %s- line: %d, socket %i ",__func__,__LINE__,i);
 							exit(-1);
 						}
 						close(i);
 						FD_CLR(i, &master);
-					} else {
+					}
+					else {
+						printf("%s",buff);
 						//atenderPeticion(SocketQuePide, buff);
 						for (j = 0; j <= fdmax; j++) {
 							if (FD_ISSET(j, &master)) {
 								if (j != socketListener) {
-									if (send(j, buff, nbytes, 0) == -1) {
+									if (send(j, buff, tam_buff, 0) == -1) {
 										perror("Error de send");
 										close(j);
 										exit(-1);

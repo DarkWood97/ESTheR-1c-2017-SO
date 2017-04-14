@@ -38,11 +38,10 @@ void mostrar_consola(consola aMostrar) {
 }
 //------FUNCIONES MENSAJES--------------------------------------------
 char * recibirMensaje(){
-	char* mensajeARecibir= malloc(16);//buscar la manera que aparezca vacio
+	char* mensajeARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
 	puts("Mensaje:");
 	scanf("%s", mensajeARecibir);
 	return mensajeARecibir;
-	free(mensajeARecibir);
 }
 void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 {
@@ -60,7 +59,7 @@ int main(int argc, char *argv[]) {
 	mostrar_consola(nuevaConsola);
 	int socketKernel;
 	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char* mensajeAEnviar= malloc(16);
+	char* mensajeAEnviar;
 	mensajeAEnviar = recibirMensaje();
 	verificarRecepcionMensaje(socketKernel,mensajeAEnviar);
 	free(mensajeAEnviar);

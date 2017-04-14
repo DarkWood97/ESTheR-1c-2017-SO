@@ -113,14 +113,14 @@ void seleccionarYAceptarSockets(int socketListener) {
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
-	int longitud = string_length(mensaje);
+	int longitud = string_length(mensaje)+1; //sino no lee \0
 	int i = 0;
-	for (; i < longitud; i++) {
+	//for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
 			exit(-1);
-		}
+		//}
 	}
 	return true;
 }
