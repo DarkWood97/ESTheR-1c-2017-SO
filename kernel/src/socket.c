@@ -9,6 +9,7 @@
  */
 
 #include "funcionesSockets.h"
+
 typedef struct {
 	int puerto;
 	int socket_cliente;
@@ -18,7 +19,7 @@ typedef struct {
 	void * data;
 } arg_escucharclientes;
 
-int ponerseAEscuchar(int puerto, int protocolo) {
+int ponerseAEscucharClientes(int puerto, int protocolo) {
 	struct sockaddr_in mySocket;
 	int socketListener = socket(AF_INET, SOCK_STREAM, protocolo);
 	verificarErrorSocket(socketListener);
@@ -32,7 +33,7 @@ int ponerseAEscuchar(int puerto, int protocolo) {
 	return socketListener;
 }
 
-int aceptarConexion(int socketListener) {
+int aceptarConexionDeCliente(int socketListener) {
 	int socketAceptador;
 	struct sockaddr_in su_addr;
 	socklen_t sin_size;
@@ -41,7 +42,7 @@ int aceptarConexion(int socketListener) {
 	//while (1) {
 	if ((socketAceptador = accept(socketListener, (struct sockaddr *) &su_addr,
 			&sin_size)) == -1) {
-		perror("Error de accept");
+		perror("Error al aceptar conexion");
 		exit(-1);
 	} else {
 		printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
@@ -54,8 +55,7 @@ int aceptarConexion(int socketListener) {
 void seleccionarYAceptarSockets(int socketListener) {
 	int fdmax = socketListener, socketAceptador, nbytes;
 	fd_set master, read_fds;
-	int tam_buff=sizeof(char)*16;//tamanio del buffer
-	char* buff = malloc(tam_buff);
+	char* buff = (char*) malloc(16);
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);
@@ -69,31 +69,28 @@ void seleccionarYAceptarSockets(int socketListener) {
 		for (i = 0; i <= fdmax; i++) {
 			if (FD_ISSET(i, &read_fds)) {
 				if (i == socketListener) {
-					socketAceptador = aceptarConexion(socketListener);
-					printf("socket aceptador: %d",socketAceptador);
+					socketAceptador = aceptarConexionDeCliente(socketListener);
 					FD_SET(socketAceptador, &master);
 					if (socketAceptador > fdmax) {
 						fdmax = socketAceptador;
 					}
 				} else {
-					if ((nbytes = recv(i, buff, tam_buff, 0)) <= 0) {
+					if ((nbytes = recv(i, buff, sizeof(buff), 0)) <= 0) {
 						if (nbytes == 0) {
-							printf("El socket %d corto", i);
+							printf("El socket cliente %d corto", i);
 						} else {
-							printf("error-func: %s- line: %d, socket %i ",__func__,__LINE__,i);
+							perror("Error al recibir mensaje de cliente");
 							exit(-1);
 						}
 						close(i);
 						FD_CLR(i, &master);
-					}
-					else {
-						printf("%s",buff);
+					} else {
 						//atenderPeticion(SocketQuePide, buff);
 						for (j = 0; j <= fdmax; j++) {
 							if (FD_ISSET(j, &master)) {
 								if (j != socketListener) {
-									if (send(j, buff, tam_buff, 0) == -1) {
-										perror("Error de send");
+									if (send(j, buff, nbytes, 0) == -1) {
+										perror("Error al enviar mensaje a cliente");
 										close(j);
 										exit(-1);
 									}
@@ -116,19 +113,19 @@ void seleccionarYAceptarSockets(int socketListener) {
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
-	int longitud = string_length(mensaje);
+	int longitud = string_length(mensaje)+1; //sino no lee \0
 	int i = 0;
-	for (; i < longitud; i++) {
+	//for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
 			exit(-1);
-		}
+		//}
 	}
 	return true;
 }
 
-int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto
+int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto
 
 	int socket_server = socket(AF_INET, SOCK_STREAM, 0);
 	struct hostent *infoDelServer;
@@ -153,7 +150,7 @@ int conectarServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
 		close(socket_server);
-		//exit(-1);		Sacarlo cuando la conexion a memoria este hecha
+		exit(-1);
 	}
 
 	return socket_server;

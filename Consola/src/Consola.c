@@ -25,7 +25,7 @@ consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 
 }
 
-consola iniciarConsola(char *path) {
+consola inicializarConsola(char *path) {
 	t_config *configuracion = (t_config*)malloc(sizeof(t_config));
 	*configuracion = generarT_ConfigParaCargar(path);
 	consola nueva_consola = consola_crear(configuracion);
@@ -37,7 +37,7 @@ void mostrar_consola(consola aMostrar) {
 	printf("PUERTO=%i\n", aMostrar.puerto_kernel);
 }
 //------FUNCIONES MENSAJES--------------------------------------------
-char * recibirMensaje(){
+char * recibirMensajePorTeclado(){
 	char* mensajeARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
 	puts("Mensaje:");
 	scanf("%s", mensajeARecibir);
@@ -55,15 +55,15 @@ void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
-	consola nuevaConsola = iniciarConsola(argv[1]);
+	consola nuevaConsola = inicializarConsola(argv[1]);
 	mostrar_consola(nuevaConsola);
-	int socketKernel;
-	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char* mensajeAEnviar;
-	mensajeAEnviar = recibirMensaje();
-	verificarRecepcionMensaje(socketKernel,mensajeAEnviar);
-	free(mensajeAEnviar);
-	recibirMensajeDeKernel(socketKernel);
+	int socketParaKernel;
+	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
+	char* mensajeAEnviarAKernel;
+	mensajeAEnviarAKernel = recibirMensajePorTeclado();
+	verificarRecepcionMensaje(socketParaKernel,mensajeAEnviarAKernel);
+	free(mensajeAEnviarAKernel);
+	recibirMensajeDeKernel(socketParaKernel);
 	return EXIT_SUCCESS;
 
 }

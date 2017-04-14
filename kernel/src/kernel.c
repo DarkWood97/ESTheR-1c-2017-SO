@@ -90,13 +90,13 @@ int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	kernel kernel = inicializarKernel(argv[1]);
 	mostrarConfiguracionesKernel(kernel);
-	int socketMemoria, socketFileSystem;
-	int socketListener = ponerseAEscuchar(kernel.puerto_Prog, 0);
+	int socketParaMemoria, socketParaFileSystem;
+	int socketListener = ponerseAEscucharClientes(kernel.puerto_Prog, 0);
 	//int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
 	//int socketAceptador = aceptarConexion(socketListener);
 	//int socketAceptadorCPU = aceptarConexion(socketListenerCPU);
-	socketMemoria = conectarServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
-	socketFileSystem = conectarServer(kernel.ip_FS.numero, kernel.puerto_FS);
+	socketParaMemoria = conectarAServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
+	socketParaFileSystem = conectarAServer(kernel.ip_FS.numero, kernel.puerto_FS);
 	seleccionarYAceptarSockets(socketListener);
 	//seleccionarYAceptarSockets(socketListenerCPU);
 	return EXIT_SUCCESS;

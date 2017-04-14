@@ -50,8 +50,8 @@ int main(int argc, char *argv[]) {
 	cpu cpuDelSistema = inicializarCPU(argv[1]);
 	mostrarConfiguracionCPU(cpuDelSistema);
 	int socketParaMemoria, socketParaKernel;
-	socketParaMemoria = conectarServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
-	socketParaKernel = conectarServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
+	socketParaMemoria = conectarAServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
+	socketParaKernel = conectarAServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
 	recibirMensajeDeKernel(socketParaKernel);
 	return EXIT_SUCCESS;
 }
