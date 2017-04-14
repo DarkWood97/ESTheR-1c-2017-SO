@@ -55,7 +55,7 @@ int aceptarConexionDeCliente(int socketListener) {
 void seleccionarYAceptarSockets(int socketListener) {
 	int fdmax = socketListener, socketAceptador, nbytes;
 	fd_set master, read_fds;
-	char* buff = (char*) malloc(16);
+	char* buff = malloc(sizeof(char)*16);
 	FD_ZERO(&master);
 	FD_ZERO(&read_fds);
 	FD_SET(socketListener, &master);
@@ -77,7 +77,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 				} else {
 					if ((nbytes = recv(i, buff, sizeof(buff), 0)) <= 0) {
 						if (nbytes == 0) {
-							printf("El socket cliente %d corto", i);
+							printf("El socket cliente %d corto\n", i);
 						} else {
 							perror("Error al recibir mensaje de cliente");
 							exit(-1);
@@ -86,6 +86,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 						FD_CLR(i, &master);
 					} else {
 						//atenderPeticion(SocketQuePide, buff);
+
 						for (j = 0; j <= fdmax; j++) {
 							if (FD_ISSET(j, &master)) {
 								if (j != socketListener) {
@@ -97,6 +98,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 								}
 							}
 						}
+						printf("%s\n",buff);
 						/*
 						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
 						 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
@@ -150,7 +152,7 @@ int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socke
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
 		close(socket_server);
-		exit(-1);
+	//	exit(-1);
 	}
 
 	return socket_server;

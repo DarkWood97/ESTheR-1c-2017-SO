@@ -38,7 +38,7 @@ t_config generarT_ConfigParaCargar(char *path) {
 }
 
 void recibirMensajeDeKernel(int socketKernel){
-	char *buff = (char*)malloc(16);
+	char *buff = malloc(sizeof(char)*16);
 	int tamanioBuff = sizeof(buff);
 	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
 		perror("Error de receive");
@@ -57,7 +57,7 @@ void verificarParametrosInicio(int argc)
 void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
 {
 	if (dictionary_size(configuracion->properties) != sizeStruct) {
-			perror("Faltan parametros para inicializar el kernel");
+			perror("Faltan parametros para inicializar el fileSystem");
 			exit(-1);
 		}
 }

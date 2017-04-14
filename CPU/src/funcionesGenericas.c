@@ -38,20 +38,26 @@ t_config generarT_ConfigParaCargar(char *path) {
 }
 
 void recibirMensajeDeKernel(int socketKernel){
-	char *buff = (char*)malloc(16);
+	char *buff = malloc(sizeof(char)*16);
 	int tamanioBuff = sizeof(buff);
 	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
 		perror("Error de receive");
-		free(buff);
 		exit(-1);
 	}
-	printf("%s\n",buff);
+	printf("%s",buff);
 	free(buff);
 }
 void verificarParametrosInicio(int argc)
 {
 	if(argc!=2){
-			perror("Faltan parametros para inicializar la CPU");
+			perror("Faltan parametros");
+			exit(-1);
+		}
+}
+void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
+{
+	if (dictionary_size(configuracion->properties) != sizeStruct) {
+			perror("Faltan parametros para inicializar el fileSystem");
 			exit(-1);
 		}
 }

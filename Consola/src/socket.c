@@ -150,7 +150,7 @@ int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socke
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
 		close(socket_server);
-		exit(-1);
+		//exit(-1);
 	}
 
 	return socket_server;
