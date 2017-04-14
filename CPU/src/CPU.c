@@ -11,14 +11,14 @@
 
 #include "funcionesGenericas.h"
 #include "socket.h"
-
+//--TYPEDEF----------------------------------------------------------------
 typedef struct {
 	_ip ipKernel;
 	int puertoKernel;
 	_ip ipMemoria;
 	int puertoMemoria;
 }cpu;
-
+//----FUNCIONES CPU--------------------------------------------------------
 cpu cpuCrear(t_config *configuracionCPU){
 	cpu nuevaCPU;
 	nuevaCPU.ipKernel.numero = config_get_string_value(configuracionCPU, "IP_KERNEL");
@@ -46,10 +46,7 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 
 
 int main(int argc, char *argv[]) {
-	if(argc != 2){
-		perror("Faltan parametros");
-		exit(-1);
-	}
+	verificarParametrosInicio(argc);
 	cpu cpuDelSistema = inicializarCPU(argv[1]);
 	mostrarConfiguracionCPU(cpuDelSistema);
 	int socketParaMemoria, socketParaKernel;

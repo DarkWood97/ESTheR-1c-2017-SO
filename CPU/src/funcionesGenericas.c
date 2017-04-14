@@ -48,4 +48,10 @@ void recibirMensajeDeKernel(int socketKernel){
 	printf("%s\n",buff);
 	free(buff);
 }
-
+void verificarParametrosInicio(int argc)
+{
+	if(argc!=2){
+			perror("Faltan parametros para inicializar la CPU");
+			exit(-1);
+		}
+}

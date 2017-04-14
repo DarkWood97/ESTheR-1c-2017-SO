@@ -10,13 +10,13 @@
 
 #include "funcionesGenericas.h"
 #include "socket.h"
-
+//--TYPEDEF-------------------------------------------------------------------
 
 typedef struct {
 	_ip ip_Kernel;
 	int puerto_kernel;
 } consola;
-
+//----FUNCIONES CONSOLA-------------------------------------------------------
 consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo si no tiene error
 	consola consola_auxiliar;
 	consola_auxiliar.ip_Kernel.numero = config_get_string_value(configuracion,"IP_KERNEL");
@@ -36,32 +36,33 @@ void mostrar_consola(consola aMostrar) {
 	printf("IP=%s\n", aMostrar.ip_Kernel.numero);
 	printf("PUERTO=%i\n", aMostrar.puerto_kernel);
 }
-
+//------FUNCIONES MENSAJES--------------------------------------------
 char * recibirMensaje(){
-	char* mensajeARecibir= (char*)malloc(16);//buscar la manera que aparezca vacio
+	char* mensajeARecibir= malloc(16);//buscar la manera que aparezca vacio
 	puts("Mensaje:");
 	scanf("%s", mensajeARecibir);
 	return mensajeARecibir;
 	free(mensajeARecibir);
 }
+void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
+{
+	bool llegoMensaje;
+	if(!(llegoMensaje = enviarMensaje (socket, mensajeAEnviar))){
+			perror("No se pudo enviar el mensaje");
+			free(mensajeAEnviar);
+			exit(-1);
+		}
+}
 
 int main(int argc, char *argv[]) {
-	if(argc!=2){
-		perror("Faltan parametros");
-		exit(-1);
-	}
+	verificarParametrosInicio(argc);
 	consola nuevaConsola = iniciarConsola(argv[1]);
 	mostrar_consola(nuevaConsola);
 	int socketKernel;
-	bool llegoMensaje;
 	socketKernel = conectarServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char* mensajeAEnviar= (char*)malloc(16);
+	char* mensajeAEnviar= malloc(16);
 	mensajeAEnviar = recibirMensaje();
-	if(!(llegoMensaje = enviarMensaje (socketKernel, mensajeAEnviar))){
-		perror("No se pudo enviar el mensaje");
-		free(mensajeAEnviar);
-		exit(-1);
-	}
+	verificarRecepcionMensaje(socketKernel,mensajeAEnviar);
 	free(mensajeAEnviar);
 	recibirMensajeDeKernel(socketKernel);
 	return EXIT_SUCCESS;

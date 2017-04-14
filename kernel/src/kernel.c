@@ -1,6 +1,6 @@
 #include "funcionesGenericas.h"
 #include "socket.h"
-
+//--TYPEDEF------------------------------------------------------
 
 typedef struct {
 	int puerto_Prog;
@@ -18,13 +18,10 @@ typedef struct {
 	unsigned char *shared_Vars;
 	int stack_Size;
 } kernel;
-
-kernel kernelCrear(t_config *configuracion) {
+//-----FUNCIONES KERNEL------------------------------------------
+kernel crearKernel(t_config *configuracion) {
 	kernel kernelAuxiliar;
-	if (dictionary_size(configuracion->properties) != 14) {
-		perror("Faltan parametros para inicializar el kernel");
-		exit(-1);
-	}
+	verificarParametrosCrear(configuracion,14);
 	kernelAuxiliar.puerto_Prog = config_get_int_value(configuracion,"PUERTO_PROG");
 	kernelAuxiliar.puerto_Cpu = config_get_int_value(configuracion,"PUERTO_CPU");
 	kernelAuxiliar.ip_FS.numero = config_get_string_value(configuracion, "IP_FS");
@@ -45,29 +42,10 @@ kernel kernelCrear(t_config *configuracion) {
 kernel inicializarKernel(char *path) {
 	t_config *configuracionKernel = (t_config*)malloc(sizeof(t_config));
 	*configuracionKernel = generarT_ConfigParaCargar(path);
-	kernel kernelSistema = kernelCrear(configuracionKernel);
+	kernel kernelSistema = crearKernel(configuracionKernel);
 	return kernelSistema;
 	free(configuracionKernel);
 }
-
-void imprimirArrayDeChar(char* arrayDeChar[]){
-	int i = 0;
-	printf("[");
-	for(; arrayDeChar[i]!=NULL; i++){
-		printf("%s ",arrayDeChar[i]);
-	}
-	puts("]");
-}
-
-void imprimirArrayDeInt(int arrayDeInt[]){
-	int i = 0;
-	printf("[");
-	for(; arrayDeInt[i]!=NULL; i++){
-		printf("%d ",arrayDeInt[i]);
-	}
-	puts("]");
-}
-
 void mostrarConfiguracionesKernel(kernel kernel) {
 	printf("PUERTO_PROG=%d\n", kernel.puerto_Prog);
 	printf("PUERTO_CPU=%d\n", kernel.puerto_Cpu);
@@ -87,12 +65,29 @@ void mostrarConfiguracionesKernel(kernel kernel) {
 	imprimirArrayDeChar(kernel.shared_Vars);
 	printf("STACK_SIZE=%d\n", kernel.stack_Size);
 }
+//------FUNCIONES DE ARRAY----------------------------------------
+
+void imprimirArrayDeChar(char* arrayDeChar[]){
+	int i = 0;
+	printf("[");
+	for(; arrayDeChar[i]!=NULL; i++){
+		printf("%s ",arrayDeChar[i]);
+	}
+	puts("]");
+}
+
+void imprimirArrayDeInt(int arrayDeInt[]){
+	int i = 0;
+	printf("[");
+	for(; arrayDeInt[i]!=NULL; i++){
+		printf("%d ",arrayDeInt[i]);
+	}
+	puts("]");
+}
+
 
 int main(int argc, char *argv[]) {
-	if (argc != 2) {
-		perror("Faltan parametros");
-		exit(-1);
-	}
+	verificarParametrosInicio(argc);
 	kernel kernel = inicializarKernel(argv[1]);
 	mostrarConfiguracionesKernel(kernel);
 	int socketMemoria, socketFileSystem;

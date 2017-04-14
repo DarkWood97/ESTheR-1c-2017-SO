@@ -1,6 +1,6 @@
 #include "funcionesGenericas.h"
 #include "socket.h"
-
+//--TYPEDEF--------------------------------------------------------------
 typedef struct {
 	int puerto;
 	int marcos;
@@ -10,13 +10,10 @@ typedef struct {
 	char *reemplazo_cache;
 	int retardo_memoria;
 } memoria;
-
-memoria memoriaCrear(t_config *configuracion) {
+//-----FUNCIONES MEMORIA-------------------------------------------------
+memoria crearMemoria(t_config *configuracion) {
 	memoria memoriaAuxiliar;
-	if (dictionary_size(configuracion->properties) != 7) {
-		perror("Faltan parametros para inicializar memoria");
-		exit(-1);
-	}
+	verificarParametrosCrear(configuracion,7);
 	memoriaAuxiliar.puerto = config_get_int_value(configuracion, "PUERTO");
 	memoriaAuxiliar.marcos = config_get_int_value(configuracion, "MARCOS");
 	memoriaAuxiliar.marco_size = config_get_int_value(configuracion,"MARCO_SIZE");
@@ -30,7 +27,7 @@ memoria memoriaCrear(t_config *configuracion) {
 memoria inicializarMemoria(char *path) {
 	t_config *configuracionMemoria = (t_config*)malloc(sizeof(t_config));
 	*configuracionMemoria = generarT_ConfigParaCargar(path);
-	memoria memoriaSistema = memoriaCrear(configuracionMemoria);
+	memoria memoriaSistema = crearMemoria(configuracionMemoria);
 	return memoriaSistema;
 	free(configuracionMemoria);
 }
@@ -46,10 +43,7 @@ void mostrarConfiguracionesMemoria(memoria memoria) {
 }
 
 int main(int argc, char *argv[]) {
-	if (argc != 2) {
-		perror("Faltan parametros");
-		exit(-1);
-	}
+	verificarParametrosInicio(argc);
 	memoria memoria = inicializarMemoria(argv[1]);
 	mostrarConfiguracionesMemoria(memoria);
 	int socketAceptadorMemoria, socketListenerMemoria;

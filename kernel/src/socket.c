@@ -9,7 +9,6 @@
  */
 
 #include "funcionesSockets.h"
-
 typedef struct {
 	int puerto;
 	int socket_cliente;

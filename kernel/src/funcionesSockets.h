@@ -32,5 +32,9 @@ int verificarErrorSetsockopt(int);
 int verificarErrorBind(int, struct sockaddr_in);
 
 int verificarErrorListen(int);
-
+void verificarErrorServer(struct hostent *, char*);
+void verificarErrorSend(int, int );
+void verificarErrorSelect(int );
+void verificarErrorConexion(int, int);
+void verificarErrorAccept(int, struct sockaddr_in);
 #endif /* FUNCIONESGENERICAS_H_ */

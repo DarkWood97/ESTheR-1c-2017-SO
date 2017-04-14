@@ -47,4 +47,17 @@ void recibirMensajeDeKernel(int socketKernel){
 	printf("%s",buff);
 	free(buff);
 }
-
+void verificarParametrosInicio(int argc)
+{
+	if(argc!=2){
+			perror("Faltan parametros");
+			exit(-1);
+		}
+}
+void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
+{
+	if (dictionary_size(configuracion->properties) != sizeStruct) {
+			perror("Faltan parametros para inicializar el kernel");
+			exit(-1);
+		}
+}

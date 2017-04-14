@@ -28,7 +28,43 @@
 #include <commons/collections/list.h>
 
 #define backlog 10 //cantidad de conexiones en la cola
+void verificarErrorAccept(int verificacion, struct sockaddr_in su_addr)
+{
+	if(verificacion==-1)
+	{
+			perror("Error de accept");
+			exit(-1);
+	}
+	else
+	{
+			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
+	}
 
+}
+void verificarErrorConexion(int verificador, int socket_server)
+{
+	if (verificador == -1) {
+			perror("Error al conectar con el servidor.");
+			close(socket_server);
+			//exit(-1);		Sacarlo cuando la conexion a memoria este hecha
+		}
+}
+void verificarErrorSend(int verificacion, int socket)
+{
+	if (verificacion == -1) {
+				perror("Error de send");
+				close(socket);
+				exit(-1);
+			}
+}
+struct hostent* verificarErrorServer(struct hostent *infoDelServer, char* ip)
+{
+	if ((infoDelServer = gethostbyname(ip)) == NULL) {
+			perror("Error al obtener datos del server.");
+			exit(-1);
+		}
+	return infoDelServer;
+}
 int verificarErrorSocket(int socket) {
 	if (socket == -1) {
 		perror("Error de socket");
