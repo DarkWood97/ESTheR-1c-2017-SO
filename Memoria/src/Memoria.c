@@ -46,18 +46,19 @@ int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	//char* path = "Debug/memoria.config";
 	memoria memoria = inicializarMemoria(argv[1]);
-	fd_set master, read_Socket;
+	//memoria memoria = inicializarMemoria(path);
+	fd_set master, read_socket;
 	FD_ZERO(&master);
-	FD_ZERO(&read_Socket);
+	FD_ZERO(&read_socket);
 	mostrarConfiguracionesMemoria(memoria);
 	int socketListenerMemoria,socketMax;
 	socketListenerMemoria = ponerseAEscucharClientes(memoria.puerto, 0);
 	socketMax=socketListenerMemoria;
 	FD_SET(socketListenerMemoria,&master);
 	while(1){
-		read_Socket=master;
-		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListenerMemoria,&read_Socket);
-		recibirMensajesDeClientes(socketMax,&master,socketListenerMemoria, &read_Socket);
+		read_socket = master;
+		fd_set *a = seleccionarYAceptarConexiones(master,socketMax,socketListenerMemoria);
+		recibirMensajesDeClientes(socketMax,a);
 	}
 	return EXIT_SUCCESS;
 }

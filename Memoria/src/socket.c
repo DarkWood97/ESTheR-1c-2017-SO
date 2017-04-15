@@ -8,7 +8,7 @@
  ============================================================================
  */
 
-#include "funcionesSockets.h"
+#include "../Socket/src/funcionesSockets.h"
 
 typedef struct {
 	int puerto;
@@ -52,36 +52,38 @@ int aceptarConexionDeCliente(int socketListener) {
 	return socketAceptador;
 }
 
-int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEscucha,fd_set (*read_sockets2)){
+fd_set* seleccionarYAceptarConexiones(fd_set master, int socketMax, int socketEscucha){
 	int socketAceptador, socketRevisado;
-	if(select(socketMax+1, &(*read_sockets2), NULL, NULL,NULL)==-1){
+	fd_set* read_sockets = malloc(sizeof(fd_set));
+	FD_ZERO(&read_sockets);
+	read_sockets = master;
+	if(select(socketMax+1, read_sockets, NULL, NULL,NULL)==-1){
 		perror("Error de Select");
 		exit(-1);
 	}
 	for(socketRevisado = 0; socketRevisado <= socketMax ; socketRevisado++){
-		if(FD_ISSET(socketRevisado,&(*read_sockets2))){
+		if(FD_ISSET(socketRevisado,read_sockets)){
 			if(socketRevisado == socketEscucha){
 				socketAceptador = aceptarConexionDeCliente(socketEscucha);
-				FD_SET(socketAceptador, &(*master));
+				FD_SET(socketAceptador, &master);
 				if(socketAceptador>socketMax){
 					socketMax = socketAceptador;
 				}
-				FD_CLR(socketRevisado,&(*read_sockets2));
+				FD_CLR(socketRevisado,read_sockets);
 			}
 		}
 	}
-	return socketMax;
+	return read_sockets;
 }
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
-
-	int longitud =	sizeof(mensaje)+1; //sino no lee \0
+	int longitud =	strlen(mensaje)+1; //sino no lee \0
 	//int i = 0;
 	//for (; i < longitud; i++) {
-		if (send(socket, mensaje, longitud, 0) == -1) {
-			perror("Error de send");
-			close(socket);
-			exit(-1);
+	if (send(socket, mensaje, longitud, 0) == -1) {
+		perror("Error de send");
+		close(socket);
+		exit(-1);
 		//}
 	}
 	return true;
@@ -97,7 +99,7 @@ void chequearErrorDeSend (int socketAEnviarMensaje, int bytesAEnviar, char* cade
 
 void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
 	if(bytesRecibidos == 0){
-		printf("El socket cliente %d\n corto", socketCliente);
+		printf("El socket cliente %d corto\n", socketCliente);
 	}
 	else{
 		perror("Error al recibir mensaje de cliente");
@@ -105,20 +107,25 @@ void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
 	}
 }
 
-void recibirMensajesDeClientes(int socketMax,fd_set (*master),  fd_set (*read_Socket2)){
+fd_set recibirMensajesDeClientes(int socketMax,fd_set read_master){
 	int socketAChequear, bytesRecibidos = 0;
+	fd_set read_sockets;
+	FD_ZERO(&read_sockets);
+	read_sockets = read_master;
+	int tamMsj = sizeof(char)*16;
 	char *buff = malloc(sizeof(char)*16);
 	for(socketAChequear=0; socketAChequear<=socketMax; socketAChequear++){
-		if(FD_ISSET(socketAChequear,&(*read_Socket2))){
-			if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
+		if(FD_ISSET(socketAChequear,&read_sockets)){
+			if((bytesRecibidos = recv(socketAChequear,buff,tamMsj,0))<=0){
 				revisarSiCortoCliente(socketAChequear, bytesRecibidos);
 				close(socketAChequear);
-				FD_CLR(socketAChequear, &(*master));
+				FD_CLR(socketAChequear, &read_master);
 			}else{
 				printf("%s",buff);
 			}
 		}
 	}
+	return read_sockets;
 }
 
 void recibirYReenviarMensaje(int socketMax,fd_set (*master), int socketEscucha, fd_set (*read_Socket)){

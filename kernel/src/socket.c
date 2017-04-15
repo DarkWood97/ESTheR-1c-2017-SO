@@ -75,7 +75,7 @@ int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEsc
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
-	int longitud =	sizeof(mensaje)+1; //sino no lee \0
+	int longitud =	strlen(mensaje)+1; //sino no lee \0
 	//int i = 0;
 	//for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
@@ -97,7 +97,7 @@ void chequearErrorDeSend (int socketAEnviarMensaje, int bytesAEnviar, char* cade
 
 void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
 	if(bytesRecibidos == 0){
-		printf("El socket cliente %d\n corto", socketCliente);
+		printf("El socket cliente %d corto\n", socketCliente);
 	}
 	else{
 		perror("Error al recibir mensaje de cliente");
@@ -105,29 +105,33 @@ void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
 	}
 }
 
-void recibirYReenviarMensaje(int socketMax,fd_set (*master), int socketEscucha, fd_set (*read_Socket)){
+fd_set recibirYReenviarMensaje(int socketMax,fd_set master, int socketEscucha){
 	int socketAChequear, socketsAEnviarMensaje, bytesRecibidos = 0;
-	char *buff = malloc(sizeof(char)*16);
+	fd_set read_sockets;
+	FD_ZERO(&read_sockets);
+	read_sockets = master;
+	int tamMsj = sizeof(char)*16;
+	char *buff = malloc(tamMsj);
 	for(socketAChequear=0; socketAChequear<=socketMax; socketAChequear++){
-		if(FD_ISSET(socketAChequear,&(*read_Socket))){
-			if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
+		if(FD_ISSET(socketAChequear,&read_sockets)){
+			if((bytesRecibidos = recv(socketAChequear,buff,tamMsj,0))<=0){
 				revisarSiCortoCliente(socketAChequear, bytesRecibidos);
 				close(socketAChequear);
-				FD_CLR(socketAChequear, &(*master));
+				FD_CLR(socketAChequear, &read_sockets);
 			}else{
 				for(socketsAEnviarMensaje=0;socketsAEnviarMensaje<=socketMax;socketsAEnviarMensaje++){
-					if(FD_ISSET(socketsAEnviarMensaje, &(*master))){
+					if(FD_ISSET(socketsAEnviarMensaje, &read_sockets)){
 						if(socketsAEnviarMensaje != socketEscucha){
 							chequearErrorDeSend(socketsAEnviarMensaje, bytesRecibidos, buff);
 						}
 					}
 				}
-				FD_CLR(socketAChequear,&(*read_Socket));
+				FD_CLR(socketAChequear,&read_sockets);
 				printf("%s",buff);
-
 			}
 		}
 	}
+	return read_sockets;
 }
 
 int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto

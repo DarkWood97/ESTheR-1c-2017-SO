@@ -113,8 +113,6 @@ int main(int argc, char *argv[]) {
 		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListener,&read_Socket);
 		recibirYReenviarMensaje(socketMax,&master,socketListener,&read_Socket);
 	}
-
-
 	//seleccionarYAceptarSockets(socketListenerCPU);
 	return EXIT_SUCCESS;
 }
