@@ -99,18 +99,21 @@ int main(int argc, char *argv[]) {
 	mostrarConfiguracionesKernel(kernel);
 	int socketParaMemoria, socketParaFileSystem, socketMax;
 	int socketListener = ponerseAEscucharClientes(kernel.puerto_Prog, 0);
-	socketMax=socketListener;
 	FD_SET(socketListener,&master);
 	//int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
 	//int socketAceptador = aceptarConexion(socketListener);
 	//int socketAceptadorCPU = aceptarConexion(socketListenerCPU);
 	socketParaMemoria = conectarAServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
 	socketParaFileSystem = conectarAServer(kernel.ip_FS.numero, kernel.puerto_FS);
+	FD_SET(socketParaMemoria,&master);
+	FD_SET(socketParaFileSystem,&master);
+	socketMax =MAX(socketListener,MAX(socketParaMemoria,socketParaFileSystem));
 	while(1){
 		read_Socket=master;
 		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListener,&read_Socket);
 		recibirYReenviarMensaje(socketMax,&master,socketListener,&read_Socket);
 	}
+
 
 	//seleccionarYAceptarSockets(socketListenerCPU);
 	return EXIT_SUCCESS;

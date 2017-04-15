@@ -44,6 +44,7 @@ void mostrarConfiguracionesMemoria(memoria memoria) {
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
 	memoria memoria = inicializarMemoria(argv[1]);
 	fd_set master, read_Socket;
 	FD_ZERO(&master);
@@ -56,7 +57,7 @@ int main(int argc, char *argv[]) {
 	while(1){
 		read_Socket=master;
 		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListenerMemoria,&read_Socket);
-		recibirMensajesDeClientes();
+		recibirMensajesDeClientes(socketMax,&master,socketListenerMemoria, &read_Socket);
 	}
 	return EXIT_SUCCESS;
 }

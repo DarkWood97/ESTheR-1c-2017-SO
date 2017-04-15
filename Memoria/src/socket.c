@@ -52,21 +52,21 @@ int aceptarConexionDeCliente(int socketListener) {
 	return socketAceptador;
 }
 
-int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEscucha,fd_set (*read_sockets)){
+int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEscucha,fd_set (*read_sockets2)){
 	int socketAceptador, socketRevisado;
-	if(select(socketMax+1, &(*read_sockets), NULL, NULL,NULL)==-1){
+	if(select(socketMax+1, &(*read_sockets2), NULL, NULL,NULL)==-1){
 		perror("Error de Select");
 		exit(-1);
 	}
 	for(socketRevisado = 0; socketRevisado <= socketMax ; socketRevisado++){
-		if(FD_ISSET(socketRevisado,&(*read_sockets))){
+		if(FD_ISSET(socketRevisado,&(*read_sockets2))){
 			if(socketRevisado == socketEscucha){
 				socketAceptador = aceptarConexionDeCliente(socketEscucha);
 				FD_SET(socketAceptador, &(*master));
 				if(socketAceptador>socketMax){
 					socketMax = socketAceptador;
 				}
-				FD_CLR(socketRevisado,&(*read_sockets));
+				FD_CLR(socketRevisado,&(*read_sockets2));
 			}
 		}
 	}
@@ -105,11 +105,11 @@ void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
 	}
 }
 
-void recibirMensajesDeClientes(int socketMax,fd_set (*master),  fd_set (*read_Socket)){
+void recibirMensajesDeClientes(int socketMax,fd_set (*master),  fd_set (*read_Socket2)){
 	int socketAChequear, bytesRecibidos = 0;
 	char *buff = malloc(sizeof(char)*16);
 	for(socketAChequear=0; socketAChequear<=socketMax; socketAChequear++){
-		if(FD_ISSET(socketAChequear,&(*read_Socket))){
+		if(FD_ISSET(socketAChequear,&(*read_Socket2))){
 			if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
 				revisarSiCortoCliente(socketAChequear, bytesRecibidos);
 				close(socketAChequear);
