@@ -57,10 +57,10 @@ void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 //------------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
-//	verificarParametrosInicio(argc);
+	//verificarParametrosInicio(argc);
 	char *path = "Debug/consola.config";
 	consola nuevaConsola = inicializarConsola(path);
-//	consola nuevaConsola = inicializarConsola(argv[1]);
+	//consola nuevaConsola = inicializarConsola(argv[1]);
 	mostrar_consola(nuevaConsola);
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
