@@ -45,10 +45,18 @@ void mostrarConfiguracionesMemoria(memoria memoria) {
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	memoria memoria = inicializarMemoria(argv[1]);
+	fd_set master, read_Socket;
+	FD_ZERO(&master);
+	FD_ZERO(&read_Socket);
 	mostrarConfiguracionesMemoria(memoria);
-	int socketAceptadorMemoria, socketListenerMemoria;
+	int socketListenerMemoria,socketMax;
 	socketListenerMemoria = ponerseAEscucharClientes(memoria.puerto, 0);
-	seleccionarYAceptarSockets(socketListenerMemoria);
-	recibirMensajeDeKernel(socketAceptadorMemoria);
+	socketMax=socketListenerMemoria;
+	FD_SET(socketListenerMemoria,&master);
+	while(1){
+		read_Socket=master;
+		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListenerMemoria,&read_Socket);
+		recibirMensajesDeClientes();
+	}
 	return EXIT_SUCCESS;
 }

@@ -89,12 +89,13 @@ void imprimirArrayDeInt(int arrayDeInt[]){
 
 
 int main(int argc, char *argv[]) {
-	//verificarParametrosInicio(argc);
-	char *path = "Debug/kernel.config";
-	kernel kernel = inicializarKernel(path);
-	//kernel kernel = inicializarKernel(argv[1]);
-	fd_set master;
+	verificarParametrosInicio(argc);
+	//char *path = "Debug/kernel.config";
+	//kernel kernel = inicializarKernel(path);
+	kernel kernel = inicializarKernel(argv[1]);
+	fd_set master, read_Socket;
 	FD_ZERO(&master);
+	FD_ZERO(&read_Socket);
 	mostrarConfiguracionesKernel(kernel);
 	int socketParaMemoria, socketParaFileSystem, socketMax;
 	int socketListener = ponerseAEscucharClientes(kernel.puerto_Prog, 0);
@@ -106,8 +107,9 @@ int main(int argc, char *argv[]) {
 	socketParaMemoria = conectarAServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
 	socketParaFileSystem = conectarAServer(kernel.ip_FS.numero, kernel.puerto_FS);
 	while(1){
-		//master = seleccionarYAceptarConexiones(master,&socketMax,socketListener);
-		recibirYReenviarMensaje(socketMax,master,socketListener);
+		read_Socket=master;
+		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListener,&read_Socket);
+		recibirYReenviarMensaje(socketMax,&master,socketListener,&read_Socket);
 	}
 
 	//seleccionarYAceptarSockets(socketListenerCPU);

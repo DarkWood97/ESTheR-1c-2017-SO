@@ -52,27 +52,25 @@ int aceptarConexionDeCliente(int socketListener) {
 	return socketAceptador;
 }
 
-fd_set seleccionarYAceptarConexiones(fd_set master, int *socketMax, int socketEscucha){
+int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEscucha,fd_set (*read_sockets)){
 	int socketAceptador, socketRevisado;
-	fd_set read_sockets;
-	FD_ZERO(&read_sockets);
-	read_sockets = master;
-	if(select(socketMax+1, &read_sockets, NULL, NULL,NULL)==-1){
+	if(select(socketMax+1, &(*read_sockets), NULL, NULL,NULL)==-1){
 		perror("Error de Select");
 		exit(-1);
 	}
 	for(socketRevisado = 0; socketRevisado <= socketMax ; socketRevisado++){
-		if(FD_ISSET(socketRevisado,&read_sockets)){
+		if(FD_ISSET(socketRevisado,&(*read_sockets))){
 			if(socketRevisado == socketEscucha){
 				socketAceptador = aceptarConexionDeCliente(socketEscucha);
-				FD_SET(socketAceptador, &master);
+				FD_SET(socketAceptador, &(*master));
 				if(socketAceptador>socketMax){
 					socketMax = socketAceptador;
 				}
+				FD_CLR(socketRevisado,&(*read_sockets));
 			}
 		}
 	}
-	return master;
+	return socketMax;
 }
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
@@ -107,23 +105,27 @@ void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
 	}
 }
 
-void recibirYReenviarMensaje(int socketMax,fd_set master, int socketEscucha){
+void recibirYReenviarMensaje(int socketMax,fd_set (*master), int socketEscucha, fd_set (*read_Socket)){
 	int socketAChequear, socketsAEnviarMensaje, bytesRecibidos = 0;
 	char *buff = malloc(sizeof(char)*16);
 	for(socketAChequear=0; socketAChequear<=socketMax; socketAChequear++){
-		if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
-			revisarSiCortoCliente(socketAChequear, bytesRecibidos);
-			close(socketAChequear);
-			FD_CLR(socketAChequear, &master);
-		}else{
-			for(socketsAEnviarMensaje=0;socketsAEnviarMensaje<=socketMax;socketsAEnviarMensaje++){
-				if(FD_ISSET(socketsAEnviarMensaje, &master)){
-					if(socketsAEnviarMensaje != socketEscucha){
-						chequearErrorDeSend(socketsAEnviarMensaje, bytesRecibidos, buff);
+		if(FD_ISSET(socketAChequear,&(*read_Socket))){
+			if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
+				revisarSiCortoCliente(socketAChequear, bytesRecibidos);
+				close(socketAChequear);
+				FD_CLR(socketAChequear, &(*master));
+			}else{
+				for(socketsAEnviarMensaje=0;socketsAEnviarMensaje<=socketMax;socketsAEnviarMensaje++){
+					if(FD_ISSET(socketsAEnviarMensaje, &(*master))){
+						if(socketsAEnviarMensaje != socketEscucha){
+							chequearErrorDeSend(socketsAEnviarMensaje, bytesRecibidos, buff);
+						}
 					}
 				}
+				FD_CLR(socketAChequear,&(*read_Socket));
+				printf("%s",buff);
+
 			}
-			printf("%s\n",buff);
 		}
 	}
 }

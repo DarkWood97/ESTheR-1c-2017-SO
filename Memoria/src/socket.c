@@ -52,69 +52,31 @@ int aceptarConexionDeCliente(int socketListener) {
 	return socketAceptador;
 }
 
-void seleccionarYAceptarSockets(int socketListener) {
-	int fdmax = socketListener, socketAceptador, nbytes;
-	fd_set master, read_fds;
-	char* buff = (char*) malloc(16);
-	FD_ZERO(&master);
-	FD_ZERO(&read_fds);
-	FD_SET(socketListener, &master);
-	int i, j;
-	while (1) {
-		read_fds = master;
-		if (select(fdmax + 1, &read_fds, NULL, NULL, NULL) == -1) {
-			perror("Error de select");
-			exit(1);
-		}
-		for (i = 0; i <= fdmax; i++) {
-			if (FD_ISSET(i, &read_fds)) {
-				if (i == socketListener) {
-					socketAceptador = aceptarConexionDeCliente(socketListener);
-					FD_SET(socketAceptador, &master);
-					if (socketAceptador > fdmax) {
-						fdmax = socketAceptador;
-					}
-				} else {
-					if ((nbytes = recv(i, buff, sizeof(buff), 0)) <= 0) {
-						if (nbytes == 0) {
-							printf("El socket cliente %d corto", i);
-						} else {
-							perror("Error al recibir mensaje de cliente");
-							exit(-1);
-						}
-						close(i);
-						FD_CLR(i, &master);
-					} else {
-						//atenderPeticion(SocketQuePide, buff);
-						for (j = 0; j <= fdmax; j++) {
-							if (FD_ISSET(j, &master)) {
-								if (j != socketListener) {
-									if (send(j, buff, nbytes, 0) == -1) {
-										perror("Error al enviar mensaje a cliente");
-										close(j);
-										exit(-1);
-									}
-								}
-							}
-						}
-						/*
-						 * Falta hacer el send y ver si es necesario verificar si la cantidad enviada es igual a nbytes que devuelve
-						 * la funcion. Para la primer entrega se pide unicamente enviar un mensaje de tamaño fijo, pero para las proximas
-						 * va a ser de tamaño variable. Ver!
-						 * Solucion: implementar el while 1 en el main de kernel, modularizar la parte de select y receive para que sea
-						 * funcional para las proximas entregas.
-						 */
-					}
+int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEscucha,fd_set (*read_sockets)){
+	int socketAceptador, socketRevisado;
+	if(select(socketMax+1, &(*read_sockets), NULL, NULL,NULL)==-1){
+		perror("Error de Select");
+		exit(-1);
+	}
+	for(socketRevisado = 0; socketRevisado <= socketMax ; socketRevisado++){
+		if(FD_ISSET(socketRevisado,&(*read_sockets))){
+			if(socketRevisado == socketEscucha){
+				socketAceptador = aceptarConexionDeCliente(socketEscucha);
+				FD_SET(socketAceptador, &(*master));
+				if(socketAceptador>socketMax){
+					socketMax = socketAceptador;
 				}
+				FD_CLR(socketRevisado,&(*read_sockets));
 			}
 		}
 	}
+	return socketMax;
 }
 
 bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
-	int longitud = string_length(mensaje)+1; //sino no lee \0
-	int i = 0;
+	int longitud =	sizeof(mensaje)+1; //sino no lee \0
+	//int i = 0;
 	//for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
@@ -123,6 +85,65 @@ bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 		//}
 	}
 	return true;
+}
+
+void chequearErrorDeSend (int socketAEnviarMensaje, int bytesAEnviar, char* cadenaAEnviar){
+	if(send(socketAEnviarMensaje,cadenaAEnviar,bytesAEnviar,0) == -1){
+		perror("Error al enviar mensaje a cliente");
+		close(socketAEnviarMensaje);
+		exit(-1);
+	}
+}
+
+void revisarSiCortoCliente(int socketCliente, int bytesRecibidos){
+	if(bytesRecibidos == 0){
+		printf("El socket cliente %d\n corto", socketCliente);
+	}
+	else{
+		perror("Error al recibir mensaje de cliente");
+		exit(-1);
+	}
+}
+
+void recibirMensajesDeClientes(int socketMax,fd_set (*master),  fd_set (*read_Socket)){
+	int socketAChequear, bytesRecibidos = 0;
+	char *buff = malloc(sizeof(char)*16);
+	for(socketAChequear=0; socketAChequear<=socketMax; socketAChequear++){
+		if(FD_ISSET(socketAChequear,&(*read_Socket))){
+			if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
+				revisarSiCortoCliente(socketAChequear, bytesRecibidos);
+				close(socketAChequear);
+				FD_CLR(socketAChequear, &(*master));
+			}else{
+				printf("%s",buff);
+			}
+		}
+	}
+}
+
+void recibirYReenviarMensaje(int socketMax,fd_set (*master), int socketEscucha, fd_set (*read_Socket)){
+	int socketAChequear, socketsAEnviarMensaje, bytesRecibidos = 0;
+	char *buff = malloc(sizeof(char)*16);
+	for(socketAChequear=0; socketAChequear<=socketMax; socketAChequear++){
+		if(FD_ISSET(socketAChequear,&(*read_Socket))){
+			if((bytesRecibidos = recv(socketAChequear,buff,sizeof(buff),0))<=0){
+				revisarSiCortoCliente(socketAChequear, bytesRecibidos);
+				close(socketAChequear);
+				FD_CLR(socketAChequear, &(*master));
+			}else{
+				for(socketsAEnviarMensaje=0;socketsAEnviarMensaje<=socketMax;socketsAEnviarMensaje++){
+					if(FD_ISSET(socketsAEnviarMensaje, &(*master))){
+						if(socketsAEnviarMensaje != socketEscucha){
+							chequearErrorDeSend(socketsAEnviarMensaje, bytesRecibidos, buff);
+						}
+					}
+				}
+				FD_CLR(socketAChequear,&(*read_Socket));
+				printf("%s",buff);
+
+			}
+		}
+	}
 }
 
 int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto
@@ -150,7 +171,7 @@ int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socke
 			sizeof(struct sockaddr)) == -1) {
 		perror("Error al conectar con el servidor.");
 		close(socket_server);
-		exit(-1);
+	//	exit(-1);
 	}
 
 	return socket_server;
