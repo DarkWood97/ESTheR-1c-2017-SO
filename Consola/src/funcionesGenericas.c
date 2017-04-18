@@ -40,8 +40,8 @@ t_config generarT_ConfigParaCargar(char *path) {
 
 void recibirMensajeDeKernel(int socketKernel){
 	char *buff = malloc(sizeof(char)*16);
-	int tamanioBuff = sizeof(char)*16;
-	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
+//	int tamanioBuff = strlen(buff)+1;
+	if(recv(socketKernel,buff,16,0) == -1){ //Implementar protocolo donde esta el 16 Tamano de mensaje
 		perror("Error de receive");
 		free(buff);
 		exit(-1);

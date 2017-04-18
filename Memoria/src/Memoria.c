@@ -47,18 +47,10 @@ int main(int argc, char *argv[]) {
 	//char* path = "Debug/memoria.config";
 	memoria memoria = inicializarMemoria(argv[1]);
 	//memoria memoria = inicializarMemoria(path);
-	fd_set master, read_socket;
-	FD_ZERO(&master);
-	FD_ZERO(&read_socket);
 	mostrarConfiguracionesMemoria(memoria);
-	int socketListenerMemoria,socketMax;
-	socketListenerMemoria = ponerseAEscucharClientes(memoria.puerto, 0);
-	socketMax=socketListenerMemoria;
-	FD_SET(socketListenerMemoria,&master);
-	while(1){
-		read_socket = master;
-		fd_set *a = seleccionarYAceptarConexiones(master,socketMax,socketListenerMemoria);
-		recibirMensajesDeClientes(socketMax,a);
-	}
+	int socketEscuchaMemoria,socketClienteKernel;
+	socketEscuchaMemoria = ponerseAEscucharClientes(memoria.puerto, 0);
+	socketClienteKernel = aceptarConexionDeCliente(socketEscuchaMemoria);
+	recibirMensajeDeKernel(socketClienteKernel);
 	return EXIT_SUCCESS;
 }

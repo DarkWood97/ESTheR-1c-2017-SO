@@ -39,7 +39,7 @@ t_config generarT_ConfigParaCargar(char *path) {
 
 void recibirMensajeDeKernel(int socketKernel){
 	char *buff = malloc(sizeof(char)*16);
-	int tamanioBuff = sizeof(buff);
+	int tamanioBuff = strlen(buff)+1;
 	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
 		perror("Error de receive");
 		exit(-1);

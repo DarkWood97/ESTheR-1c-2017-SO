@@ -93,27 +93,55 @@ int main(int argc, char *argv[]) {
 	//char *path = "Debug/kernel.config";
 	//kernel kernel = inicializarKernel(path);
 	kernel kernel = inicializarKernel(argv[1]);
-	fd_set master, read_Socket;
-	FD_ZERO(&master);
-	FD_ZERO(&read_Socket);
+	fd_set socketsCliente, socketsConPeticion, socketsMaster; //socketsMaster son los sockets clientes + sockets servidor
+	FD_ZERO(&socketsCliente);
+	FD_ZERO(&socketsConPeticion);
+	FD_ZERO(&socketsMaster);
 	mostrarConfiguracionesKernel(kernel);
-	int socketParaMemoria, socketParaFileSystem, socketMax;
-	int socketListener = ponerseAEscucharClientes(kernel.puerto_Prog, 0);
-	FD_SET(socketListener,&master);
-	//int socketListenerCPU = ponerseAEscuchar(kernel.puerto_Cpu, 0);
-	//int socketAceptador = aceptarConexion(socketListener);
-	//int socketAceptadorCPU = aceptarConexion(socketListenerCPU);
+	char *buff = malloc(sizeof(char)*16);
+	int socketParaMemoria, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
+	int tamMsj = strlen(buff);
+	int socketEscucha = ponerseAEscucharClientes(kernel.puerto_Prog, 0);
 	socketParaMemoria = conectarAServer(kernel.ip_Memoria.numero, kernel.puerto_Memoria);
 	socketParaFileSystem = conectarAServer(kernel.ip_FS.numero, kernel.puerto_FS);
-	FD_SET(socketParaMemoria,&master);
-	FD_SET(socketParaFileSystem,&master);
-	socketMax =MAX(socketListener,MAX(socketParaMemoria,socketParaFileSystem));
+	FD_SET(socketEscucha,&socketsCliente);
+	FD_SET(socketParaMemoria,&socketsMaster);
+	FD_SET(socketParaFileSystem,&socketsMaster);
+	socketMaxCliente = socketEscucha;
+	socketMaxMaster = calcularSocketMaximo(socketParaMemoria, socketParaFileSystem);
+
 	while(1){
-		read_Socket=master;
-		socketMax = seleccionarYAceptarConexiones(&master,socketMax,socketListener,&read_Socket);
-		recibirYReenviarMensaje(socketMax,&master,socketListener,&read_Socket);
+		socketsConPeticion=socketsCliente;
+		if(select(socketMaxCliente+1, &socketsConPeticion, NULL, NULL, NULL) == -1){
+			perror("Error de select");
+			exit(-1);
+		}
+		for(socketAChequear = 0; socketAChequear<=socketMaxCliente; socketAChequear++){
+			if(FD_ISSET(socketAChequear, &socketsConPeticion)){
+				if(socketAChequear == socketEscucha){
+					socketQueAcepta = aceptarConexionDeCliente(socketEscucha);
+					FD_SET(socketQueAcepta, &socketsMaster);
+					FD_SET(socketQueAcepta, &socketsCliente);
+					socketMaxCliente = calcularSocketMaximo(socketQueAcepta, socketMaxCliente);
+					socketMaxMaster = calcularSocketMaximo(socketQueAcepta, socketMaxMaster);
+				}else {
+					if((bytesRecibidos = recv(socketAChequear, buff, 16, 0))<=0){
+						revisarSiCortoCliente(socketAChequear, bytesRecibidos);
+						close(socketAChequear);
+						FD_CLR(socketAChequear,&socketsMaster);
+						FD_CLR(socketAChequear, &socketsCliente);
+					} else {
+						for(socketAEnviarMensaje = 0; socketAEnviarMensaje<=socketMaxMaster; socketAEnviarMensaje++){
+							if(FD_ISSET(socketAEnviarMensaje,&socketsMaster)){
+								chequearErrorDeSend(socketAEnviarMensaje, bytesRecibidos,buff);
+							}
+						}
+						printf("%s\n",buff);
+					}
+				}
+			}
+		}
 	}
-	//seleccionarYAceptarSockets(socketListenerCPU);
 	return EXIT_SUCCESS;
 }
 

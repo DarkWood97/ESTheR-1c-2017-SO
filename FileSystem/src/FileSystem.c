@@ -60,9 +60,9 @@ int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	fileSystem fileSystem = inicializarFileSystem(argv[1]);
 	mostrarConfiguracionesFileSystem(fileSystem);
-	int socketQueAceptaFS, socketListenerFS;
-	socketListenerFS = ponerseAEscucharClientes(fileSystem.puerto, 0);
-	socketQueAceptaFS = aceptarConexionDeCliente(socketListenerFS);
-	recibirMensajeDeKernel(socketQueAceptaFS);
+	int socketClienteParaKernel, socketEscuchaFS;
+	socketEscuchaFS = ponerseAEscucharClientes(fileSystem.puerto, 0);
+	socketClienteParaKernel = aceptarConexionDeCliente(socketEscuchaFS);
+	recibirMensajeDeKernel(socketClienteParaKernel);
 	return EXIT_SUCCESS;
 }

@@ -165,3 +165,13 @@ int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socke
 	return socket_server;
 
 }
+
+
+int calcularSocketMaximo(int socketNuevo, int socketMaximoPrevio){
+	if(socketNuevo>socketMaximoPrevio){
+		return socketNuevo;
+	}
+	else{
+		return socketMaximoPrevio;
+	}
+}
