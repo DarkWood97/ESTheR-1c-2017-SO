@@ -25,7 +25,8 @@ consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 
 }
 
-consola inicializarConsola(char *path) {
+consola inicializarConsola() {
+	char * path="consola.config";
 	t_config *configuracion = (t_config*)malloc(sizeof(t_config));
 	*configuracion = generarT_ConfigParaCargar(path);
 	consola nueva_consola = consola_crear(configuracion);
@@ -58,16 +59,18 @@ void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
-	//char *path = "Debug/consola.config";
-	//consola nuevaConsola = inicializarConsola(path);
-	consola nuevaConsola = inicializarConsola(argv[1]);
+	consola nuevaConsola = inicializarConsola();
 	mostrar_consola(nuevaConsola);
+	int tamanioDelPath= strlen(argv[1]);
+	char *nombreDelArchivo=malloc((sizeof(char))*tamanioDelPath);
+	strcpy(nombreDelArchivo,argv[1]);
+
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	char* mensajeAEnviarAKernel;
-	mensajeAEnviarAKernel = recibirMensajePorTeclado();
-	verificarRecepcionMensaje(socketParaKernel,mensajeAEnviarAKernel);
-	free(mensajeAEnviarAKernel);
+	//mensajeAEnviarAKernel = recibirMensajePorTeclado();
+	verificarRecepcionMensaje(socketParaKernel,nombreDelArchivo);
+	free(nombreDelArchivo);
 	recibirMensajeDeKernel(socketParaKernel);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;
