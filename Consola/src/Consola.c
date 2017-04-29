@@ -25,8 +25,7 @@ consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 
 }
 
-consola inicializarConsola() {
-	char * path="consola.config";
+consola inicializarConsola(char* path) {
 	t_config *configuracion = (t_config*)malloc(sizeof(t_config));
 	*configuracion = generarT_ConfigParaCargar(path);
 	consola nueva_consola = consola_crear(configuracion);
@@ -37,13 +36,31 @@ void mostrar_consola(consola aMostrar) {
 	printf("IP=%s\n", aMostrar.ip_Kernel.numero);
 	printf("PUERTO=%i\n", aMostrar.puerto_kernel);
 }
+//----FUNCIONES DE ARCHIVOS RECIBIDOS---------------------------------
+void verificarArchivoAEnviar(char * archivo)
+{
+	if(strlen(archivo)==0)
+	{
+		printf("Error de archivo: No se recibio ningun path de archivo%s \n");
+		exit(-1);
+	}
+	FILE * archivoRecibido;
+	archivoRecibido=fopen(archivo,'r');
+	if(archivoRecibido == NULL)
+	{
+		printf("Error de archivo: El archivo recibido esta vacio");
+		exit(-1);
+	}
+	fclose(archivo);
+}
 //------FUNCIONES MENSAJES--------------------------------------------
-char * recibirMensajePorTeclado(){
-	char* mensajeARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
-	puts("Mensaje:");
+char * recibirArchivoPorTeclado(){
+	char* archivoARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
+	printf("Ingresar archivo:%s\n");
 //	scanf("%s", mensajeARecibir);
-	fgets(mensajeARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
-	return mensajeARecibir;
+	fgets(archivoARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
+	verificarArchivoAEnviar(archivoARecibir);
+	return archivoARecibir;
 }
 void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 {
@@ -59,20 +76,15 @@ void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
-	consola nuevaConsola = inicializarConsola();
+	consola nuevaConsola = inicializarConsola(argv[1]);
 	mostrar_consola(nuevaConsola);
-	int tamanioDelPath= strlen(argv[1]);
-	char *nombreDelArchivo=malloc((sizeof(char))*tamanioDelPath);
-	strcpy(nombreDelArchivo,argv[1]);
-
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char* mensajeAEnviarAKernel;
-	//mensajeAEnviarAKernel = recibirMensajePorTeclado();
-	verificarRecepcionMensaje(socketParaKernel,nombreDelArchivo);
-	free(nombreDelArchivo);
+	char* archivoAEnviarAKernel;
+	archivoAEnviarAKernel = recibirArchivoPorTeclado();
+	verificarRecepcionMensaje(socketParaKernel,archivoAEnviarAKernel);
+	free(archivoAEnviarAKernel);
 	recibirMensajeDeKernel(socketParaKernel);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;
-
 }
