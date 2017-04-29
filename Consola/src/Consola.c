@@ -36,6 +36,7 @@ void mostrar_consola(consola aMostrar) {
 	printf("IP=%s\n", aMostrar.ip_Kernel.numero);
 	printf("PUERTO=%i\n", aMostrar.puerto_kernel);
 }
+//-------------------------------------------------------------------
 //----FUNCIONES DE ARCHIVOS RECIBIDOS---------------------------------
 void verificarArchivoAEnviar(char * archivo)
 {
