@@ -11,20 +11,19 @@
 #include "funcionesGenericas.h"
 #include "socket.h"
 //--TYPEDEF-------------------------------------------------------------------
+typedef struct{
+  int tamMsj;
+  int tipoMsj;
+} header;
+typedef struct __attribute__((__packed__)){
+  header header;
+  char* mensaje;
+}paquete;
 
 typedef struct {
 	_ip ip_Kernel;
 	int puerto_kernel;
 } consola;
-typedef struct{
-  int tamMsj;
-  int tipoMsj;
-} header;
-
-typedef struct __attribute__((packed)){
-  header header;
-  char* mensaje;
-}paquete;
 
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
@@ -37,7 +36,7 @@ consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 
 }
 
-consola inicializarConsola(char* path) {
+consola inicializarPrograma(char* path) {
 	t_config *configuracion = (t_config*)malloc(sizeof(t_config));
 	*configuracion = generarT_ConfigParaCargar(path);
 	consola nueva_consola = consola_crear(configuracion);
@@ -66,6 +65,16 @@ char * recibirArchivoPorTeclado(){
 	verificarArchivoAEnviar(archivoARecibir);
 	return archivoARecibir;
 }
+bool enviarMensaje(int socket, paquete mensaje) { //Socket que envia mensaje
+
+	//int tamPaquete=sizeof(struct paquete);
+		if (send(socket, mensaje, tamPaquete, 0) == -1) {
+			perror("Error de send");
+			close(socket);
+			exit(-1);
+	}
+	return true;
+}
 void verificarRecepcionMensaje(int socket, paquete mensajeAEnviar)
 {
 	bool llegoMensaje;
@@ -86,16 +95,17 @@ paquete serializar(header headerDeMensaje, void *bufferDeData) {
 }
 void crearHeader(char* path, header enviar)
 {
-	int longitudPath=strlen(path);
+	int longitudPath=strlen(path)+1;
 	enviar.tamMsj=longitudPath;
 	enviar.tipoMsj = MENSAJE_PATH;
 }
+
 
 //------------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
-	consola nuevaConsola = inicializarConsola(argv[1]);
+	consola nuevaConsola = inicializarPrograma(argv[1]);
 	mostrar_consola(nuevaConsola);
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
