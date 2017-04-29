@@ -8,6 +8,6 @@
 #ifndef ANSISOP_H_
 #define ANSISOP_H_
 t_puntero definirVariable(t_nombre_variable);
-
+t_puntero obtenerPosicionVariable(t_nombre_variable);
 
 #endif /* ANSISOP_H_ */

@@ -13,11 +13,12 @@
 #include "socket.h"
 #include <parser/metadata_program.h>
 #include <parser/parser.h>
-#include <ansiSop.h>
+#include "ansiSop.h"
 
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
+		.AnSISOP_obtenerPosicionVariable = obtenerPosicionVariable,
 
 };
 //--TYPEDEF----------------------------------------------------------------

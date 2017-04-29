@@ -57,11 +57,11 @@
 					</folderInfo>
 					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.21909257.2143941428" name="ansiSop.c" rcbsApplicability="disable" resourcePath="src/ansiSop.c" toolsToInvoke="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.142555191.1203917370">
 						<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.142555191.1203917370" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.142555191">
-							<option id="gnu.c.compiler.option.include.paths.986392700" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+							<option id="gnu.c.compiler.option.include.paths.986392700" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 								<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket}&quot;"/>
 								<listOptionValue builtIn="false" value="&quot;${workspace_loc:/FuncionesGenericas}&quot;"/>
 								<listOptionValue builtIn="false" value="../commons"/>
-								<listOptionValue builtIn="false" value="../ansisop"/>
+								<listOptionValue builtIn="false" value="../parser"/>
 							</option>
 							<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1327945234" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 						</tool>
