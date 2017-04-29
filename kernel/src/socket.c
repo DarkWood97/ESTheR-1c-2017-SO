@@ -73,7 +73,7 @@ int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEsc
 	return socketMax;
 }
 
-bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
+bool enviarMensaje(int socket, void* mensaje) { //Socket que envia mensaje
 
 	int longitud =	strlen(mensaje)+1; //sino no lee \0
 	//int i = 0;

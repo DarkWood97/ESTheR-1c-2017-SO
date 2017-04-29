@@ -26,7 +26,15 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+typedef struct{
+  int tamMsj;
+  int tipoMsj;
+} header;
 
+typedef struct{
+  header header;
+  void* mensaje;
+}paquete;
 t_config generarT_ConfigParaCargar(char *path) {
 	t_config *configuracionDelComponente = (t_config*)malloc(sizeof(t_config));
 	if((configuracionDelComponente = config_create(path)) == NULL){
@@ -56,5 +64,4 @@ void verificarParametrosInicio(int argc)
 			exit(-1);
 		}
 }
-
 

@@ -18,7 +18,15 @@ typedef struct {
 	void (*fn_connectionClosed)();
 	void * data;
 } arg_escucharclientes;
+typedef struct{
+  int tamMsj;
+  int tipoMsj;
+} header;
 
+typedef struct{
+  header header;
+  char* mensaje;
+}paquete;
 int ponerseAEscucharClientes(int puerto, int protocolo) {
 	struct sockaddr_in mySocket;
 	int socketListener = socket(AF_INET, SOCK_STREAM, protocolo);
@@ -111,16 +119,13 @@ void seleccionarYAceptarSockets(int socketListener) {
 	}
 }
 
-bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
+bool enviarMensaje(int socket, paquete mensaje) { //Socket que envia mensaje
 
 	int longitud = string_length(mensaje)+1; //sino no lee \0
-//	int i = 0;
-	//for (; i < longitud; i++) {
 		if (send(socket, mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
 			exit(-1);
-		//}
 	}
 	return true;
 }

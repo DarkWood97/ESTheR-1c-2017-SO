@@ -34,6 +34,15 @@ typedef struct {
 	char *numero;
 }_ip;
 
+typedef struct{
+  int tamMsj;
+  int tipoMsj;
+} header;
+
+typedef struct{
+  header header;
+  void* mensaje;
+}paquete;
 
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);

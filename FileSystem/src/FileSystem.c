@@ -56,9 +56,9 @@ void borraArchivo(char* path) {
 	remove(path); //Bitmap?
 }
 
-int main(int argc, char *argv[]) {
-	verificarParametrosInicio(argc);
-	fileSystem fileSystem = inicializarFileSystem(argv[1]);
+int main() {
+	char *path="FileSystem/fileSystem.config"
+	fileSystem fileSystem = inicializarFileSystem(path);
 	mostrarConfiguracionesFileSystem(fileSystem);
 	int socketClienteParaKernel, socketEscuchaFS;
 	socketEscuchaFS = ponerseAEscucharClientes(fileSystem.puerto, 0);

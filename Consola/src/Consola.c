@@ -16,6 +16,18 @@ typedef struct {
 	_ip ip_Kernel;
 	int puerto_kernel;
 } consola;
+typedef struct{
+  int tamMsj;
+  int tipoMsj;
+} header;
+
+typedef struct __attribute__((packed)){
+  header header;
+  char* mensaje;
+}paquete;
+
+#define MENSAJE_IMPRIMIR 101
+#define MENSAJE_PATH  103
 //----FUNCIONES CONSOLA-------------------------------------------------------
 consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo si no tiene error
 	consola consola_auxiliar;
@@ -42,17 +54,8 @@ void verificarArchivoAEnviar(char * archivo)
 {
 	if(strlen(archivo)==0)
 	{
-		printf("Error de archivo: No se recibio ningun path de archivo%s \n");
-		exit(-1);
+		printf("Error de archivo: No se recibio ningun path de archivo%s\n");
 	}
-	FILE * archivoRecibido;
-	archivoRecibido=fopen(archivo,'r');
-	if(archivoRecibido == NULL)
-	{
-		printf("Error de archivo: El archivo recibido esta vacio");
-		exit(-1);
-	}
-	fclose(archivo);
 }
 //------FUNCIONES MENSAJES--------------------------------------------
 char * recibirArchivoPorTeclado(){
@@ -63,14 +66,29 @@ char * recibirArchivoPorTeclado(){
 	verificarArchivoAEnviar(archivoARecibir);
 	return archivoARecibir;
 }
-void verificarRecepcionMensaje(int socket, char* mensajeAEnviar)
+void verificarRecepcionMensaje(int socket, paquete mensajeAEnviar)
 {
 	bool llegoMensaje;
-	if(!(llegoMensaje = enviarMensaje (socket, mensajeAEnviar))){
+	if(!(llegoMensaje=enviarMensaje(socket, mensajeAEnviar))){
 			perror("No se pudo enviar el mensaje");
-			free(mensajeAEnviar);
+			free(mensajeAEnviar.mensaje);
 			exit(-1);
 		}
+}
+//---------------FUNCIONES DE SERIALIZACION--------------------------------
+paquete serializar(header headerDeMensaje, void *bufferDeData) {
+  paquete paqueteAEnviar;
+  paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
+  paqueteAEnviar.header.tamMsj = headerDeMensaje.tamMsj;
+  paqueteAEnviar.header.tipoMsj=headerDeMensaje.tipoMsj;
+  paqueteAEnviar.mensaje = bufferDeData;
+  return paqueteAEnviar;
+}
+void crearHeader(char* path, header enviar)
+{
+	int longitudPath=strlen(path);
+	enviar.tamMsj=longitudPath;
+	enviar.tipoMsj = MENSAJE_PATH;
 }
 
 //------------------------------------------------------------------------------------------------------------------
@@ -81,10 +99,14 @@ int main(int argc, char *argv[]) {
 	mostrar_consola(nuevaConsola);
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char* archivoAEnviarAKernel;
-	archivoAEnviarAKernel = recibirArchivoPorTeclado();
+	char* archivo;
+	header aEnviar;
+	archivo = recibirArchivoPorTeclado();
+	crearHeader(archivo, aEnviar);
+	paquete archivoAEnviarAKernel;
+	archivoAEnviarAKernel=serializar(aEnviar,archivo);
 	verificarRecepcionMensaje(socketParaKernel,archivoAEnviarAKernel);
-	free(archivoAEnviarAKernel);
+	free(archivoAEnviarAKernel.mensaje);
 	recibirMensajeDeKernel(socketParaKernel);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;
