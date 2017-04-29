@@ -11,6 +11,8 @@
 
 #include "funcionesGenericas.h"
 #include "socket.h"
+#include <parser/metadata_program.h>
+#include <parser/parser.h>
 //--TYPEDEF----------------------------------------------------------------
 typedef struct {
 	_ip ipKernel;
