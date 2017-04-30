@@ -111,7 +111,7 @@ void seleccionarYAceptarSockets(int socketListener) {
 	}
 }
 
-bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
+/*bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 
 	int longitud = string_length(mensaje)+1; //sino no lee \0
 	int i = 0;
@@ -123,7 +123,7 @@ bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
 		//}
 	}
 	return true;
-}
+}*/
 
 int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto
 

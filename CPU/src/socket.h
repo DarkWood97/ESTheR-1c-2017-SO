@@ -11,7 +11,7 @@
 int ponerseAEscuchar(int, int);
 int aceptarConexion(int);
 void seleccionarYAceptarSockets(int);
-bool enviarMensaje(int, char*);
+//bool enviarMensaje(int, char*);
 int conectarAServer(char *, int);
 
 

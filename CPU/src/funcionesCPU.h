@@ -54,6 +54,7 @@ typedef struct  __attribute__((packed)){
 t_log* log;
 pcb * PCB;
 int tamPagina;
+
 //-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
