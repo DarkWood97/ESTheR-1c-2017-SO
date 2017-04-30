@@ -38,7 +38,9 @@
 									<listOptionValue builtIn="false" value="commons"/>
 									<listOptionValue builtIn="false" value="FuncionesGenericas"/>
 									<listOptionValue builtIn="false" value="Socket"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="parser-ansisop"/>
+									<listOptionValue builtIn="false" value="parser-ansisop"/>
+									<listOptionValue builtIn="false" value="parser-ansisop"/>
+									<listOptionValue builtIn="false" value="parser"/>
 								</option>
 								<option id="gnu.c.link.option.paths.798254713" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket/Debug}&quot;"/>
@@ -60,8 +62,8 @@
 							<option id="gnu.c.compiler.option.include.paths.986392700" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 								<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket}&quot;"/>
 								<listOptionValue builtIn="false" value="&quot;${workspace_loc:/FuncionesGenericas}&quot;"/>
-								<listOptionValue builtIn="false" value="../commons"/>
-								<listOptionValue builtIn="false" value="../parser"/>
+								<listOptionValue builtIn="false" value="&quot;${workspace_loc:/CPU/parser}&quot;"/>
+								<listOptionValue builtIn="false" value="&quot;${workspace_loc:/CPU/commons}&quot;"/>
 							</option>
 							<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1327945234" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 						</tool>

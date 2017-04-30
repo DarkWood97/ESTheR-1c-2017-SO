@@ -7,13 +7,11 @@
  Description : Hello World in C, Ansi-style
  ============================================================================
  */
-
-
-#include "funcionesGenericas.h"
 #include "socket.h"
 #include <parser/metadata_program.h>
 #include <parser/parser.h>
 #include "ansiSop.h"
+#include "funcionesCPU.h"
 
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
@@ -31,13 +29,15 @@ AnSISOP_funciones primitivas = {
 };
 //--TYPEDEF----------------------------------------------------------------
 typedef struct {
-	_ip ipKernel;
+	char *numero;
+}ip;
+typedef struct {
+	ip ipKernel;
 	int puertoKernel;
-	_ip ipMemoria;
+	ip ipMemoria;
 	int puertoMemoria;
 }cpu;
 
-struct AnSISOP_funciones a;
 //----FUNCIONES CPU--------------------------------------------------------
 cpu cpuCrear(t_config *configuracionCPU){
 	cpu nuevaCPU;
@@ -50,8 +50,9 @@ cpu cpuCrear(t_config *configuracionCPU){
 
 cpu inicializarCPU(char *path){
 	t_config *configuracionCPU = (t_config*)malloc(sizeof(t_config));
-	*configuracionCPU = generarT_ConfigParaCargar(path);
-	cpu cpuSistemas = cpuCrear(configuracionCPU);
+	configuracionCPU = generarT_ConfigParaCargar(path);
+	cpu cpuSistemas;
+	cpuSistemas= cpuCrear(configuracionCPU);
 	return cpuSistemas;
 	free(configuracionCPU);
 }
@@ -62,7 +63,6 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
-
 
 
 int main(int argc, char *argv[]) {

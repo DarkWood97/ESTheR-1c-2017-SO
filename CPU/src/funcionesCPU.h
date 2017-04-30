@@ -26,24 +26,35 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
-
+#include <parser/metadata_program.h>
+#include <parser/parser.h>
+#include <parser/sintax.h>
+//-------------FIN DE INCLUDES----------------------------------------
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 
-typedef struct {
-	char *numero;
-}_ip;
-
+//---------------------STRUCTS----------------------------------------
 typedef struct{
-  int tamMsj;
-  int tipoMsj;
-} header;
-
-typedef struct{
-  header header;
+  int tipoMensaje;
+  int tamMensaje;
   void* mensaje;
 }paquete;
+typedef struct  __attribute__((packed)){
 
+	int ProgramID;
+	unsigned int programCounter, paginasCodigo;
+	void* referenciaTP; //no estoy segura de que tipo es
+	int stackPointer;
+	int exitCode;
+	t_list *contextoActual;
+	int tamContextoActual;
+	/* faltan cosas, defini lo que necesita CPU NO CAMBIAR!!*/
+}pcb;
+//------------------------DEFINE--------------------------------------
+t_log* log;
+pcb * PCB;
+int tamPagina;
+//-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);

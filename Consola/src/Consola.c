@@ -21,7 +21,7 @@ typedef struct {
 	_ip ip_Kernel;
 	int puerto_kernel;
 } consola;
-
+int sizePaquete=sizeof(paquete);
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
 //----FUNCIONES CONSOLA-------------------------------------------------------
@@ -56,7 +56,7 @@ void verificarArchivoAEnviar(char * archivo)
 //------FUNCIONES MENSAJES--------------------------------------------
 char * recibirArchivoPorTeclado(){
 	char* archivoARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
-	printf("Ingresar archivo:%s\n");
+	printf("%s","Ingresar archivo:");
 //	scanf("%s", mensajeARecibir);
 	fgets(archivoARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
 	verificarArchivoAEnviar(archivoARecibir);
@@ -111,7 +111,9 @@ int main(int argc, char *argv[]) {
 	char* archivo;
 	archivo = recibirArchivoPorTeclado();
 	paquete archivoAEnviarAKernel;
-	archivoAEnviarAKernel=serializar(archivo);
+	paquete auxiliar;
+	auxiliar= serializar(archivo);
+	memcpy(&archivoAEnviarAKernel,&auxiliar,sizePaquete);
 	verificarRecepcionMensaje(socketParaKernel,archivoAEnviarAKernel);
 	free(archivoAEnviarAKernel.mensaje);
 	recibirMensajeDeKernel(socketParaKernel);
