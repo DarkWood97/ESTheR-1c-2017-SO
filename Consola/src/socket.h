@@ -12,7 +12,7 @@
 int ponerseAEscuchar(int, int);
 int aceptarConexion(int);
 void seleccionarYAceptarSockets(int);
-int conectarServer(char *, int);
+int conectarAServer(char *, int);
 
 
 #endif /* SRC_SOCKET_H_ */
