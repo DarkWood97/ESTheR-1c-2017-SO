@@ -11,13 +11,10 @@
 #include "funcionesGenericas.h"
 #include "socket.h"
 //--TYPEDEF-------------------------------------------------------------------
-typedef struct{
-  int tamMsj;
-  int tipoMsj;
-} header;
 typedef struct __attribute__((__packed__)){
-  header header;
-  char* mensaje;
+	int tamMsj;
+	int tipoMsj;
+	void* mensaje;
 }paquete;
 
 typedef struct {
@@ -67,8 +64,8 @@ char * recibirArchivoPorTeclado(){
 }
 bool enviarMensaje(int socket, paquete mensaje) { //Socket que envia mensaje
 
-	//int tamPaquete=sizeof(struct paquete);
-		if (send(socket, mensaje, tamPaquete, 0) == -1) {
+	int tamPaquete=sizeof mensaje.mensaje+sizeof mensaje.tamMsj+sizeof mensaje.tipoMsj;
+		if (send(socket, &mensaje, tamPaquete, 0) == -1) {
 			perror("Error de send");
 			close(socket);
 			exit(-1);
@@ -85,20 +82,22 @@ void verificarRecepcionMensaje(int socket, paquete mensajeAEnviar)
 		}
 }
 //---------------FUNCIONES DE SERIALIZACION--------------------------------
-paquete serializar(header headerDeMensaje, void *bufferDeData) {
+int obtenerLongitudPath(char* path)
+{
+	int longitudPath=strlen(path)+1;
+	return longitudPath;
+
+}
+paquete serializar(void *bufferDeData) {
   paquete paqueteAEnviar;
+  int longitud= obtenerLongitudPath(bufferDeData);
   paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
-  paqueteAEnviar.header.tamMsj = headerDeMensaje.tamMsj;
-  paqueteAEnviar.header.tipoMsj=headerDeMensaje.tipoMsj;
+  paqueteAEnviar.tamMsj = longitud;
+  paqueteAEnviar.tipoMsj= MENSAJE_PATH;
   paqueteAEnviar.mensaje = bufferDeData;
   return paqueteAEnviar;
 }
-void crearHeader(char* path, header enviar)
-{
-	int longitudPath=strlen(path)+1;
-	enviar.tamMsj=longitudPath;
-	enviar.tipoMsj = MENSAJE_PATH;
-}
+
 
 
 //------------------------------------------------------------------------------------------------------------------
@@ -110,11 +109,9 @@ int main(int argc, char *argv[]) {
 	int socketParaKernel;
 	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	char* archivo;
-	header aEnviar;
 	archivo = recibirArchivoPorTeclado();
-	crearHeader(archivo, aEnviar);
 	paquete archivoAEnviarAKernel;
-	archivoAEnviarAKernel=serializar(aEnviar,archivo);
+	archivoAEnviarAKernel=serializar(archivo);
 	verificarRecepcionMensaje(socketParaKernel,archivoAEnviarAKernel);
 	free(archivoAEnviarAKernel.mensaje);
 	recibirMensajeDeKernel(socketParaKernel);
