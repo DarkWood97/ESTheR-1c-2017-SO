@@ -64,7 +64,7 @@ char * recibirArchivoPorTeclado(){
 }
 bool enviarMensaje(int socket, paquete mensaje) { //Socket que envia mensaje
 
-	int tamPaquete=sizeof mensaje.mensaje+sizeof mensaje.tamMsj+sizeof mensaje.tipoMsj;
+	int tamPaquete=(sizeof mensaje.tamMsj)+sizeof (mensaje.tipoMsj)+sizeof(mensaje.mensaje);
 		if (send(socket, &mensaje, tamPaquete, 0) == -1) {
 			perror("Error de send");
 			close(socket);
