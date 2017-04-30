@@ -19,7 +19,15 @@
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
 		.AnSISOP_obtenerPosicionVariable = obtenerPosicionVariable,
-
+		.AnSISOP_dereferenciar = dereferenciar,
+		.AnSISOP_asignar = asignar,
+		.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
+		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
+		.AnSISOP_irAlLabel = irAlLabel,
+		.AnSISOP_llamarSinRetorno = llamarSinRetorno,
+		.AnSISOP_llamarConRetorno = llamarConRetorno,
+		.AnSISOP_finalizar = finalizar,
+		.AnSISOP_retornar = retornar,
 };
 //--TYPEDEF----------------------------------------------------------------
 typedef struct {
@@ -28,6 +36,8 @@ typedef struct {
 	_ip ipMemoria;
 	int puertoMemoria;
 }cpu;
+
+struct AnSISOP_funciones a;
 //----FUNCIONES CPU--------------------------------------------------------
 cpu cpuCrear(t_config *configuracionCPU){
 	cpu nuevaCPU;
