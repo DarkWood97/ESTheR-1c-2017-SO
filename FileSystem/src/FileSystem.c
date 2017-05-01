@@ -57,7 +57,7 @@ void borraArchivo(char* path) {
 }
 
 int main() {
-	char *path="FileSystem/fileSystem.config"
+	char *path="FileSystem/fileSystem.config";
 	fileSystem fileSystem = inicializarFileSystem(path);
 	mostrarConfiguracionesFileSystem(fileSystem);
 	int socketClienteParaKernel, socketEscuchaFS;
