@@ -12,9 +12,13 @@
 #include <parser/parser.h>
 #include "ansiSop.h"
 #include "funcionesCPU.h"
-//----------------------VARIABLES GLOBALES-------------------------------
+//----------------------VARIABLES GLOBALES-TIPO MENSAJES---------------------------
 #define HANDSHAKE_MEMORIA 1001
 #define HANDSHAKE_KERNEL 1002
+#define MENSAJE_IMPRIMIR 101
+#define MENSAJE_PATH  103
+#define ERROR -1
+#define CORTO 0
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
@@ -58,7 +62,7 @@ cpu cpuCrear(t_config *configuracionCPU){
 
 cpu inicializarCPU(char *path){
 	t_config *configuracionCPU = (t_config*)malloc(sizeof(t_config));
-	configuracionCPU = generarT_ConfigParaCargar(path);
+	configuracionCPU =generarT_ConfigParaCargar(path);
 	cpu cpuSistemas;
 	cpuSistemas= cpuCrear(configuracionCPU);
 	return cpuSistemas;
@@ -98,6 +102,48 @@ paquete serializar(void *bufferDeData, int tipoDeMensaje) {
   paqueteAEnviar.mensaje = bufferDeData;
   return paqueteAEnviar;
 }
+//----------------RECIBIR HANDSHAKE--------------------------------------------
+void recibirMensaje(int socket, void * aRecibir){
+	void *buff = malloc(sizeof(void*));
+	if(recv(socket,buff,16,0) == -1){
+		perror("Error de receive");
+		exit(-1);
+	}
+	aRecibir=buff;
+	free(buff);
+}
+void deserealizarMensaje(int socket)
+{
+	int *tamanio;
+	recv(socket,tamanio,16,0);
+	paquete recibido;
+	recv(socket,&recibido,(int)tamanio,0);
+	int caso=recibido.tipoMsj;
+	switch(caso)
+	{
+	case MENSAJE_IMPRIMIR:
+		printf("Mensaje recibido: %p",recibido.mensaje);
+		break;
+	case HANDSHAKE_KERNEL:
+		printf("Handshake con kernel \n Mensaje recibido: %p", recibido.mensaje);
+		break;
+	case HANDSHAKE_MEMORIA:
+		printf("Handshake con memoria \n Mensaje recibido:%p", recibido.mensaje);
+		break;
+	case CORTO:
+		printf("El socket %d corto la conexion", socket);
+		close(socket);
+		break;
+	case ERROR:
+		perror("Error de recv");
+		exit(-1);
+		break;
+	case MENSAJE_PATH:
+		printf("Path recibido: %p ", recibido.mensaje);
+		break;
+	}
+}
+
 //----------------------MAIN---------------------------------------------------
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
@@ -105,8 +151,9 @@ int main(int argc, char *argv[]) {
 	mostrarConfiguracionCPU(cpuDelSistema);
 	int socketParaMemoria, socketParaKernel;
 	socketParaMemoria = conectarAServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
+	deserealizarMensaje(socketParaMemoria);
 	socketParaKernel = conectarAServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
-	recibirMensajeDeKernel(socketParaKernel);
+	deserealizarMensaje(socketParaKernel);
 	/*handshake con memoria */
 	paquete paqueteAEnviar,auxiliar;
 	auxiliar=serializar(NULL,HANDSHAKE_MEMORIA);
@@ -117,9 +164,6 @@ int main(int argc, char *argv[]) {
 	auxiliar=serializar(NULL, HANDSHAKE_KERNEL);
 	memcpy(&paqueteKernel,&auxiliar,sizeof(auxiliarKernel));
 	realizarHandshake(socketParaKernel,paqueteKernel);
-
-
-	//deserealizar
 	close(socketParaMemoria);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;

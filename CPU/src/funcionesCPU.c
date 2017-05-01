@@ -37,7 +37,7 @@ t_config generarT_ConfigParaCargar(char *path) {
 	free(configuracionDelComponente);
 }
 
-void recibirMensajeDeKernel(int socketKernel){
+/*void recibirMensajeDeKernel(int socketKernel){
 	char *buff = malloc(sizeof(char)*16);
 //	int tamanioBuff = strlen(buff)+1;
 	if(recv(socketKernel,buff,16,0) == -1){
@@ -46,7 +46,7 @@ void recibirMensajeDeKernel(int socketKernel){
 	}
 	printf("%s\n",buff);
 	free(buff);
-}
+}*/
 void verificarParametrosInicio(int argc)
 {
 	if(argc!=2){

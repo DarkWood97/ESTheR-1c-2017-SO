@@ -59,4 +59,5 @@ int tamPagina;
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);
+void verificarParametrosCrear(t_config *,int);
 #endif /* FUNCIONESGENERICAS_H_ */
