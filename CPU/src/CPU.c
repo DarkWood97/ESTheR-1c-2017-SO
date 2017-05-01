@@ -8,10 +8,9 @@
  ============================================================================
  */
 #include "socket.h"
-#include <parser/metadata_program.h>
-#include <parser/parser.h>
 #include "ansiSop.h"
 #include "funcionesCPU.h"
+
 //----------------------VARIABLES GLOBALES-TIPO MENSAJES---------------------------
 #define HANDSHAKE_MEMORIA 1001
 #define HANDSHAKE_KERNEL 1002
@@ -22,16 +21,16 @@
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
-		.AnSISOP_obtenerPosicionVariable = obtenerPosicionVariable,
-		.AnSISOP_dereferenciar = dereferenciar,
-		.AnSISOP_asignar = asignar,
+		.AnSISOP_obtenerPosicionVariable= obtenerPosicionVariable,
+		.AnSISOP_dereferenciar			= dereferenciar,
+		.AnSISOP_asignar				= asignar,
 		.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
 		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
-		.AnSISOP_irAlLabel = irAlLabel,
-		.AnSISOP_llamarSinRetorno = llamarSinRetorno,
-		.AnSISOP_llamarConRetorno = llamarConRetorno,
-		.AnSISOP_finalizar = finalizar,
-		.AnSISOP_retornar = retornar,
+		.AnSISOP_irAlLabel				= irAlLabel,
+		.AnSISOP_llamarConRetorno		= llamarConRetorno,
+		.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
+		.AnSISOP_retornar				= retornar,
+		.AnSISOP_finalizar				= finalizar,
 };
 //--TYPEDEF----------------------------------------------------------------
 typedef struct {
