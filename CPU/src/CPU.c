@@ -21,16 +21,16 @@
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
-		.AnSISOP_obtenerPosicionVariable= obtenerPosicionVariable,
-		.AnSISOP_dereferenciar			= dereferenciar,
-		.AnSISOP_asignar				= asignar,
-		.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
-		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
-		.AnSISOP_irAlLabel				= irAlLabel,
-		.AnSISOP_llamarConRetorno		= llamarConRetorno,
-		.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
+	//	.AnSISOP_obtenerPosicionVariable= obtenerPosicionVariable,
+	//	.AnSISOP_dereferenciar			= dereferenciar,
+	//	.AnSISOP_asignar				= asignar,
+	//	.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
+	//	.AnSISOP_asignarValorCompartida = asignarValorCompartida,
+	//	.AnSISOP_irAlLabel				= irAlLabel,
+	//	.AnSISOP_llamarConRetorno		= llamarConRetorno,
+	//	.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
 		.AnSISOP_retornar				= retornar,
-		.AnSISOP_finalizar				= finalizar,
+	//	.AnSISOP_finalizar				= finalizar,
 };
 //--TYPEDEF----------------------------------------------------------------
 typedef struct {
@@ -113,7 +113,7 @@ void recibirMensaje(int socket, void * aRecibir){
 }
 void deserealizarMensaje(int socket)
 {
-	int *tamanio;
+	int *tamanio = 0;
 	recv(socket,tamanio,16,0);
 	paquete recibido;
 	recv(socket,&recibido,(int)tamanio,0);
