@@ -50,7 +50,7 @@ void verificarArchivoAEnviar(char * archivo)
 {
 	if(strlen(archivo)==0)
 	{
-		printf("Error de archivo: No se recibio ningun path de archivo%s\n");
+		printf("Error de archivo: No se recibio ningun path de archivos\n");
 	}
 }
 //------FUNCIONES MENSAJES--------------------------------------------

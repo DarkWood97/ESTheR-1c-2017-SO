@@ -9,7 +9,7 @@
  */
 #include "socket.h"
 #include "ansiSop.h"
-#include "funcionesCPU.h"
+#include "funcionesCpu.h"
 
 //----------------------VARIABLES GLOBALES-TIPO MENSAJES---------------------------
 #define HANDSHAKE_MEMORIA 1001
@@ -23,7 +23,7 @@ AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
 	//	.AnSISOP_obtenerPosicionVariable= obtenerPosicionVariable,
 	//	.AnSISOP_dereferenciar			= dereferenciar,
-	//	.AnSISOP_asignar				= asignar,
+		.AnSISOP_asignar				= asignar,
 	//	.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
 	//	.AnSISOP_asignarValorCompartida = asignarValorCompartida,
 	//	.AnSISOP_irAlLabel				= irAlLabel,
@@ -46,7 +46,7 @@ typedef struct __attribute__((__packed__)){
 	int tamMsj;
 	int tipoMsj;
 	void* mensaje;
-}paquete;
+}_paquete;
 
 
 //----FUNCIONES CPU--------------------------------------------------------
@@ -92,8 +92,8 @@ int obtenerLongitudBuff(char* path)
 	return longitudPath;
 
 }
-paquete serializar(void *bufferDeData, int tipoDeMensaje) {
-  paquete paqueteAEnviar;
+_paquete serializar(void *bufferDeData, int tipoDeMensaje) {
+  _paquete paqueteAEnviar;
   int longitud= obtenerLongitudBuff(bufferDeData);
   paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
   paqueteAEnviar.tamMsj = longitud;

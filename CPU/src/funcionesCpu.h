@@ -1,10 +1,9 @@
 /*
- * funcionesGenericas.h
+ * funcionesCpu.h
  *
- *  Created on: 6/4/2017
+ *  Created on: 3/5/2017
  *      Author: utnso
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,11 +28,11 @@
 #include <parser/metadata_program.h>
 #include <parser/parser.h>
 #include <parser/sintax.h>
-//-------------FIN DE INCLUDES----------------------------------------
-#ifndef FUNCIONESGENERICAS_H_
-#define FUNCIONESGENERICAS_H_
 
-//---------------------STRUCTS----------------------------------------
+#ifndef FUNCIONESCPU_H_
+#define FUNCIONESCPU_H_
+
+
 typedef struct{
   int tipoMensaje;
   int tamMensaje;
@@ -60,4 +59,5 @@ t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);
 void verificarParametrosCrear(t_config *,int);
-#endif /* FUNCIONESGENERICAS_H_ */
+
+#endif /* FUNCIONESCPU_H_ */
