@@ -197,18 +197,20 @@ void destruirPaquete(paquete * paquete) {
 	free(paquete);
 }
 
-void enviarDirAMemoria(char* escritura, t_direccion* direccion, long valor){
-
+void enviarDirAMemoria(t_direccion* direccion, long valor)
+{
+		char* escritura= malloc(sizeof(char)*16);
+		paquete paqueteAEnviar,auxiliar;
 		memcpy(escritura, &direccion->pagina , 4);
 		memcpy(escritura+4, &direccion->offset , 4);
 		memcpy(escritura+8, &direccion->tam , 4);
 		memcpy(escritura+12, &valor , 4);
-		paquete paqueteAEnviar,auxiliar;
-		auxiliar=serializar(NULL,HANDSHAKE_MEMORIA);
+		auxiliar=serializar(escritura,HANDSHAKE_MEMORIA);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 		realizarHandshake(socketMemoria,paqueteAEnviar);
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
+		free(escritura);
 
 }
 
@@ -223,7 +225,20 @@ void punteroADir(int puntero, t_direccion* dir){
 		dir->tam=4;
 	}
 }
+void inicializarVariable(t_variable *variable, t_nombre_variable identificador_variable,t_direccion *direccion_variable)
+{
+	variable->direccion=direccion_variable;
+	variable->etiqueta=identificador_variable;
+}
 //---------------------------------FUNCIONES-------------------------
+void asignar (t_puntero direccion_variable, t_valor_variable valor)
+{
+	t_direccion *dir= malloc(sizeT_direccion);
+	punteroADir(direccion_variable, dir);
+	log_info(log, "%ld\n", valor);
+	enviarDirAMemoria(dir, valor);
+	free(dir);
+}
 t_puntero definirVariable(t_nombre_variable identificador_variable)
 {
 		log_info(log,"Definir una variable %c\n", identificador_variable);
@@ -256,18 +271,18 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 				{
 					log_info(log,"Declarando variable %c de funcion\n", identificador_variable);
 					armarDireccionDeFuncion(direccion_variable);
-					variable=(t_variable*)asignar(identificador_variable, direccion_variable);
+					iniciarlizarVariable(variable,identificador_variable,direccion_variable);
+					variable->direccion=direccion_variable;
 					list_add(contexto->vars, variable);
 					contexto->tamVars++;
 				}
 				else {
 						armarProximaDireccion(direccion_variable);
-						variable=(t_variable*)asignar(identificador_variable, direccion_variable);
+						iniciarlizarVariable(variable,identificador_variable,direccion_variable);
 						list_add(contexto->vars, variable);
 						contexto->tamVars++;
 					}
 			}
-			char* escritura= malloc(sizeof(char)*16);
 			long valor;
 			log_info(log,"Alocado %ld",valor);
 			int dirReturn = dirAPuntero(direccion_variable);
@@ -275,12 +290,10 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 					log_info(log,"No hay espacio para definir variable %c. Abortando programa\n", identificador_variable);
 					return 1;
 				}else{
-					enviarDirAMemoria(escritura, direccion_variable, valor);
-					free(escritura);
+					enviarDirAMemoria(direccion_variable, valor);
 					log_info(log,"Devuelvo direccion: %d\n", dirReturn);
 					return (dirReturn);
 			}
-			free(escritura);
 		}
 return 1;
 }
@@ -294,16 +307,7 @@ t_puntero dereferenciar (t_puntero direccion_variable)
 {
 	return NULL;
 }*/
-void asignar (t_puntero direccion_variable, t_valor_variable valor)
-{
-	t_direccion *dir= malloc(sizeT_direccion);
-	punteroADir(direccion_variable, dir);
-	char* escritura= malloc(sizeof(char)*16);
-	log_info(log, "%ld\n", valor);
-	enviarDirAMemoria(escritura, dir, valor);
-	free(escritura);
-	free(dir);
-}
+
 /*t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
 {
 	return NULL;

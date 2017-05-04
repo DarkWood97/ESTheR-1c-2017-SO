@@ -155,6 +155,7 @@ int main(int argc, char *argv[]) {
 	mostrarConfiguracionCPU(cpuDelSistema);
 	int socketParaMemoria, socketParaKernel;
 	socketParaMemoria = conectarAServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
+	socketMemoria=socketParaMemoria; /*para ansisop*/
 	deserealizarMensaje(socketParaMemoria);
 	socketParaKernel = conectarAServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
 	deserealizarMensaje(socketParaKernel);
@@ -164,13 +165,14 @@ int main(int argc, char *argv[]) {
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 	realizarHandshake(socketParaMemoria,paqueteAEnviar);
 	destruirPaquete(&paqueteAEnviar);
+	destruirPaquete(&auxiliar);
 	/*Handshake kernel*/
 	paquete paqueteKernel, auxiliarKernel;
-	auxiliar=serializar(NULL, HANDSHAKE_KERNEL);
-	memcpy(&paqueteKernel,&auxiliar,sizeof(auxiliarKernel));
+	auxiliarKernel=serializar(NULL, HANDSHAKE_KERNEL);
+	memcpy(&paqueteKernel,&auxiliarKernel,sizeof(auxiliarKernel));
 	realizarHandshake(socketParaKernel,paqueteKernel);
 	destruirPaquete(&paqueteKernel);
-	destruirPaquete(&auxiliar);
+	destruirPaquete(&auxiliarKernel);
 	close(socketParaMemoria);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;

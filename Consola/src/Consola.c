@@ -24,13 +24,18 @@ typedef struct {
 int sizePaquete=sizeof(paquete);
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
+#define iniciar "INICIAR PROGRAMA"
+#define finalizar "FINALIZAR PROGRAMA"
+#define desconectar "DESCONECTAR CONSOLA"
+#define limpiar "LIMPIARCONSOLA"
+
+int socketKernel;
 //----FUNCIONES CONSOLA-------------------------------------------------------
 consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo si no tiene error
 	consola consola_auxiliar;
 	consola_auxiliar.ip_Kernel.numero = config_get_string_value(configuracion,"IP_KERNEL");
 	consola_auxiliar.puerto_kernel = config_get_int_value(configuracion,"PUERTO_KERNEL");
 	return consola_auxiliar;
-
 }
 
 consola inicializarPrograma(char* path) {
@@ -56,7 +61,7 @@ void verificarArchivoAEnviar(char * archivo)
 //------FUNCIONES MENSAJES--------------------------------------------
 char * recibirArchivoPorTeclado(){
 	char* archivoARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
-	printf("%s","Ingresar archivo:");
+	printf("%s","Ingresar archivo");
 //	scanf("%s", mensajeARecibir);
 	fgets(archivoARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
 	verificarArchivoAEnviar(archivoARecibir);
@@ -97,26 +102,78 @@ paquete serializar(void *bufferDeData) {
   paqueteAEnviar.mensaje = bufferDeData;
   return paqueteAEnviar;
 }
+void destruirPaquete(paquete *paquete) {
+	free(paquete->mensaje);
+	free(paquete);
+}
+//---------------------FUNCIONES DE INTERFAZ----------------------------
+void iniciarProgramaAnsisop()
+{
+	char * pathPrograma;
+	paquete auxiliar,paquetePath;
+	recibirArchivoPorTeclado(pathPrograma);
+	auxiliar=serializar(pathPrograma);
+	memcpy(&paquetePath,&auxiliar,sizeof(auxiliar));
+	verificarRecepcionMensaje(socketKernel,paquetePath);
+	destruirPaquete(&auxiliar);
+	destruirPaquete(&paquetePath);
+}
+void finalizarPrograma()
+{
 
+}
+void desconectarConsola()
+{
 
-
+}
+void solicitarComando()
+{
+	char* comando;
+	printf("Esperando comando....");
+	fgets(comando,sizeof(char)*16,stdin);
+	string_to_upper(comando);
+	if(strcmp(comando,iniciar)==0)
+	{
+		iniciarProgramaAnsisop();
+	}
+	else
+	{
+		if(strcmp(comando,finalizar)==0)
+		{
+			finalizarPrograma();
+		}
+		else
+		{
+			if(strcmp(comando,desconectar)==0)
+			{
+				desconectarConsola();
+			}
+			else
+			{
+				if(strcmp(comando,limpiar)==0)
+				{
+					system("clear");
+				}
+				else
+				{
+					printf("Error de comando");
+				}
+			}
+		}
+	}
+}
 //------------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	consola nuevaConsola = inicializarPrograma(argv[1]);
 	mostrar_consola(nuevaConsola);
-	int socketParaKernel;
-	socketParaKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	char* archivo;
-	archivo = recibirArchivoPorTeclado();
-	paquete archivoAEnviarAKernel;
-	paquete auxiliar;
-	auxiliar= serializar(archivo);
-	memcpy(&archivoAEnviarAKernel,&auxiliar,sizePaquete);
-	verificarRecepcionMensaje(socketParaKernel,archivoAEnviarAKernel);
-	free(archivoAEnviarAKernel.mensaje);
-	recibirMensajeDeKernel(socketParaKernel);
-	close(socketParaKernel);
+	socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
+	while(1)
+	{
+		solicitarComando();
+		recibirMensajeDeKernel(socketKernel);
+	}
+	close(socketKernel);
 	return EXIT_SUCCESS;
 }
