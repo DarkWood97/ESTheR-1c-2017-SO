@@ -24,10 +24,10 @@ typedef struct {
 int sizePaquete=sizeof(paquete);
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
-#define iniciar "INICIAR PROGRAMA"
-#define finalizar "FINALIZAR PROGRAMA"
-#define desconectar "DESCONECTAR CONSOLA"
-#define limpiar "LIMPIARCONSOLA"
+#define INICIAR 1
+#define FINALIZAR 2
+#define DESCONECTAR 3
+#define LIMPIAR 4
 
 int socketKernel;
 //----FUNCIONES CONSOLA-------------------------------------------------------
@@ -128,40 +128,34 @@ void desconectarConsola()
 }
 void solicitarComando()
 {
-	char* comando;
-	printf("Esperando comando....");
-	fgets(comando,sizeof(char)*16,stdin);
-	string_to_upper(comando);
-	if(strcmp(comando,iniciar)==0)
+	int comando;
+	printf("INgrese el numero de la opcion deseada\n");
+	printf("-1. Iniciar programa Ansisop\n");
+	printf("-2 Finalizar programa");
+	printf("-3 Desconectar consola");
+	printf("-4 Limpiar consola");
+	printf("Esperando comando....\n");
+	//fgets(comando,sizeof(int),stdin);
+	scanf("%d",&comando);
+	switch(comando)
 	{
+	case INICIAR:
 		iniciarProgramaAnsisop();
-	}
-	else
-	{
-		if(strcmp(comando,finalizar)==0)
-		{
-			finalizarPrograma();
-		}
-		else
-		{
-			if(strcmp(comando,desconectar)==0)
-			{
-				desconectarConsola();
-			}
-			else
-			{
-				if(strcmp(comando,limpiar)==0)
-				{
-					system("clear");
-				}
-				else
-				{
-					printf("Error de comando");
-				}
-			}
-		}
+		break;
+	case FINALIZAR:
+		finalizarPrograma();
+		break;
+	case DESCONECTAR:
+		desconectarConsola();
+		break;
+	case LIMPIAR:
+		system("clear");
+		break;
+	default:
+		perror("Comando no reconocido");
 	}
 }
+
 //------------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {

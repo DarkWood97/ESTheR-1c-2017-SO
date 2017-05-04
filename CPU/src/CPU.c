@@ -61,7 +61,7 @@ cpu cpuCrear(t_config *configuracionCPU){
 
 cpu inicializarCPU(char *path){
 	t_config *configuracionCPU = malloc(sizeof(t_config));
-	configuracionCPU = generarT_ConfigParaCargar(path);
+	*configuracionCPU = generarT_ConfigParaCargar(path);
 	cpu cpuSistemas;
 	cpuSistemas= cpuCrear(configuracionCPU);
 	return cpuSistemas;

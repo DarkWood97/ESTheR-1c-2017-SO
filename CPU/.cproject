@@ -36,7 +36,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.79105555" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug">
 								<option id="gnu.c.link.option.libs.660511880" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="commons"/>
-									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="parser-ansisop"/>
+									<listOptionValue builtIn="false" value="parser-ansisop"/>
 								</option>
 								<option id="gnu.c.link.option.paths.798254713" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket/Debug}&quot;"/>
