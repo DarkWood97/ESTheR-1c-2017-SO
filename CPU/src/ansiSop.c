@@ -1,5 +1,15 @@
 
-#include "funcionesCPU.h"
+#include "funcionesCpu.h"
+#include <stdbool.h>
+
+#define HANDSHAKE_MEMORIA 1001
+#define HANDSHAKE_KERNEL 1002
+#define MENSAJE_IMPRIMIR 101
+#define MENSAJE_PATH  103
+#define ERROR -1
+#define CORTO 0
+
+
 
 //-----------------ESTRUCTURAS---------------------------------------
 typedef struct __attribute__((packed))t_direccion{
@@ -22,6 +32,13 @@ typedef struct __attribute__((packed))t_contexto
 	int tamArgs;
 	int tamVars;
 }t_contexto;
+
+typedef struct __attribute__((__packed__)){
+	int tamMsj;
+	int tipoMsj;
+	void* mensaje;
+}paquete;
+
 //-----------------------VARIABLES GLOBALES------------------------------
 int sizeT_direccion= sizeof(t_direccion);
 //----------------------------FUNCIONES AUXILIARES----------------------
@@ -144,9 +161,66 @@ void armarDireccionDeFuncion(t_direccion* direccionOriginal)
 				int posicionUltimaVariable = ((t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1)))->tamVars-1;
 				proximaDireccion(direccionOriginal,posicionStackActual, posicionUltimaVariable);
 			}
+	}
+}
+int DirAPuntero(t_direccion* dire)
+{
+	int direccionOriginal,pag,desplazamiento;
+	pag=(dire->pagina)*tamPagina;
+	desplazamiento=dire->offset;
+	direccionOriginal=pag+desplazamiento;
+	return direccionOriginal;
+}
 
+void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
 
+	int longitud = sizeof(mensaje); //sino no lee \0
+		if (send(socket, &mensaje, longitud, 0) == -1) {
+			perror("Error de send");
+			close(socket);
+			exit(-1);
+	}
 
+}
+paquete serializar(void *bufferDeData, int tipoDeMensaje) {
+  paquete paqueteAEnviar;
+  int longitud= obtenerLongitudBuff(bufferDeData);
+  paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
+  paqueteAEnviar.tamMsj = longitud;
+  paqueteAEnviar.tipoMsj=tipoDeMensaje;
+  paqueteAEnviar.mensaje = bufferDeData;
+  return paqueteAEnviar;
+}
+
+void destruirPaquete(paquete * paquete) {
+	free(paquete->mensaje);
+	free(paquete);
+}
+
+void enviarDirAMemoria(char* escritura, t_direccion* direccion, long valor){
+
+		memcpy(escritura, &direccion->pagina , 4);
+		memcpy(escritura+4, &direccion->offset , 4);
+		memcpy(escritura+8, &direccion->tam , 4);
+		memcpy(escritura+12, &valor , 4);
+		paquete paqueteAEnviar,auxiliar;
+		auxiliar=serializar(NULL,HANDSHAKE_MEMORIA);
+		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
+		realizarHandshake(socketMemoria,paqueteAEnviar);
+		destruirPaquete(&paqueteAEnviar);
+		destruirPaquete(&auxiliar);
+
+}
+
+void punteroADir(int puntero, t_direccion* dir){
+	if(tamPagina>puntero){
+		dir->pagina=0;
+		dir->offset=puntero;
+		dir->tam=4;
+	}else{
+		dir->pagina = (puntero/tamPagina);
+		dir->offset = puntero%tamPagina;
+		dir->tam=4;
 	}
 }
 //---------------------------------FUNCIONES-------------------------
@@ -194,24 +268,43 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 					}
 			}
 			char* escritura= malloc(sizeof(char)*16);
+			long valor;
+			log_info(log,"Alocado %ld",valor);
+			int dirReturn = dirAPuntero(direccion_variable);
+				if(dirReturn+3>variableMaxima){
+					log_info(log,"No hay espacio para definir variable %c. Abortando programa\n", identificador_variable);
+					return 1;
+				}else{
+					enviarDirAMemoria(escritura, direccion_variable, valor);
+					free(escritura);
+					log_info(log,"Devuelvo direccion: %d\n", dirReturn);
+					return (dirReturn);
+			}
 			free(escritura);
-			/* falta escritura en memoria*/
 		}
 return 1;
 }
-t_puntero obtenerPosicionVariable(t_nombre_variable identifcador_variable)
+
+
+/*t_puntero obtenerPosicionVariable(t_nombre_variable identifcador_variable)
 {
 	return NULL;
 }
 t_puntero dereferenciar (t_puntero direccion_variable)
 {
 	return NULL;
-}
+}*/
 void asignar (t_puntero direccion_variable, t_valor_variable valor)
 {
-
+	t_direccion *dir= malloc(sizeT_direccion);
+	punteroADir(direccion_variable, dir);
+	char* escritura= malloc(sizeof(char)*16);
+	log_info(log, "%ld\n", valor);
+	enviarDirAMemoria(escritura, dir, valor);
+	free(escritura);
+	free(dir);
 }
-t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
+/*t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
 {
 	return NULL;
 }
@@ -234,7 +327,7 @@ void llamarConRetorno (t_nombre_etiqueta etiqueta, t_puntero donde_retornar)
 void finalizar ()
 {
 
-}
+}*/
 void retornar(t_valor_variable retorno)
 {
 		log_info(log,"La posicion de retorno %d\n", retorno);

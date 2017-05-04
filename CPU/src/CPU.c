@@ -46,7 +46,7 @@ typedef struct __attribute__((__packed__)){
 	int tamMsj;
 	int tipoMsj;
 	void* mensaje;
-}_paquete;
+}paquete;
 
 
 //----FUNCIONES CPU--------------------------------------------------------
@@ -60,8 +60,8 @@ cpu cpuCrear(t_config *configuracionCPU){
 }
 
 cpu inicializarCPU(char *path){
-	t_config *configuracionCPU = (t_config*)malloc(sizeof(t_config));
-	configuracionCPU =generarT_ConfigParaCargar(path);
+	t_config *configuracionCPU = malloc(sizeof(t_config));
+	configuracionCPU = generarT_ConfigParaCargar(path);
 	cpu cpuSistemas;
 	cpuSistemas= cpuCrear(configuracionCPU);
 	return cpuSistemas;
@@ -92,8 +92,8 @@ int obtenerLongitudBuff(char* path)
 	return longitudPath;
 
 }
-_paquete serializar(void *bufferDeData, int tipoDeMensaje) {
-  _paquete paqueteAEnviar;
+paquete serializar(void *bufferDeData, int tipoDeMensaje) {
+  paquete paqueteAEnviar;
   int longitud= obtenerLongitudBuff(bufferDeData);
   paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
   paqueteAEnviar.tamMsj = longitud;
@@ -143,6 +143,11 @@ void deserealizarMensaje(int socket)
 	}
 }
 
+void destruirPaquete(paquete * paquete) {
+	free(paquete->mensaje);
+	free(paquete);
+}
+
 //----------------------MAIN---------------------------------------------------
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
@@ -158,11 +163,14 @@ int main(int argc, char *argv[]) {
 	auxiliar=serializar(NULL,HANDSHAKE_MEMORIA);
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 	realizarHandshake(socketParaMemoria,paqueteAEnviar);
+	destruirPaquete(&paqueteAEnviar);
 	/*Handshake kernel*/
 	paquete paqueteKernel, auxiliarKernel;
 	auxiliar=serializar(NULL, HANDSHAKE_KERNEL);
 	memcpy(&paqueteKernel,&auxiliar,sizeof(auxiliarKernel));
 	realizarHandshake(socketParaKernel,paqueteKernel);
+	destruirPaquete(&paqueteKernel);
+	destruirPaquete(&auxiliar);
 	close(socketParaMemoria);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;

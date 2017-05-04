@@ -29,15 +29,10 @@
 #include <parser/parser.h>
 #include <parser/sintax.h>
 
+
 #ifndef FUNCIONESCPU_H_
 #define FUNCIONESCPU_H_
 
-
-typedef struct{
-  int tipoMensaje;
-  int tamMensaje;
-  void* mensaje;
-}paquete;
 typedef struct  __attribute__((packed)){
 
 	int ProgramID;
@@ -53,6 +48,8 @@ typedef struct  __attribute__((packed)){
 t_log* log;
 pcb * PCB;
 int tamPagina;
+int variableMaxima;
+int socketMemoria;
 
 //-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);
