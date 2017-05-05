@@ -1,5 +1,19 @@
 #include "funcionesGenericas.h"
 #include "socket.h"
+
+//--TYPEDEF------------------------------------------------------
+#define  CONEXION_CONSOLA  201
+#define CORTO  0
+#define ERROR -1
+#define MENSAJE_IMPRIMIR 101
+#define MENSAJE_PAGINA 102
+#define MENSAJE_PATH 103
+#define MENSAJE_MEMORIA 1001 //Uso el mismo que el CPU?
+#define ASIGNAR_PAGINAS 1002 //DEFINIR
+
+bool YA_HAY_UNA_CONSOLA = false;
+int pid_actual = 1;
+
 //--TYPEDEF------------------------------------------------------
 
 typedef struct {
@@ -18,6 +32,47 @@ typedef struct {
 	unsigned char *shared_Vars;
 	int stack_Size;
 } kernel;
+
+typedef struct{
+int PID;
+// int PC;
+//int paginas_Codigo;
+// codigo cod;
+// etiquetas etiq;
+// Stack SP;
+// int EX;
+}PCB;
+//--------------indicide de codigo-----
+// typdef struct{
+// int inicio;
+// int longitud;
+// }codigo;
+//--------------indice de etiquetas----
+// typdef struct{
+// char* funcion;
+// int etiqueta;
+// }etiquetas;
+//---------------indice de stack----
+// typdef struct{
+// int pos;
+// t_list args;
+// t_list vars;
+// int retPos;
+// retVar retVar;
+// }stack;
+//
+// typdef struct{
+// int pagina;
+// int offset;
+// int size;
+// }retVar;
+
+typedef struct __attribute__((packed)){
+  int tipoMsj;
+  int tamMsj;
+  char* mensaje;//CONTROLAR VOID O CHAR?
+}paquete;
+
 //-----FUNCIONES KERNEL------------------------------------------
 kernel crearKernel(t_config *configuracion) {
 	kernel kernelAuxiliar;
@@ -65,6 +120,104 @@ void mostrarConfiguracionesKernel(kernel kernel) {
 	imprimirArrayDeChar(kernel.shared_Vars);
 	printf("STACK_SIZE=%d\n", kernel.stack_Size);
 }
+
+paquete serializar(int tipoMensaje, void* bufferDeData) {
+  paquete paqueteAEnviar;
+  int tamPaquete =sizeof(paquete);
+  //paqueteAEnviar = (paquete) malloc(tamPaquete);
+  paqueteAEnviar.tamMsj = tamPaquete;
+  paqueteAEnviar.tipoMsj = tipoMensaje;
+  paqueteAEnviar.mensaje = bufferDeData;
+  return paqueteAEnviar;
+  //Hacer free
+}
+
+
+
+
+void deserealizar(int socketChequear){
+  paquete mensajeAux;
+  PCB nuevoPcb;
+  paquete consola;
+  void* dataRecibida;
+  int caso = recv(socketChequear,&mensajeAux.tipoMsj,sizeof(int),0);
+  switch (caso) {
+    case CORTO:
+      printf("El socket %d corto la conexion\n", socketChequear);
+      close(socketChequear);
+      break;
+    case ERROR:
+      perror("Error de recv");
+      close(socketChequear);
+      exit(-1);
+      break;
+    case MENSAJE_IMPRIMIR: //Imprimir por pantalla
+      recv(socketChequear, &mensajeAux.tamMsj,sizeof(int),0);//Verificar si llego bien en todos los recv (hacer una funcion generica para todas)
+      dataRecibida = malloc(mensajeAux.tamMsj);
+      recv(socketChequear,&dataRecibida,mensajeAux.tamMsj,0);
+      printf("Mensaje recibido: %s\n", dataRecibida);
+      break;
+    case MENSAJE_PATH: //Recibir path de archivo
+      recv(socketChequear, &mensajeAux.tamMsj, sizeof(int),0);
+      dataRecibida = malloc(mensajeAux.tamMsj);
+      recv(socketChequear,&dataRecibida,mensajeAux.tamMsj,0);
+      FILE *archivoRecibido = fopen(dataRecibida,"r+w");
+//      nuevoPcb =inicializarPCB();
+      break;
+    case MENSAJE_PAGINA: //Recibo una pagina de memoria
+      recv(socketChequear, &mensajeAux.tamMsj,sizeof(int),0);
+		  //dataRecibida = malloc(mensajeAux.tamMsj);
+		  //Tendria que verificar el tamaño de la pagina con el tamaño del codigo
+//      asignarPagina(socketChequear,nuevo.pid, tabla.pagina);
+      break;
+
+    case CONEXION_CONSOLA:
+      if(YA_HAY_UNA_CONSOLA){
+        perror("Ya hay una consola conectada");
+        //FD_CLR(socketChequear,&socketsMaster);
+        close(socketChequear);
+      }else{
+        YA_HAY_UNA_CONSOLA = true;
+        //FD_SET(socketChequear, &socketsMaster);
+        recv(socketChequear,&mensajeAux.tamMsj,sizeof(int),0);
+        dataRecibida = malloc(mensajeAux.tamMsj);
+        recv(socketChequear,&dataRecibida,mensajeAux.tamMsj,0);
+        printf("Handshake con Consola: %s\n", dataRecibida);
+      }
+      break;
+    }
+}
+
+void realizarHandshake(int socket, paquete mensaje) {
+	int longitud = sizeof(mensaje);
+		if (send(socket, &mensaje, longitud, 0) == -1) {
+			perror("Error de send");
+			close(socket);
+			exit(-1);
+	}
+
+}
+
+
+void asignarPagina(int socket, int pid, int contadorPaginas){
+	paquete paqMemoria, aux;
+	aux = serializar(ASIGNAR_PAGINAS,contadorPaginas);
+	memcpy(&paqMemoria,&aux,sizeof(aux));
+	//enviarMensaje(socket,paqMemoria);  CREAR FUNCION
+}
+
+//int proximoPID(){
+//	return pid_Actual++;
+//}
+//
+//PCB inicializarPCB(){
+//	PCB pcb.PID=proximoPID();
+//	return pcb;
+//}
+
+
+
+
 //------FUNCIONES DE ARRAY----------------------------------------
 
 void imprimirArrayDeChar(char* arrayDeChar[]){
@@ -84,6 +237,8 @@ void imprimirArrayDeInt(int arrayDeInt[]){
 	}
 	puts("]");
 }
+//-----------------------------------MAIN-----------------------------------------------
+
 
 //-----------------------------------MAIN-----------------------------------------------
 
