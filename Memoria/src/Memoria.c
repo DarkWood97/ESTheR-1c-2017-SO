@@ -1,6 +1,6 @@
 #include "funcionesGenericas.h"
 #include "socket.h"
-#include <pthread.h>
+#include <ctype.h>
 
 
 #define FALTA_RECURSOS_MEMORIA -50
@@ -20,6 +20,8 @@ t_log * loggerMemoria;
 void* memoriaSistema;
 entradaTabla* entradasDeTabla;
 void* punteroAPrincipioDeDatos;
+pthread_mutex_t mutexTablaInvertida;
+
 
 //-----VALORES DE MEMORIA--------//
 int PUERTO;
@@ -60,100 +62,176 @@ void mostrarConfiguracionesMemoria() {
 }
 
 int calcularTamanioDeTabla(){
-  long int tamanio_tabla = MARCOS*sizeof(entradaTabla);
-  int cantidadDePaginasQueOcupa = tamanio_tabla/MARCOS_SIZE;
-  return cantidadDePaginasQueOcupa;
+	long int tamanio_tabla = MARCOS*sizeof(entradaTabla);
+	int cantidadDePaginasQueOcupa = tamanio_tabla/MARCOS_SIZE;
+	return cantidadDePaginasQueOcupa;
 }
 
 void crearEstructuraAdministrativa(){ //Tabla de paginas invertidas
-  int cantidadDePAginasQueOcupa = calcularTamanioDeTabla();
-  punteroAPrincipioDeDatos = memoriaSistema + cantidadDePAginasQueOcupa*MARCOS_SIZE +1;
-  int paginaChequeada;
-  for(paginaChequeada = 0; paginaChequeada<cantidadDePAginasQueOcupa;paginaChequeada++){
-    entradasDeTabla[paginaChequeada].pid = -1;
-    entradasDeTabla[paginaChequeada].pagina = paginaChequeada;
-  }
-  for(paginaChequeada = cantidadDePAginasQueOcupa; paginaChequeada<MARCOS; paginaChequeada++){
-    entradasDeTabla[paginaChequeada].pid = -1;
-    entradasDeTabla[paginaChequeada].pagina = -1;
-  }
+	int cantidadDePAginasQueOcupa = calcularTamanioDeTabla();
+	punteroAPrincipioDeDatos = memoriaSistema + cantidadDePAginasQueOcupa*MARCOS_SIZE;
+	int paginaChequeada;
+	for(paginaChequeada = 0; paginaChequeada<cantidadDePAginasQueOcupa;paginaChequeada++){
+//	entradasDeTabla[paginaChequeada].frame = paginaChequeada;
+		entradasDeTabla[paginaChequeada].pid = -1;
+		entradasDeTabla[paginaChequeada].pagina = paginaChequeada;
+	}
+	for(paginaChequeada = cantidadDePAginasQueOcupa; paginaChequeada<MARCOS; paginaChequeada++){
+//	entradasDeTabla[paginaChequeada].frame = paginaChequeada;
+		entradasDeTabla[paginaChequeada].pid = -1;
+		entradasDeTabla[paginaChequeada].pagina = -1;
+	}
 }
 
-//-------------------------FUNCIONES AUXILIARES PARA LOS MANEJADORES DE HILOS---------------------------//
-
+//-----------------------------FUNCIONES AUXILIARES DE MEMORIA-----------------------------------------//
 bool ocupaCeroPaginas(int pagina){
-  if(entradasDeTabla[pagina].pagina == -1){
-    return true;
-  }
-  else{
-    return false;
-  }
+	if(entradasDeTabla[pagina].pagina == -1){
+		return true;
+	}
+	else{
+		return false;
+	}
 }
 
 bool noHayNingunProceso(int pagina){
-  if(entradasDeTabla[pagina].pid == -1){
-    return true;
-  }else{
-    return false;
-  }
+	if(entradasDeTabla[pagina].pid == -1){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+bool esNumero(char* cadenaAChequear){
+	bool esNumero = true;
+	int numeroDeCaracter;
+	int tamanioNumero = string_length(cadenaAChequear);
+	for(numeroDeCaracter = 0; numeroDeCaracter<tamanioNumero;numeroDeCaracter++){
+		if(!isdigit(cadenaAChequear[numeroDeCaracter])){
+			esNumero = false;
+			return esNumero;
+		}
+	}
+	return esNumero;
+}
+
+void retardo(int retardoRequerido){
+	RETARDO_MEMORIA = retardoRequerido;
 }
 
 
+//-------------------------COMANDOS DE MEMORIA Y FUNCIONES AUXILIARES PARA ELLOS------------------------//
+//--------------------------------------DUMP-------------------------------------------------------------//
+
+void copiarAArchivoDump(char* mensajeACopiar){
+	int tamanioAEscribir = string_length(mensajeACopiar);
+	FILE* dump = fopen("./dump.txt","a");
+	fwrite(mensajeACopiar,tamanioAEscribir,1,dump);
+	fclose(dump);
+}
+
+void copiarDatosProceso (int numeroDeFrame){
+	char* cadenaDeCopiadoDeDatos = string_new();
+	string_append(&cadenaDeCopiadoDeDatos,string_from_format("Datos pertenecientes al proceso %d,",entradasDeTabla[numeroDeFrame].pid));
+	string_append(&cadenaDeCopiadoDeDatos,string_from_format(" numero de pagina %d,", entradasDeTabla[numeroDeFrame].pagina));
+	string_append(&cadenaDeCopiadoDeDatos,string_from_format(", se encuentran en el frame %d y ",numeroDeFrame));
+  //Obtengo los datos pertenecientes a la pagina
+	long int comienzoDeDatos = numeroDeFrame*MARCOS_SIZE;
+	void* datosDeProceso = malloc(MARCOS_SIZE);
+	memcpy(datosDeProceso,entradasDeTabla+comienzoDeDatos,MARCOS_SIZE);
+	string_append(&cadenaDeCopiadoDeDatos,string_from_format("posee los datos %s.\n", datosDeProceso));
+	printf("%s",cadenaDeCopiadoDeDatos);
+	copiarAArchivoDump(cadenaDeCopiadoDeDatos);
+	free(datosDeProceso);
+	free(cadenaDeCopiadoDeDatos);
+}
+
+bool perteneceAlProceso(int pid, int numeroDeFrame){
+	return entradasDeTabla[numeroDeFrame].pid == pid;
+}
+
+
+
+void copiarTituloContenidoMemoria(){
+	char* cadenaDeEstructuracionDump = string_new();
+	string_append(&cadenaDeEstructuracionDump,"\n----------DUMP CONTENIDO DE MEMORIA----------\n");
+	printf("%s",cadenaDeEstructuracionDump);
+	copiarAArchivoDump(cadenaDeEstructuracionDump);
+	free(cadenaDeEstructuracionDump);
+}
+
+void dumpDeTodosLosDatos(){
+	copiarTituloContenidoMemoria();
+	int numeroDeFrame;
+	pthread_mutex_lock(&mutexTablaInvertida);
+	for(numeroDeFrame = 0; numeroDeFrame<MARCOS; numeroDeFrame++){
+		if(!ocupaCeroPaginas(numeroDeFrame)){
+			copiarDatosProceso(numeroDeFrame);
+		}
+	}
+	pthread_mutex_unlock(&mutexTablaInvertida);
+}
+
+
+
+//-------------------------FUNCIONES AUXILIARES PARA LOS MANEJADORES DE HILOS---------------------------//
+
+
+
 bool hayEspacioParaNuevoProceso(int cantidadDePaginasNecesarias){
-  int paginaChequeada;
-  int paginasDisponiblesEncontradas = 0;
-  bool hayEspacio = false;
-  for(paginaChequeada = 0 ; paginaChequeada<=MARCOS;paginaChequeada++){
-    if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
-      paginasDisponiblesEncontradas++;
-    }
-  }
-  if(paginasDisponiblesEncontradas>=cantidadDePaginasNecesarias){
-    hayEspacio = true;
-  }
-  return hayEspacio;
+	int paginaChequeada;
+	int paginasDisponiblesEncontradas = 0;
+	bool hayEspacio = false;
+	for(paginaChequeada = 0 ; paginaChequeada<=MARCOS;paginaChequeada++){
+		if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
+			paginasDisponiblesEncontradas++;
+		}
+	}
+	if(paginasDisponiblesEncontradas>=cantidadDePaginasNecesarias){
+		hayEspacio = true;
+	}
+	return hayEspacio;
 }
 
 void asignarPaginasAProceso(int pid, int cantidadDePaginas){
   //Aca va un semaforo
-  int paginaChequeada, cantidadDePaginasAsignadas = 0;
-  for(paginaChequeada = 0; paginaChequeada<=MARCOS && cantidadDePaginasAsignadas<=cantidadDePaginas; paginaChequeada++){
-    if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
-      entradasDeTabla[paginaChequeada].pid = pid;
-      entradasDeTabla[paginaChequeada].pagina = cantidadDePaginasAsignadas;
-      cantidadDePaginasAsignadas++;
-    }
-  }
+	int paginaChequeada, cantidadDePaginasAsignadas = 0;
+	for(paginaChequeada = 0; paginaChequeada<=MARCOS && cantidadDePaginasAsignadas<=cantidadDePaginas; paginaChequeada++){
+		if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
+			entradasDeTabla[paginaChequeada].pid = pid;
+			entradasDeTabla[paginaChequeada].pagina = cantidadDePaginasAsignadas;
+			cantidadDePaginasAsignadas++;
+		}
+	}
   //Fin del semaforo
 }
 
 
 void inicializarProceso(int pid, int cantidadDePaginas, int socketKernel){
   //Aca va un semaforo
-  bool espacioInsuficiente = hayEspacioParaNuevoProceso(cantidadDePaginas);
-  if(espacioInsuficiente){
-    int espacioInsuficiente = ESPACIO_INSUFICIENTE;
-    if(send(socketKernel,&espacioInsuficiente,sizeof(int),0)==-1){
-      perror("Error de send");
-      exit(-1);
-    }
-  }else{
-    log_info(loggerMemoria,"Se ha encontrado espacio suficiente para inicializar el programa %d",pid);
-    usleep(RETARDO_MEMORIA);
-    log_info(loggerMemoria,"Retardo...");
-    asignarPaginasAProceso(pid, cantidadDePaginas);
-  }
+	bool espacioInsuficiente = hayEspacioParaNuevoProceso(cantidadDePaginas);
+	if(espacioInsuficiente){
+		int espacioInsuficiente = ESPACIO_INSUFICIENTE;
+		if(send(socketKernel,&espacioInsuficiente,sizeof(int),0)==-1){
+			perror("Error de send");
+			exit(-1);
+		}
+	}else{
+		log_info(loggerMemoria,"Se ha encontrado espacio suficiente para inicializar el programa %d",pid);
+		usleep(RETARDO_MEMORIA);
+		log_info(loggerMemoria,"Retardo...");
+		asignarPaginasAProceso(pid, cantidadDePaginas);
+	}
 }
 
 void finalizarProceso(int pidProceso){
-  int numeroDePagina;
-  for(numeroDePagina = 0; numeroDePagina<=MARCOS; numeroDePagina++){
-    if(entradasDeTabla[numeroDePagina].pid == pidProceso){
-      entradasDeTabla[numeroDePagina].pid = -1;
-      entradasDeTabla[numeroDePagina].pagina = -1;
-    }
-  }
-  log_info(loggerMemoria,"El proceso %d se ha finalizado.",pidProceso);
+	int numeroDePagina;
+	for(numeroDePagina = 0; numeroDePagina<=MARCOS; numeroDePagina++){
+		if(entradasDeTabla[numeroDePagina].pid == pidProceso){
+			entradasDeTabla[numeroDePagina].pid = -1;
+			entradasDeTabla[numeroDePagina].pagina = -1;
+		}
+	}
+	log_info(loggerMemoria,"El proceso %d se ha finalizado.",pidProceso);
 }
 
 
@@ -162,88 +240,90 @@ void finalizarProceso(int pidProceso){
 
 void *manejadorTeclado(){
   //Leo de consola, con un maximo de 50 caracteres Usar getline
-  char* comando = malloc(50*sizeof(char));
-  size_t tamanioMaximo = 50;
+	char* comando = malloc(50*sizeof(char));
+	size_t tamanioMaximo = 50;
 
 
-  while(1){
-  puts("Esperando comando...");
-  getline(&comando, &tamanioMaximo, stdin);
+	while(1){
+		puts("Esperando comando...");
+		getline(&comando, &tamanioMaximo, stdin);
 
-  int tamanioRecibido = strlen(comando);
-  comando[tamanioRecibido-1] = '\0';
+		int tamanioRecibido = strlen(comando);
+		comando[tamanioRecibido-1] = '\0';
+		if(string_equals_ignore_case(comando,"dump")){
+			dumpDeTodosLosDatos();
+		}else{
 
-  char* posibleRetardo = string_substring_until(comando, 7);
-  char* posibleFlush = string_substring_until(comando, 5);
-  char* posibleDump = string_substring_until(comando, 4);
-  char* posibleSize = string_substring_until(comando, 4);
+			char* posibleRetardo = string_substring_until(comando, 7);
+			char* posibleFlush = string_substring_until(comando, 5);
+			char* posibleDump = string_substring_until(comando, 4);
+			char* posibleSize = string_substring_until(comando, 4);
 
-  if(string_equals_ignore_case(posibleRetardo, "retardo")){  //
-    char* valorARetardar = string_substring_from(comando, 8);
+			if(string_equals_ignore_case(posibleRetardo, "retardo")){  //
+				char* valorARetardar = string_substring_from(comando, 8);
 
-    if(!isdigit(valorARetardar)){  //Hay que hacer una funcion que chequee todos los valores, porque esta solo chequea caracteres, necesita chequear strings
-      perror("Error de valor de retardo");
-    }else{
-//      int reatardoRequerido = atoi(valorARetardar);
-//      retardo(retardoRequerido);
-    }
+				if(!esNumero(valorARetardar)){
+					perror("Error de valor de retardo");
+				}else{
+					int retardoRequerido = atoi(valorARetardar);
+					retardo(retardoRequerido);
+				}
 
-  }else if(string_equals_ignore_case(posibleFlush, "flush")){
+			}else if(string_equals_ignore_case(posibleFlush, "flush")){
     //Limpiar cache, queda para las proximas entregas
-  }else if(string_equals_ignore_case(posibleDump, "dump")){
-      puts("dumppppp");
-  }else if(string_equals_ignore_case(posibleSize, "size")){
+			}else if(string_equals_ignore_case(posibleDump, "dump")){
 
-  }
+			}else if(string_equals_ignore_case(posibleSize, "size")){
 
-  }
+			}
+		}
+	}
 }
 //-------------------------------------------MANEJADOR KERNEL------------------------------------//
 void *manejadorConexionKernel(void* socketKernel){
-
-  while(1){
-	int pid;
-    paquete paqueteRecibidoDeKernel;
+	while(1){
+		int pid;
+		paquete paqueteRecibidoDeKernel;
     //Chequear y recibir datos de kernel
-    if(recv(*(int*)socketKernel, &paqueteRecibidoDeKernel.tipoMsj, sizeof(int),0)==-1){   //*(int*) porque lo que yo tengo es un puntero de cualquier cosa que paso a int y necesito el valor de eso
-    	perror("Error al recibir el tipo de mensaje\n");
-    	exit(-1);
-    }
+		if(recv(*(int*)socketKernel, &paqueteRecibidoDeKernel.tipoMsj, sizeof(int),0)==-1){   //*(int*) porque lo que yo tengo es un puntero de cualquier cosa que paso a int y necesito el valor de eso
+			perror("Error al recibir el tipo de mensaje\n");
+			exit(-1);
+		}
 
-    switch (paqueteRecibidoDeKernel.tipoMsj) {
-      case INICIALIZAR_PROGRAMA:
-    	  if(recv(*(int*)socketKernel,&paqueteRecibidoDeKernel.tamMsj,sizeof(int),0)==-1){
+		switch (paqueteRecibidoDeKernel.tipoMsj){
+		case INICIALIZAR_PROGRAMA:
+			if(recv(*(int*)socketKernel,&paqueteRecibidoDeKernel.tamMsj,sizeof(int),0)==-1){
     		  perror("Error al recibir tamanio de mensaje\n");
     		  exit(-1);
-    	  }
-    	paqueteRecibidoDeKernel.mensaje = malloc(paqueteRecibidoDeKernel.tamMsj);
-        int idPrograma,paginasRequeridas;
-        if(recv(*(int*)socketKernel,&idPrograma,sizeof(int),0) == -1){
-        	perror("Error al recibir id de programa\n");
-        	exit(-1);
-        }
-        if(recv(*(int*)socketKernel,&paginasRequeridas,sizeof(int),0)==-1){
-        	perror("Error al recibir cantidad de paginas requeridas\n");
-        	exit(-1);
-        }
-        inicializarProceso(idPrograma,paginasRequeridas,*(int*)socketKernel);
-        break;
-      case ASIGNAR_PAGINAS:
+			}
+			paqueteRecibidoDeKernel.mensaje = malloc(paqueteRecibidoDeKernel.tamMsj);
+			int idPrograma,paginasRequeridas;
+			if(recv(*(int*)socketKernel,&idPrograma,sizeof(int),0) == -1){
+				perror("Error al recibir id de programa\n");
+				exit(-1);
+			}
+			if(recv(*(int*)socketKernel,&paginasRequeridas,sizeof(int),0)==-1){
+				perror("Error al recibir cantidad de paginas requeridas\n");
+				exit(-1);
+			}
+			inicializarProceso(idPrograma,paginasRequeridas,*(int*)socketKernel);
+			break;
+		case ASIGNAR_PAGINAS:
         //blablabla todo lo que haya que hacer busco paginas libres, y asigno las que me pida,
         //Si no alcanzan perror
-    	  break;
-      case FINALIZAR_PROGRAMA:
-    	  if(recv(*(int*)socketKernel,&pid,sizeof(int),0)==-1){
-    		  perror("Error de recv");
-    		  exit(-1);
-    	  }
-    	  finalizarProceso(pid);
-    	  break;
-      default:
-    	  perror("No se recibio correctamente el mensaje");
-    }
-    free(paqueteRecibidoDeKernel.mensaje);
-  }
+			break;
+		case FINALIZAR_PROGRAMA:
+			if(recv(*(int*)socketKernel,&pid,sizeof(int),0)==-1){
+				perror("Error de recv");
+				exit(-1);
+			}
+			finalizarProceso(pid);
+			break;
+		default:
+			perror("No se recibio correctamente el mensaje");
+		}
+		free(paqueteRecibidoDeKernel.mensaje);
+	}
 }
 //--------------------------------------------MANEJADOR CPU--------------------------------------//
 void *manejadorConexionCPU (void *socket){
@@ -254,8 +334,9 @@ void *manejadorConexionCPU (void *socket){
 
 
 //----------------------------------------MAIN--------------------------------------------//
-int main(int argc, char *argv[]) {
+void main(){//int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
+	pthread_mutex_init(&mutexTablaInvertida,NULL);
 	//verificarParametrosInicio(argc);
 	char* path = "Debug/memoria.config";
 	//inicializarMemoria(argv[1]);
@@ -280,43 +361,43 @@ int main(int argc, char *argv[]) {
 	int socketMaximo = socketEscuchaMemoria;
 
 	aceptarConexiones = fd_setAuxiliar;
-		pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
-		log_info(loggerMemoria,"Conexion a consola memoria exitosa...\n");
-		while (1) { //Chequeo nuevas conexiones y las voy separando a partir del handshake recibido (CPU o Kernel).
-		  fd_setAuxiliar = aceptarConexiones;
-		  if(select(socketEscuchaMemoria,&fd_setAuxiliar,NULL,NULL,NULL)==-1){
-			  perror("Error de select en memoria.");
-			  exit(-1);
-		  }
-		  for(socketClienteChequeado = 0; socketClienteChequeado<=socketMaximo; socketClienteChequeado++){
-		  		  if(socketClienteChequeado == socketMaximo){
-		  			  socketAceptaClientes = aceptarConexionDeCliente(socketEscuchaMemoria);
-		  			  FD_SET(socketAceptaClientes,&aceptarConexiones);
-		  			  socketMaximo = calcularSocketMaximo(socketAceptaClientes,socketMaximo);
-		  			  log_info(loggerMemoria,"Registro nueva conexion de socket: %d\n",socketAceptaClientes);
-		  		  }else{
-		  			  if(recv(socketClienteChequeado,&paqueteDeRecepcion.tipoMsj,sizeof(int),0)==-1){
-		  				  perror("Error de send en memoria");
-		  				  exit(-1);
-		  			  }else{
-		  				  switch(paqueteDeRecepcion.tipoMsj){
-		  				  	  case ES_CPU:
-		  				  		  pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketClienteChequeado);
-		  				  		  log_info(loggerMemoria,"Se registro nueva CPU...\n");
-		  				  		  break;
-		  				  	  case ES_KERNEL:
-		  				  		  pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
-		  				  		  log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
-		  				  		  break;
-		  				  	  default:
-		  				  		  puts("Conexion erronea");
-		  				  		  FD_CLR(socketClienteChequeado,&aceptarConexiones);
-		  				  		  close(socketClienteChequeado);
-		  				  }
-		  			  }
-		  		  }
-		  	  }
-
+	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
+	log_info(loggerMemoria,"Conexion a consola memoria exitosa...\n");
+	while (1) { //Chequeo nuevas conexiones y las voy separando a partir del handshake recibido (CPU o Kernel).
+		fd_setAuxiliar = aceptarConexiones;
+		if(select(socketEscuchaMemoria,&fd_setAuxiliar,NULL,NULL,NULL)==-1){
+			perror("Error de select en memoria.");
+			exit(-1);
 		}
-	return EXIT_SUCCESS;
+		for(socketClienteChequeado = 0; socketClienteChequeado<=socketMaximo; socketClienteChequeado++){
+			if(socketClienteChequeado == socketMaximo){
+				socketAceptaClientes = aceptarConexionDeCliente(socketEscuchaMemoria);
+				FD_SET(socketAceptaClientes,&aceptarConexiones);
+				socketMaximo = calcularSocketMaximo(socketAceptaClientes,socketMaximo);
+				log_info(loggerMemoria,"Registro nueva conexion de socket: %d\n",socketAceptaClientes);
+			}else{
+				if(recv(socketClienteChequeado,&paqueteDeRecepcion.tipoMsj,sizeof(int),0)==-1){
+					perror("Error de send en memoria");
+					exit(-1);
+				}else{
+					switch(paqueteDeRecepcion.tipoMsj){
+		  				case ES_CPU:
+		  					pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketClienteChequeado);
+		  					log_info(loggerMemoria,"Se registro nueva CPU...\n");
+		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
+		  					break;
+		  				case ES_KERNEL:
+		  					pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
+		  					log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
+		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
+		  					break;
+		  				default:
+		  					puts("Conexion erronea");
+		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
+		  					close(socketClienteChequeado);
+					}
+				}
+			}
+		}
+	}
 }
