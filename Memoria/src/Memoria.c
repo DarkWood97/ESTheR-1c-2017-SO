@@ -1,5 +1,6 @@
 #include "funcionesGenericas.h"
-#include "socket.h"
+#include "../Socket/src/socket.h"
+//#include "socket.h"
 #include <ctype.h>
 
 
@@ -10,10 +11,13 @@
 #define INICIALIZAR_PROGRAMA 501
 #define ASIGNAR_PAGINAS 502
 #define FINALIZAR_PROGRAMA 503
+#define INICIO_EXITOSO
+#define TAMANIO_PAGINA_PARA_KERNEL
 
 typedef struct __attribute__((packed)){
-  int pid;
-  int pagina;
+	int frame;
+	int pid;
+	int pagina;
 }entradaTabla;
 
 t_log * loggerMemoria;
@@ -64,6 +68,9 @@ void mostrarConfiguracionesMemoria() {
 int calcularTamanioDeTabla(){
 	long int tamanio_tabla = MARCOS*sizeof(entradaTabla);
 	int cantidadDePaginasQueOcupa = tamanio_tabla/MARCOS_SIZE;
+	if((tamanio_tabla%MARCOS_SIZE)!=0){
+	    cantidadDePaginasQueOcupa++;
+	  }
 	return cantidadDePaginasQueOcupa;
 }
 
@@ -72,12 +79,12 @@ void crearEstructuraAdministrativa(){ //Tabla de paginas invertidas
 	punteroAPrincipioDeDatos = memoriaSistema + cantidadDePAginasQueOcupa*MARCOS_SIZE;
 	int paginaChequeada;
 	for(paginaChequeada = 0; paginaChequeada<cantidadDePAginasQueOcupa;paginaChequeada++){
-//	entradasDeTabla[paginaChequeada].frame = paginaChequeada;
+		entradasDeTabla[paginaChequeada].frame = paginaChequeada;
 		entradasDeTabla[paginaChequeada].pid = -1;
 		entradasDeTabla[paginaChequeada].pagina = paginaChequeada;
 	}
 	for(paginaChequeada = cantidadDePAginasQueOcupa; paginaChequeada<MARCOS; paginaChequeada++){
-//	entradasDeTabla[paginaChequeada].frame = paginaChequeada;
+		entradasDeTabla[paginaChequeada].frame = paginaChequeada;
 		entradasDeTabla[paginaChequeada].pid = -1;
 		entradasDeTabla[paginaChequeada].pagina = -1;
 	}
@@ -133,12 +140,12 @@ void copiarDatosProceso (int numeroDeFrame){
 	char* cadenaDeCopiadoDeDatos = string_new();
 	string_append(&cadenaDeCopiadoDeDatos,string_from_format("Datos pertenecientes al proceso %d,",entradasDeTabla[numeroDeFrame].pid));
 	string_append(&cadenaDeCopiadoDeDatos,string_from_format(" numero de pagina %d,", entradasDeTabla[numeroDeFrame].pagina));
-	string_append(&cadenaDeCopiadoDeDatos,string_from_format(", se encuentran en el frame %d y ",numeroDeFrame));
+	string_append(&cadenaDeCopiadoDeDatos,string_from_format(" se encuentran en el frame %d y ",numeroDeFrame));
   //Obtengo los datos pertenecientes a la pagina
 	long int comienzoDeDatos = numeroDeFrame*MARCOS_SIZE;
 	void* datosDeProceso = malloc(MARCOS_SIZE);
 	memcpy(datosDeProceso,entradasDeTabla+comienzoDeDatos,MARCOS_SIZE);
-	string_append(&cadenaDeCopiadoDeDatos,string_from_format("posee los datos %s.\n", datosDeProceso));
+	string_append(&cadenaDeCopiadoDeDatos,string_from_format("posee los datos %p.\n", &datosDeProceso));
 	printf("%s",cadenaDeCopiadoDeDatos);
 	copiarAArchivoDump(cadenaDeCopiadoDeDatos);
 	free(datosDeProceso);
@@ -175,7 +182,7 @@ void dumpDeTodosLosDatos(){
 
 //-------------------------FUNCIONES AUXILIARES PARA LOS MANEJADORES DE HILOS---------------------------//
 
-
+//------------------------FUNCIONES AUXILIARES PARA HILO DE KERNEL--------------------------------------//
 
 bool hayEspacioParaNuevoProceso(int cantidadDePaginasNecesarias){
 	int paginaChequeada;
@@ -192,35 +199,38 @@ bool hayEspacioParaNuevoProceso(int cantidadDePaginasNecesarias){
 	return hayEspacio;
 }
 
-void asignarPaginasAProceso(int pid, int cantidadDePaginas){
+//-------------------------------------ASIGNAR PAGINAS PARA PROCESO---------------------------------//
+
+void asignarPaginasAProceso(int pid, int cantidadDePaginas, int socketKernel){
   //Aca va un semaforo
-	int paginaChequeada, cantidadDePaginasAsignadas = 0;
-	for(paginaChequeada = 0; paginaChequeada<=MARCOS && cantidadDePaginasAsignadas<=cantidadDePaginas; paginaChequeada++){
-		if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
-			entradasDeTabla[paginaChequeada].pid = pid;
-			entradasDeTabla[paginaChequeada].pagina = cantidadDePaginasAsignadas;
-			cantidadDePaginasAsignadas++;
+	if(hayEspacioParaNuevoProceso(cantidadDePaginas)){
+		int espacioInsuficiente = ESPACIO_INSUFICIENTE;
+		if(send(socketKernel,&espacioInsuficiente,sizeof(int),0)==-1){
+			perror("Erro de send");
+			exit(-1);
+		}
+	}else{
+		int paginaChequeada, cantidadDePaginasAsignadas = 0;
+		for(paginaChequeada = 0; paginaChequeada<=MARCOS && cantidadDePaginasAsignadas<=cantidadDePaginas; paginaChequeada++){
+			if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
+				entradasDeTabla[paginaChequeada].pid = pid;
+				entradasDeTabla[paginaChequeada].pagina = cantidadDePaginasAsignadas;
+				cantidadDePaginasAsignadas++;
+			}
 		}
 	}
   //Fin del semaforo
 }
 
+//-----------------------------------INICIAR PROCESO----------------------------------------//
 
 void inicializarProceso(int pid, int cantidadDePaginas, int socketKernel){
   //Aca va un semaforo
-	bool espacioInsuficiente = hayEspacioParaNuevoProceso(cantidadDePaginas);
-	if(espacioInsuficiente){
-		int espacioInsuficiente = ESPACIO_INSUFICIENTE;
-		if(send(socketKernel,&espacioInsuficiente,sizeof(int),0)==-1){
-			perror("Error de send");
-			exit(-1);
-		}
-	}else{
-		log_info(loggerMemoria,"Se ha encontrado espacio suficiente para inicializar el programa %d",pid);
-		usleep(RETARDO_MEMORIA);
-		log_info(loggerMemoria,"Retardo...");
-		asignarPaginasAProceso(pid, cantidadDePaginas);
-	}
+
+	log_info(loggerMemoria,"Se ha encontrado espacio suficiente para inicializar el programa %d",pid);
+	usleep(RETARDO_MEMORIA);
+	log_info(loggerMemoria,"Retardo...");
+	asignarPaginasAProceso(pid, cantidadDePaginas,socketKernel);
 }
 
 void finalizarProceso(int pidProceso){
@@ -267,6 +277,7 @@ void *manejadorTeclado(){
 				}else{
 					int retardoRequerido = atoi(valorARetardar);
 					retardo(retardoRequerido);
+					log_info(loggerMemoria,"Se ha modificado el RETARDO_MEMORIA a %d",retardoRequerido);
 				}
 
 			}else if(string_equals_ignore_case(posibleFlush, "flush")){
@@ -275,6 +286,8 @@ void *manejadorTeclado(){
 
 			}else if(string_equals_ignore_case(posibleSize, "size")){
 
+			}else{
+				puts("Error de comando");
 			}
 		}
 	}
@@ -282,41 +295,38 @@ void *manejadorTeclado(){
 //-------------------------------------------MANEJADOR KERNEL------------------------------------//
 void *manejadorConexionKernel(void* socketKernel){
 	while(1){
-		int pid;
+		int pid,paginasRequeridas;
 		paquete paqueteRecibidoDeKernel;
     //Chequear y recibir datos de kernel
 		if(recv(*(int*)socketKernel, &paqueteRecibidoDeKernel.tipoMsj, sizeof(int),0)==-1){   //*(int*) porque lo que yo tengo es un puntero de cualquier cosa que paso a int y necesito el valor de eso
 			perror("Error al recibir el tipo de mensaje\n");
 			exit(-1);
 		}
+		if(recv(*(int*)socketKernel,&paqueteRecibidoDeKernel.tamMsj, sizeof(int),0)==-1){
+			perror("Error al recibir el tamanio del mensaje\n");
+		}
+		if(recv(*(int*)socketKernel,&pid,sizeof(int),0)==-1){ //Lo recibo aca, ya que todas los comandos enviados por kernel incluyen el pid
+			perror("Error de recv");
+			exit(-1);
+		}
 
 		switch (paqueteRecibidoDeKernel.tipoMsj){
 		case INICIALIZAR_PROGRAMA:
-			if(recv(*(int*)socketKernel,&paqueteRecibidoDeKernel.tamMsj,sizeof(int),0)==-1){
-    		  perror("Error al recibir tamanio de mensaje\n");
-    		  exit(-1);
-			}
 			paqueteRecibidoDeKernel.mensaje = malloc(paqueteRecibidoDeKernel.tamMsj);
-			int idPrograma,paginasRequeridas;
-			if(recv(*(int*)socketKernel,&idPrograma,sizeof(int),0) == -1){
-				perror("Error al recibir id de programa\n");
-				exit(-1);
-			}
 			if(recv(*(int*)socketKernel,&paginasRequeridas,sizeof(int),0)==-1){
 				perror("Error al recibir cantidad de paginas requeridas\n");
 				exit(-1);
 			}
-			inicializarProceso(idPrograma,paginasRequeridas,*(int*)socketKernel);
+			inicializarProceso(pid,paginasRequeridas,*(int*)socketKernel);
 			break;
 		case ASIGNAR_PAGINAS:
-        //blablabla todo lo que haya que hacer busco paginas libres, y asigno las que me pida,
-        //Si no alcanzan perror
-			break;
-		case FINALIZAR_PROGRAMA:
-			if(recv(*(int*)socketKernel,&pid,sizeof(int),0)==-1){
-				perror("Error de recv");
+			if(recv(*(int*)socketKernel,&paginasRequeridas,sizeof(int),0)==-1){
+				perror("Error al recibir cantidad de paginas requeridas\n");
 				exit(-1);
 			}
+			asignarPaginasAProceso(pid, paginasRequeridas, *(int*)socketKernel);
+			break;
+		case FINALIZAR_PROGRAMA:
 			finalizarProceso(pid);
 			break;
 		default:
@@ -334,7 +344,7 @@ void *manejadorConexionCPU (void *socket){
 
 
 //----------------------------------------MAIN--------------------------------------------//
-void main(){//int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
 	//verificarParametrosInicio(argc);
@@ -388,6 +398,10 @@ void main(){//int argc, char *argv[]) {
 		  					break;
 		  				case ES_KERNEL:
 		  					pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
+		  					if(send(socketClienteChequeado,&MARCOS_SIZE,sizeof(int),0)==-1){
+		  						perror("Erro al enviar el tamanio de pagina");
+		  						exit(-1);
+		  					}
 		  					log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
 		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
 		  					break;
