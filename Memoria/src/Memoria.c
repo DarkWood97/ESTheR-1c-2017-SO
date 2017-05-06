@@ -494,51 +494,53 @@ int main(int argc, char *argv[]) {
 	FD_SET(socketEscuchaMemoria,&aceptarConexiones);
 	int socketMaximo = socketEscuchaMemoria;
 
-	fd_setAuxiliar = aceptarConexiones;
-	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
+	//fd_setAuxiliar = aceptarConexiones;
+	//pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
 	log_info(loggerMemoria,"Conexion a consola memoria exitosa...\n");
 	while (1) { //Chequeo nuevas conexiones y las voy separando a partir del handshake recibido (CPU o Kernel).
 		fd_setAuxiliar = aceptarConexiones;
-		if(select(socketEscuchaMemoria,&fd_setAuxiliar,NULL,NULL,NULL)==-1){
+		if(select(socketMaximo+1,&fd_setAuxiliar,NULL,NULL,NULL)==-1){
 			perror("Error de select en memoria.");
 			exit(-1);
 		}
 		for(socketClienteChequeado = 0; socketClienteChequeado<=socketMaximo; socketClienteChequeado++){
-			if(socketClienteChequeado == socketMaximo){
-				socketAceptaClientes = aceptarConexionDeCliente(socketEscuchaMemoria);
-				FD_SET(socketAceptaClientes,&aceptarConexiones);
-				socketMaximo = calcularSocketMaximo(socketAceptaClientes,socketMaximo);
-				log_info(loggerMemoria,"Registro nueva conexion de socket: %d\n",socketAceptaClientes);
-			}else{
-				if(recv(socketClienteChequeado,&paqueteDeRecepcion.tipoMsj,sizeof(int),0)==-1){
-					perror("Error de send en memoria");
-					exit(-1);
+			if(FD_ISSET(socketClienteChequeado,&fd_setAuxiliar)){
+				if(socketClienteChequeado == socketEscuchaMemoria){
+					socketAceptaClientes = aceptarConexionDeCliente(socketEscuchaMemoria);
+					FD_SET(socketAceptaClientes,&aceptarConexiones);
+					socketMaximo = calcularSocketMaximo(socketAceptaClientes,socketMaximo);
+					log_info(loggerMemoria,"Registro nueva conexion de socket: %d\n",socketAceptaClientes);
 				}else{
-					switch(paqueteDeRecepcion.tipoMsj){
-		  				case ES_CPU:
-		  					pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketClienteChequeado);
-		  					log_info(loggerMemoria,"Se registro nueva CPU...\n");
-		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
-		  					break;
-		  				case ES_KERNEL:
-		  					pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
-		  					paquete paqDePaginas;
-		  					paqDePaginas.tipoMsj = TAMANIO_PAGINA_PARA_KERNEL;
-		  					paqDePaginas.tamMsj = sizeof(int);
-		  					paqDePaginas.mensaje = malloc(paqDePaginas.tamMsj);
-		  					memcpy(paqDePaginas.mensaje,&MARCOS_SIZE,sizeof(int));
-		  					if(send(socketClienteChequeado,&paqDePaginas,sizeof(int),0)==-1){
-		  						perror("Error al enviar el tamanio de pagina");
-		  						exit(-1);
-		  					}
-		  					free(paqDePaginas.mensaje);
-		  					log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
-		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
-		  					break;
-		  				default:
-		  					puts("Conexion erronea");
-		  					FD_CLR(socketClienteChequeado,&aceptarConexiones);
-		  					close(socketClienteChequeado);
+					if(recv(socketClienteChequeado,&paqueteDeRecepcion.tipoMsj,sizeof(int),0)==-1){
+						perror("Error de recv en memoria");
+						exit(-1);
+					}else{
+						switch(paqueteDeRecepcion.tipoMsj){
+							case ES_CPU:
+								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketClienteChequeado);
+								log_info(loggerMemoria,"Se registro nueva CPU...\n");
+								FD_CLR(socketClienteChequeado,&aceptarConexiones);
+								break;
+							case ES_KERNEL:
+								pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
+								paquete paqDePaginas;
+								paqDePaginas.tipoMsj = TAMANIO_PAGINA_PARA_KERNEL;
+								paqDePaginas.tamMsj = sizeof(int);
+								paqDePaginas.mensaje = malloc(paqDePaginas.tamMsj);
+								memcpy(paqDePaginas.mensaje,&MARCOS_SIZE,sizeof(int));
+								if(send(socketClienteChequeado,&paqDePaginas,sizeof(int),0)==-1){
+									perror("Error al enviar el tamanio de pagina");
+									exit(-1);
+								}
+								free(paqDePaginas.mensaje);
+								log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
+								FD_CLR(socketClienteChequeado,&aceptarConexiones);
+								break;
+							default:
+								puts("Conexion erronea");
+								FD_CLR(socketClienteChequeado,&aceptarConexiones);
+								close(socketClienteChequeado);
+						}
 					}
 				}
 			}

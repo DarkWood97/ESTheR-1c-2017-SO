@@ -1929,3 +1929,29 @@ Datos pertenecientes al proceso -1, numero de pagina 23, se encuentran en el fra
 |  1  |  -1  |  1  |
 |  2  |  -1  |  2  |
 |  3  |  -1  |  3  |
+
+----------DUMP CONTENIDO DE MEMORIA----------
+Datos pertenecientes al proceso -1, numero de pagina 0, se encuentran en el frame 0 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 1, se encuentran en el frame 1 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 2, se encuentran en el frame 2 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 3, se encuentran en el frame 3 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 4, se encuentran en el frame 4 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 5, se encuentran en el frame 5 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 6, se encuentran en el frame 6 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 7, se encuentran en el frame 7 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 8, se encuentran en el frame 8 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 9, se encuentran en el frame 9 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 10, se encuentran en el frame 10 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 11, se encuentran en el frame 11 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 12, se encuentran en el frame 12 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 13, se encuentran en el frame 13 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 14, se encuentran en el frame 14 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 15, se encuentran en el frame 15 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 16, se encuentran en el frame 16 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 17, se encuentran en el frame 17 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 18, se encuentran en el frame 18 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 19, se encuentran en el frame 19 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 20, se encuentran en el frame 20 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 21, se encuentran en el frame 21 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 22, se encuentran en el frame 22 y posee los datos 0xb750e2c8.
+Datos pertenecientes al proceso -1, numero de pagina 23, se encuentran en el frame 23 y posee los datos 0xb750e2c8.
