@@ -34,8 +34,9 @@ t_config generarT_ConfigParaCargar(char *path) {
 		perror("Error de ruta de archivo de configuracion");
 		exit(-1);
 	}
-	return *configuracionDelComponente;
 	free(configuracionDelComponente);
+	return *configuracionDelComponente;
+
 }
 
 void recibirMensajeDeKernel(int socketKernel){

@@ -166,6 +166,8 @@ void copiarTituloContenidoMemoria(){
 	free(cadenaDeEstructuracionDump);
 }
 
+//------------------DUMP DE TODOS LOS DATOS
+
 void dumpDeTodosLosDatos(){
 	copiarTituloContenidoMemoria();
 	int numeroDeFrame;
@@ -177,6 +179,91 @@ void dumpDeTodosLosDatos(){
 	}
 	pthread_mutex_unlock(&mutexTablaInvertida);
 }
+
+//-------------------------DUMP CONTENIDO DE PROCESO
+
+void copiarTituloContenidoDeUnProceso(){
+	char* cadenaDeEstructuracionDump = string_new();
+	string_append(&cadenaDeEstructuracionDump,"\n----------DUMP CONTENIDO DE MEMORIA DE PROCESO----------\n");
+	printf("%s",cadenaDeEstructuracionDump);
+	copiarAArchivoDump(cadenaDeEstructuracionDump);
+	free(cadenaDeEstructuracionDump);
+}
+
+void dumpDeUnProceso(int pid){
+	copiarTituloContenidoDeUnProceso();
+	int numeroDeFrame;
+	pthread_mutex_lock(&mutexTablaInvertida);
+	for(numeroDeFrame = 0; numeroDeFrame<MARCOS; numeroDeFrame++){
+		if(perteneceAlProceso(pid, numeroDeFrame)){
+			copiarDatosProceso(numeroDeFrame);
+      //cadenaDeCopiadoDeDatos = string_from_vformat("Datos pertenecientes al proceso %d, numero de pagina %d son: %p",)
+    }
+  }
+    pthread_mutex_unlock(&mutexTablaInvertida);
+}
+
+//-----------------------------DUMP ESTRUCTURAS DE MEMORIA
+
+void copiarTituloDeEstructuras(){
+	char* cadenaDeEstructuracionDump = string_new();
+	string_append(&cadenaDeEstructuracionDump,"\n---------------DUMP ESTRUCTURAS--------------\n");
+	printf("%s\n", cadenaDeEstructuracionDump);
+	copiarAArchivoDump(cadenaDeEstructuracionDump);
+	free(cadenaDeEstructuracionDump);
+}
+
+void copiarListaDeProcesosActivos(){
+	int paginaDeProceso;
+	char* tituloListaDeProcesos = string_new();
+	string_append(&tituloListaDeProcesos,"Lista de procesos activos:\n");
+	printf("%s",tituloListaDeProcesos);
+	copiarAArchivoDump(tituloListaDeProcesos);
+	free(tituloListaDeProcesos);
+	for(paginaDeProceso = 0; paginaDeProceso<MARCOS; paginaDeProceso++){
+		if (entradasDeTabla[paginaDeProceso].pid != -1) {
+			char* procesoAImprimir = string_new();
+			procesoAImprimir = string_itoa(entradasDeTabla[paginaDeProceso].pid);
+			string_append(&procesoAImprimir,"\n");
+			printf("%s", procesoAImprimir);
+			copiarAArchivoDump(procesoAImprimir);
+			free(procesoAImprimir);
+    }
+  }
+}
+
+void copiarTablaInvertidaADump(){
+	char* cadenaAuxiliarDeCopiado = string_new();
+	string_append(&cadenaAuxiliarDeCopiado,"\n|  #Frame  |  PID  |  #Pagina  |\n");
+	printf("%s", cadenaAuxiliarDeCopiado);
+	copiarAArchivoDump(cadenaAuxiliarDeCopiado);
+	free(cadenaAuxiliarDeCopiado);
+	int posicion;
+	cadenaAuxiliarDeCopiado = string_new();
+	for(posicion = 0; posicion<MARCOS; posicion++){
+		string_append(&cadenaAuxiliarDeCopiado,string_from_format("|  %d  |  ",posicion));
+		string_append(&cadenaAuxiliarDeCopiado,string_from_format("%d  |  ",entradasDeTabla[posicion].pid));
+		string_append(&cadenaAuxiliarDeCopiado,string_from_format("%d  |\n",entradasDeTabla[posicion].pagina));
+	}
+	printf("%s", cadenaAuxiliarDeCopiado);
+	copiarAArchivoDump(cadenaAuxiliarDeCopiado);
+	free(cadenaAuxiliarDeCopiado);
+	cadenaAuxiliarDeCopiado = string_new();
+	string_append(&cadenaAuxiliarDeCopiado,"---------------------------------\n");
+	printf("%s",cadenaAuxiliarDeCopiado);
+	copiarAArchivoDump(cadenaAuxiliarDeCopiado);
+	free(cadenaAuxiliarDeCopiado);
+}
+
+void dumpEstructurasDeMemoria(){
+	copiarTituloDeEstructuras();
+    pthread_mutex_lock(&mutexTablaInvertida);
+    copiarTablaInvertidaADump();
+    copiarListaDeProcesosActivos();
+    pthread_mutex_unlock(&mutexTablaInvertida);
+}
+
+
 
 
 
@@ -256,7 +343,7 @@ void *manejadorTeclado(){
 
 	while(1){
 		puts("Esperando comando...");
-		getline(&comando, &tamanioMaximo, stdin);
+		size_t bytesLeidos = getline(&comando, &tamanioMaximo, stdin);
 
 		int tamanioRecibido = strlen(comando);
 		comando[tamanioRecibido-1] = '\0';
@@ -283,7 +370,19 @@ void *manejadorTeclado(){
 			}else if(string_equals_ignore_case(posibleFlush, "flush")){
     //Limpiar cache, queda para las proximas entregas
 			}else if(string_equals_ignore_case(posibleDump, "dump")){
-
+				char* queDumpear = string_new();
+				queDumpear = string_substring_from(comando, 5);
+				if(string_equals_ignore_case(queDumpear,"cache")){
+				    //Dumpear cache
+				}else if(string_equals_ignore_case(queDumpear,"estructuras")){
+				    dumpEstructurasDeMemoria();
+				}else if(esNumero(queDumpear)){
+					int pid = atoi(queDumpear);
+				    dumpDeUnProceso(pid);
+				}else{
+					perror("Error de segundo parametro de dump");
+				}
+				free(queDumpear);
 			}else if(string_equals_ignore_case(posibleSize, "size")){
 
 			}else{
@@ -291,6 +390,7 @@ void *manejadorTeclado(){
 			}
 		}
 	}
+	free(comando);
 }
 //-------------------------------------------MANEJADOR KERNEL------------------------------------//
 void *manejadorConexionKernel(void* socketKernel){
@@ -347,11 +447,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	//verificarParametrosInicio(argc);
-	char* path = "Debug/memoria.config";
-	//inicializarMemoria(argv[1]);
+	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
+	inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion;
-	inicializarMemoria(path);
+	//inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
