@@ -471,11 +471,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	verificarParametrosInicio(argc);
-	//char* path = "Debug/memoria.config";
-	inicializarMemoria(argv[1]);
+	//verificarParametrosInicio(argc);
+	char* path = "Debug/memoria.config";
+	//inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion;
-	//inicializarMemoria(path);
+	inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
 	FD_SET(socketEscuchaMemoria,&aceptarConexiones);
 	int socketMaximo = socketEscuchaMemoria;
 
-	aceptarConexiones = fd_setAuxiliar;
+	fd_setAuxiliar = aceptarConexiones;
 	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
 	log_info(loggerMemoria,"Conexion a consola memoria exitosa...\n");
 	while (1) { //Chequeo nuevas conexiones y las voy separando a partir del handshake recibido (CPU o Kernel).
