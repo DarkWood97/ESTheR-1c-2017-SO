@@ -174,9 +174,10 @@ PCB inicializarPCB(char* buffer) {
 	return nuevoPCB;
 }
 
-void realizarHandshake(int socket, int tipoMsj) {
-	int longitud = sizeof(tipoMsj);
-	if (send(socket, tipoMsj, longitud, 0) == -1) {
+void realizarHandshake(int socket) {
+	int longitud = sizeof(HANDSHAKE_MEMORIA);
+	int tipoMensaje = HANDSHAKE_MEMORIA;
+	if (send(socket, &tipoMensaje, longitud, 0) == -1) {
 		perror("Error de send");
 		close(socket);
 		exit(-1);
@@ -254,7 +255,7 @@ int main(int argc, char *argv[]) {
 	FD_SET(socketParaFileSystem, &socketsMaster);
 	socketMaxCliente = socketEscucha;
 	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
-	realizarHandshake(socketParaMemoria, HANDSHAKE_MEMORIA);
+	realizarHandshake(socketParaMemoria);
 
 	while (1) {
 		socketsConPeticion = socketsCliente;

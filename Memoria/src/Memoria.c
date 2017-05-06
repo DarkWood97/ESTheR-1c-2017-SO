@@ -474,7 +474,7 @@ int main(int argc, char *argv[]) {
 	//verificarParametrosInicio(argc);
 	char* path = "Debug/memoria.config";
 	//inicializarMemoria(argv[1]);
-	paquete paqueteDeRecepcion;
+	paquete paqueteDeRecepcion, paqDePaginas;
 	inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 
@@ -495,7 +495,7 @@ int main(int argc, char *argv[]) {
 	int socketMaximo = socketEscuchaMemoria;
 
 	//fd_setAuxiliar = aceptarConexiones;
-	//pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
+	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
 	log_info(loggerMemoria,"Conexion a consola memoria exitosa...\n");
 	while (1) { //Chequeo nuevas conexiones y las voy separando a partir del handshake recibido (CPU o Kernel).
 		fd_setAuxiliar = aceptarConexiones;
@@ -522,8 +522,6 @@ int main(int argc, char *argv[]) {
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
 								break;
 							case ES_KERNEL:
-								pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
-								paquete paqDePaginas;
 								paqDePaginas.tipoMsj = TAMANIO_PAGINA_PARA_KERNEL;
 								paqDePaginas.tamMsj = sizeof(int);
 								paqDePaginas.mensaje = malloc(paqDePaginas.tamMsj);
@@ -534,6 +532,7 @@ int main(int argc, char *argv[]) {
 								}
 								free(paqDePaginas.mensaje);
 								log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
+								pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
 								break;
 							default:
