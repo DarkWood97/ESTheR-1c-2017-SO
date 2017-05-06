@@ -4,22 +4,21 @@
 
 //--TYPEDEF------------------------------------------------------
 
-typedef struct {
-	int puerto_Prog;
-	int puerto_Cpu;
-	_ip ip_FS;
-	int puerto_Memoria;
-	_ip ip_Memoria;
-	int puerto_FS;
-	int quantum;
-	int quantum_Sleep;
-	char *algoritmo;
-	int grado_Multiprog;
-	unsigned char *sem_Ids;
-	unsigned int *sem_Init;
-	unsigned char *shared_Vars;
-	int stack_Size;
-} kernel;
+int puerto_Prog;
+int puerto_Cpu;
+_ip ip_FS;
+int puerto_Memoria;
+_ip ip_Memoria;
+int puerto_FS;
+int quantum;
+int quantum_Sleep;
+char *algoritmo;
+int grado_Multiprog;
+unsigned char *sem_Ids;
+unsigned int *sem_Init;
+unsigned char *shared_Vars;
+int stack_Size;
+
 
 //---------------indice de stack----
 
@@ -85,66 +84,66 @@ typedef struct {
 #define ASIGNAR_PAGINAS 502
 #define FINALIZAR_PROGRAMA 503
 
+
 bool YA_HAY_UNA_CONSOLA = false;
 int pid_actual = 1;
 tablaKernel *tablakernel;
+int TAM_PAGINA;
 
 //-----FUNCIONES KERNEL------------------------------------------
-kernel crearKernel(t_config *configuracion) {
-	kernel kernelAuxiliar;
+void crearKernel(t_config *configuracion) {
+
 	verificarParametrosCrear(configuracion, 14);
-	kernelAuxiliar.puerto_Prog = config_get_int_value(configuracion,
+	puerto_Prog = config_get_int_value(configuracion,
 			"PUERTO_PROG");
-	kernelAuxiliar.puerto_Cpu = config_get_int_value(configuracion,
+	puerto_Cpu = config_get_int_value(configuracion,
 			"PUERTO_CPU");
-	kernelAuxiliar.ip_FS.numero = config_get_string_value(configuracion,
+	ip_FS.numero = config_get_string_value(configuracion,
 			"IP_FS");
-	kernelAuxiliar.puerto_Memoria = config_get_int_value(configuracion,
+	puerto_Memoria = config_get_int_value(configuracion,
 			"PUERTO_MEMORIA");
-	kernelAuxiliar.ip_Memoria.numero = config_get_string_value(configuracion,
+	ip_Memoria.numero = config_get_string_value(configuracion,
 			"IP_MEMORIA");
-	kernelAuxiliar.puerto_FS = config_get_int_value(configuracion, "PUERTO_FS");
-	kernelAuxiliar.quantum = config_get_int_value(configuracion, "QUANTUM");
-	kernelAuxiliar.quantum_Sleep = config_get_int_value(configuracion,
+	puerto_FS = config_get_int_value(configuracion, "PUERTO_FS");
+	quantum = config_get_int_value(configuracion, "QUANTUM");
+	quantum_Sleep = config_get_int_value(configuracion,
 			"QUANTUM_SLEEP");
-	kernelAuxiliar.algoritmo = config_get_string_value(configuracion,
+	algoritmo = config_get_string_value(configuracion,
 			"ALGORITMO");
-	kernelAuxiliar.grado_Multiprog = config_get_int_value(configuracion,
+	grado_Multiprog = config_get_int_value(configuracion,
 			"GRADO_MULTIPROG");
-	kernelAuxiliar.sem_Ids = config_get_array_value(configuracion, "SEM_IDS");
-	kernelAuxiliar.sem_Init = config_get_array_value(configuracion, "SEM_INIT");
-	kernelAuxiliar.shared_Vars = config_get_array_value(configuracion,
+	sem_Ids = config_get_array_value(configuracion, "SEM_IDS");
+	sem_Init = config_get_array_value(configuracion, "SEM_INIT");
+	shared_Vars = config_get_array_value(configuracion,
 			"SHARED_VARS");
-	kernelAuxiliar.stack_Size = config_get_int_value(configuracion,
+	stack_Size = config_get_int_value(configuracion,
 			"STACK_SIZE");
-	return kernelAuxiliar;
 }
 
-kernel inicializarKernel(char *path) {
+void inicializarKernel(char *path) {
 	t_config *configuracionKernel = (t_config*) malloc(sizeof(t_config));
 	*configuracionKernel = generarT_ConfigParaCargar(path);
-	kernel kernelSistema = crearKernel(configuracionKernel);
-	return kernelSistema;
+	crearKernel(configuracionKernel);
 	free(configuracionKernel);
 }
-void mostrarConfiguracionesKernel(kernel kernel) {
-	printf("PUERTO_PROG=%d\n", kernel.puerto_Prog);
-	printf("PUERTO_CPU=%d\n", kernel.puerto_Cpu);
-	printf("IP_FS=%s\n", kernel.ip_FS.numero);
-	printf("PUERTO_FS=%d\n", kernel.puerto_FS);
-	printf("IP_MEMORIA=%s\n", kernel.ip_Memoria.numero);
-	printf("PUERTO_MEMORIA=%d\n", kernel.puerto_Memoria);
-	printf("QUANTUM=%d\n", kernel.quantum);
-	printf("QUANTUM_SLEEP=%d\n", kernel.quantum_Sleep);
-	printf("ALGORITMO=%s\n", kernel.algoritmo);
-	printf("GRADO_MULTIPROG=%d\n", kernel.grado_Multiprog);
+void mostrarConfiguracionesKernel() {
+	printf("PUERTO_PROG=%d\n", puerto_Prog);
+	printf("PUERTO_CPU=%d\n", puerto_Cpu);
+	printf("IP_FS=%s\n", ip_FS.numero);
+	printf("PUERTO_FS=%d\n", puerto_FS);
+	printf("IP_MEMORIA=%s\n", ip_Memoria.numero);
+	printf("PUERTO_MEMORIA=%d\n", puerto_Memoria);
+	printf("QUANTUM=%d\n", quantum);
+	printf("QUANTUM_SLEEP=%d\n", quantum_Sleep);
+	printf("ALGORITMO=%s\n", algoritmo);
+	printf("GRADO_MULTIPROG=%d\n", grado_Multiprog);
 	printf("SEM_IDS=");
-	imprimirArrayDeChar(kernel.sem_Ids);
+	imprimirArrayDeChar(sem_Ids);
 	printf("SEM_INIT=");
-	imprimirArrayDeInt(kernel.sem_Init);
+	imprimirArrayDeInt(sem_Init);
 	printf("SHARED_VARS=");
-	imprimirArrayDeChar(kernel.shared_Vars);
-	printf("STACK_SIZE=%d\n", kernel.stack_Size);
+	imprimirArrayDeChar(shared_Vars);
+	printf("STACK_SIZE=%d\n", stack_Size);
 }
 
 //	Stack inicializarStack(){
@@ -184,20 +183,22 @@ void realizarHandshake(int socket, int tipoMsj) {
 	}
 }
 
-int recibirCantidadPaginas(void* dataRecibida, PCB pcb, int stack_size) {
-	int tamanio = stack_size + sizeof(pcb.cod) - sizeof(HeapMetadata);
-	int cantidad = (tamanio) % ((int) &dataRecibida);
-	if (tamanio % ((int) &dataRecibida) != 0) {
+int recibirCantidadPaginas(char* codigo) {
+	int tamanio = stack_Size + strlen(codigo) - sizeof(HeapMetadata);
+	int cantidad = (tamanio) % (TAM_PAGINA);
+	if (tamanio % TAM_PAGINA != 0) {
 		cantidad++;
 	}
 	return cantidad;
 }
 
-void asignarPagina(int socket, int pid, int cantidadPaginas) {
+void inicializarPrograma(int socket,char*  buffer) {
+	PCB nuevoPCB = inicializarPCB(buffer);
 	paquete paqMemoria;
 	void* mensaje = malloc(sizeof(int) * 2);
-	memcpy(mensaje, pid, sizeof(int));
-	memcpy(mensaje + sizeof(int), cantidadPaginas, sizeof(int));
+	int cantidadPaginas=recibirCantidadPaginas(buffer);
+	memcpy(mensaje, nuevoPCB.PID, sizeof(int));
+	memcpy(mensaje + sizeof(int), TAM_PAGINA, sizeof(int));
 	paqMemoria.mensaje = mensaje;
 	paqMemoria.tamMsj = sizeof(int) * 2;
 	paqMemoria.tipoMsj = ASIGNAR_PAGINAS;
@@ -209,6 +210,8 @@ int obtenerPID() {
 	pid_actual = pid_actual++;
 	return pid;
 }
+
+
 
 //------FUNCIONES DE ARRAY----------------------------------------
 
@@ -236,21 +239,22 @@ int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	//char *path = "Debug/kernel.config";
 	//kernel kernel = inicializarKernel(path);
-	kernel kernel = inicializarKernel(argv[1]);
+	inicializarKernel(argv[1]);
 	fd_set socketsCliente, socketsConPeticion, socketsMaster; //socketsMaster son los sockets clientes + sockets servidor
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
 	FD_ZERO(&socketsMaster);
-	mostrarConfiguracionesKernel(kernel);
+	mostrarConfiguracionesKernel();
 	int socketParaMemoria, socketParaFileSystem, socketMaxCliente,socketMaxMaster, socketAChequear, socketAEnviarMensaje,socketQueAcepta, bytesRecibidos;
-	int socketEscucha = ponerseAEscucharClientes(kernel.puerto_Prog, 0);
-	socketParaMemoria = conectarAServer(kernel.ip_Memoria.numero,kernel.puerto_Memoria);
-	socketParaFileSystem = conectarAServer(kernel.ip_FS.numero,kernel.puerto_FS);
+	int socketEscucha = ponerseAEscucharClientes(puerto_Prog, 0);
+	socketParaMemoria = conectarAServer(ip_Memoria.numero,puerto_Memoria);
+	socketParaFileSystem = conectarAServer(ip_FS.numero,puerto_FS);
 	FD_SET(socketEscucha, &socketsCliente);
 	FD_SET(socketParaMemoria, &socketsMaster);
 	FD_SET(socketParaFileSystem, &socketsMaster);
 	socketMaxCliente = socketEscucha;
 	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
+	realizarHandshake(socketParaMemoria, HANDSHAKE_MEMORIA);
 
 	while (1) {
 		socketsConPeticion = socketsCliente;
@@ -300,17 +304,15 @@ int main(int argc, char *argv[]) {
 						char *buffer = malloc(mensajeAux.tamMsj);
 						FILE *archivoRecibido = fopen(dataRecibida, "r+w");
 						fscanf(archivoRecibido, "%s", buffer);
-						nuevoPCB = inicializarPCB(buffer);
-						realizarHandshake(socketParaMemoria, HANDSHAKE_MEMORIA);
+						inicializarPrograma(socketAChequear,buffer);
 						free(dataRecibida);
 						free(buffer);
 						break;
 					case TAMANIO_PAGINA:
-						recv(socketAChequear, &mensajeAux.tamMsj, sizeof(int),0);
-						dataRecibida = malloc(mensajeAux.tamMsj);
-						int cantpag = recibirCantidadPaginas(dataRecibida,nuevoPCB, kernel.stack_Size);
-						asignarPagina(socketAChequear, nuevoPCB.PID, cantpag);
-						free(dataRecibida);
+						 if(recv(socketAChequear,&TAM_PAGINA,sizeof(int),0)==-1){
+						    perror("Error al recibir el tamanio de pagina");
+						    exit(-1);
+						  }
 						break;
 					case CONEXION_CONSOLA:
 						if (YA_HAY_UNA_CONSOLA) {
