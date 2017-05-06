@@ -55,13 +55,13 @@ void verificarArchivoAEnviar(char * archivo)
 {
 	if(strlen(archivo)==0)
 	{
-		printf("Error de archivo: No se recibio ningun path de archivos\n");
+		perror("Error de archivo");
 	}
 }
 //------FUNCIONES MENSAJES--------------------------------------------
 char * recibirArchivoPorTeclado(){
 	char* archivoARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
-	printf("%s","Ingresar archivo");
+	printf("Por favor ingrese el path del archivo a continuacion\n");
 //	scanf("%s", mensajeARecibir);
 	fgets(archivoARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
 	verificarArchivoAEnviar(archivoARecibir);
@@ -107,11 +107,9 @@ void destruirPaquete(paquete *paquete) {
 	free(paquete);
 }
 //---------------------FUNCIONES DE INTERFAZ----------------------------
-void iniciarProgramaAnsisop()
+void iniciarProgramaAnsisop(char * pathPrograma)
 {
-	char * pathPrograma;
 	paquete auxiliar,paquetePath;
-	recibirArchivoPorTeclado(pathPrograma);
 	auxiliar=serializar(pathPrograma);
 	memcpy(&paquetePath,&auxiliar,sizeof(auxiliar));
 	verificarRecepcionMensaje(socketKernel,paquetePath);
@@ -129,18 +127,20 @@ void desconectarConsola()
 void solicitarComando()
 {
 	int comando;
-	printf("INgrese el numero de la opcion deseada\n");
+	char * path;
+	printf("Bienvenido al menu de opciones de la consola\n");
+	printf("Ingrese el numero de la opcion deseada\n");
 	printf("-1. Iniciar programa Ansisop\n");
-	printf("-2 Finalizar programa");
-	printf("-3 Desconectar consola");
-	printf("-4 Limpiar consola");
-	printf("Esperando comando....\n");
+	printf("-2 Finalizar programa\n");
+	printf("-3 Desconectar consola\n");
+	printf("-4 Limpiar consola\n");
 	//fgets(comando,sizeof(int),stdin);
 	scanf("%d",&comando);
 	switch(comando)
 	{
 	case INICIAR:
-		iniciarProgramaAnsisop();
+		path=recibirArchivoPorTeclado();
+		iniciarProgramaAnsisop(path);
 		break;
 	case FINALIZAR:
 		finalizarPrograma();
@@ -160,6 +160,7 @@ void solicitarComando()
 
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
+	//char* prueba="Debug/consola.config";
 	consola nuevaConsola = inicializarPrograma(argv[1]);
 	mostrar_consola(nuevaConsola);
 	socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);

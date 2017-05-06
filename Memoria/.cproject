@@ -37,8 +37,6 @@
 								<option id="gnu.c.link.option.libs.1507700759" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="commons"/>
 									<listOptionValue builtIn="false" value="pthread"/>
-									<listOptionValue builtIn="false" value="FuncionesGenericas"/>
-									<listOptionValue builtIn="false" value="Socket"/>
 								</option>
 								<option id="gnu.c.link.option.paths.1904558050" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Socket/Debug}&quot;"/>
