@@ -7,16 +7,37 @@
 #include "funcionesCpu.h"
 #ifndef ANSISOP_H_
 #define ANSISOP_H_
-t_puntero definirVariable(t_nombre_variable);
-/*t_puntero obtenerPosicionVariable(t_nombre_variable);
-t_puntero dereferenciar (t_puntero );*/
-void asignar (t_puntero direccion_variable, t_valor_variable );
-/*t_valor_variable obtenerValorCompartida (t_nombre_compartida );
-t_valor_variable asignarValorCompartida (t_nombre_compartida , t_valor_variable );
-void irAlLabel (t_nombre_etiqueta );
-void llamarSinRetorno (t_nombre_etiqueta );
-void llamarConRetorno (t_nombre_etiqueta , t_puntero );
-void finalizar ();*/
-void retornar(t_valor_variable);
+typedef struct __attribute__((packed))t_direccion{
+	int pagina;
+	int offset;
+	int tam;
+}t_direccion;
+typedef struct __attribute__((packed))t_variable
+{
+	char etiqueta;
+	t_direccion *direccion;
+} t_variable;
+typedef struct __attribute__((packed))t_contexto
+{
+	int posicion;
+	t_list *args;
+	t_list *vars;
+	int retPos;
+	t_direccion retVar;
+	int tamArgs;
+	int tamVars;
+}t_contexto;
+int sizeT_direccion;
 
+
+void proximaDireccion(t_direccion* ,int, int);
+void armarDireccionPagina(t_direccion *);
+void armarDireccionDeArgumento(t_direccion *);
+void armarProximaDireccion(t_direccion*);
+void proximaDireccionArgumento(t_direccion*, int, int);
+void armarDireccionDeFuncion(t_direccion* );
+void destruirPaquete(paquete *);
+void enviarDirAMemoria(t_direccion*, long );
+void punteroADir(int, t_direccion*);
+void inicializarVariable(t_variable *, t_nombre_variable ,t_direccion *);
 #endif /* ANSISOP_H_ */

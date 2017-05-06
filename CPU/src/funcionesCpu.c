@@ -19,6 +19,11 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+typedef struct __attribute__((__packed__)){
+	int tamMsj;
+	int tipoMsj;
+	void* mensaje;
+}paquete;
 
 t_config generarT_ConfigParaCargar(char *path) {
 	t_config *configuracionDelComponente = (t_config*)malloc(sizeof(t_config));
@@ -53,4 +58,30 @@ void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
 			perror("Faltan parametros para inicializar el fileSystem");
 			exit(-1);
 		}
+}
+paquete serializar(void *bufferDeData, int tipoDeMensaje)
+{
+  paquete paqueteAEnviar;
+  int longitud= obtenerLongitudBuff(bufferDeData);
+  paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
+  paqueteAEnviar.tamMsj = longitud;
+  paqueteAEnviar.tipoMsj=tipoDeMensaje;
+  paqueteAEnviar.mensaje = bufferDeData;
+  return paqueteAEnviar;
+}
+
+void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
+
+	int longitud = sizeof(mensaje); //sino no lee \0
+		if (send(socket, &mensaje, longitud, 0) == -1) {
+			perror("Error de send");
+			close(socket);
+			exit(-1);
+	}
+
+}
+void destruirPaquete(paquete * paquete)
+{
+	free(paquete->mensaje);
+	free(paquete);
 }

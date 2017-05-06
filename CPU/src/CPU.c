@@ -8,7 +8,7 @@
  ============================================================================
  */
 #include "socket.h"
-#include "ansiSop.h"
+#include "primitivas.h"
 #include "funcionesCpu.h"
 
 //----------------------VARIABLES GLOBALES-TIPO MENSAJES---------------------------
@@ -42,11 +42,7 @@ typedef struct {
 	ip ipMemoria;
 	int puertoMemoria;
 }cpu;
-typedef struct __attribute__((__packed__)){
-	int tamMsj;
-	int tipoMsj;
-	void* mensaje;
-}paquete;
+
 
 
 //----FUNCIONES CPU--------------------------------------------------------
@@ -74,32 +70,12 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
-//----------------ENVIAR HANDSHAKE---------------------------------------------
-void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
-
-	int longitud = sizeof(mensaje); //sino no lee \0
-		if (send(socket, &mensaje, longitud, 0) == -1) {
-			perror("Error de send");
-			close(socket);
-			exit(-1);
-	}
-
-}
 //-------------------SERIALIZACION---------------------------------------------
 int obtenerLongitudBuff(char* path)
 {
 	int longitudPath=strlen(path)+1;
 	return longitudPath;
 
-}
-paquete serializar(void *bufferDeData, int tipoDeMensaje) {
-  paquete paqueteAEnviar;
-  int longitud= obtenerLongitudBuff(bufferDeData);
-  paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
-  paqueteAEnviar.tamMsj = longitud;
-  paqueteAEnviar.tipoMsj=tipoDeMensaje;
-  paqueteAEnviar.mensaje = bufferDeData;
-  return paqueteAEnviar;
 }
 //----------------RECIBIR HANDSHAKE--------------------------------------------
 void recibirMensaje(int socket, void * aRecibir){
@@ -141,11 +117,6 @@ void deserealizarMensaje(int socket)
 		printf("Path recibido: %p ", recibido.mensaje);
 		break;
 	}
-}
-
-void destruirPaquete(paquete * paquete) {
-	free(paquete->mensaje);
-	free(paquete);
 }
 
 //----------------------MAIN---------------------------------------------------
