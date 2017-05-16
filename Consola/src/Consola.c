@@ -62,8 +62,8 @@ void verificarArchivoAEnviar(char * archivo)
 char * recibirArchivoPorTeclado(){
 	char* archivoARecibir=malloc(sizeof(char)*16);//buscar la manera que aparezca vacio
 	printf("Por favor ingrese el path del archivo a continuacion\n");
-//	scanf("%s", mensajeARecibir);
-	fgets(archivoARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
+	scanf("%s", archivoARecibir);
+	//fgets(archivoARecibir,sizeof(char)*16,stdin); //Para poder leer una cadena con espacios
 	verificarArchivoAEnviar(archivoARecibir);
 	return archivoARecibir;
 }
@@ -161,6 +161,7 @@ void solicitarComando()
 int main(int argc, char *argv[]) {
 	verificarParametrosInicio(argc);
 	//char* prueba="Debug/consola.config";
+	//consola nuevaConsola = inicializarPrograma(prueba);
 	consola nuevaConsola = inicializarPrograma(argv[1]);
 	mostrar_consola(nuevaConsola);
 	socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);

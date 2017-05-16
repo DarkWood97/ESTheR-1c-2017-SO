@@ -286,6 +286,7 @@ bool hayEspacioParaNuevoProceso(int cantidadDePaginasNecesarias){
 	int paginaChequeada;
 	int paginasDisponiblesEncontradas = 0;
 	bool hayEspacio = false;
+	usleep(RETARDO_MEMORIA);
 	for(paginaChequeada = 0 ; paginaChequeada<MARCOS;paginaChequeada++){
 		if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
 			paginasDisponiblesEncontradas++;
@@ -310,6 +311,7 @@ void asignarPaginasAProceso(int pid, int cantidadDePaginas, int socketKernel){
 	}else{
 		int ultimaPaginaProceso = obtenerCantidadDePaginasDe(pid);
 		int paginaChequeada, cantidadDePaginasAsignadas = 0;
+		usleep(RETARDO_MEMORIA);
 		for(paginaChequeada = 0; paginaChequeada<MARCOS && cantidadDePaginasAsignadas<cantidadDePaginas; paginaChequeada++){
 			if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
 				entradasDeTabla[paginaChequeada].pid = pid;
@@ -341,6 +343,7 @@ void inicializarProceso(int pid, int cantidadDePaginas, int socketKernel){
 
 void finalizarProceso(int pidProceso){
 	int numeroDePagina;
+	usleep(RETARDO_MEMORIA);
 	pthread_mutex_lock(&mutexTablaInvertida);
 	for(numeroDePagina = 0; numeroDePagina<MARCOS; numeroDePagina++){
 		if(entradasDeTabla[numeroDePagina].pid == pidProceso){
@@ -471,11 +474,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	//verificarParametrosInicio(argc);
-	char* path = "Debug/memoria.config";
-	//inicializarMemoria(argv[1]);
+	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
+	inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion, paqDePaginas;
-	inicializarMemoria(path);
+	//inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
@@ -525,6 +528,8 @@ int main(int argc, char *argv[]) {
 								paqDePaginas.tipoMsj = TAMANIO_PAGINA_PARA_KERNEL;
 								paqDePaginas.tamMsj = sizeof(int);
 								paqDePaginas.mensaje = malloc(paqDePaginas.tamMsj);
+								int* socketKernel = malloc(sizeof(int));
+								*socketKernel = socketClienteChequeado;
 								memcpy(paqDePaginas.mensaje,&MARCOS_SIZE,sizeof(int));
 								if(send(socketClienteChequeado,&paqDePaginas,sizeof(int),0)==-1){
 									perror("Error al enviar el tamanio de pagina");
@@ -532,7 +537,7 @@ int main(int argc, char *argv[]) {
 								}
 								free(paqDePaginas.mensaje);
 								log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
-								pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void *)socketClienteChequeado);
+								pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void*)socketKernel);
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
 								break;
 							default:

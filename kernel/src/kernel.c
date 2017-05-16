@@ -237,10 +237,10 @@ void imprimirArrayDeInt(int arrayDeInt[]) {
 //-----------------------------------MAIN-----------------------------------------------
 
 int main(int argc, char *argv[]) {
-	//verificarParametrosInicio(argc);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
-	//inicializarKernel(argv[1]);
+	verificarParametrosInicio(argc);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
+	inicializarKernel(argv[1]);
 	fd_set socketsCliente, socketsConPeticion, socketsMaster; //socketsMaster son los sockets clientes + sockets servidor
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
