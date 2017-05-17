@@ -84,6 +84,7 @@ typedef struct
 #define INICIAR_PROGRAMA 501
 #define ASIGNAR_PAGINAS 502
 #define FINALIZAR_PROGRAMA 503
+#define HANDSHAKE_CONSOLA 1005
 
 t_log * loggerKernel;
 bool YA_HAY_UNA_CONSOLA = false;
