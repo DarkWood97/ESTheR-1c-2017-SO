@@ -95,14 +95,30 @@ t_puntero dereferenciar (t_puntero direccion_variable)
 /*t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
 {
 	return NULL;
-}
+}*/
 t_valor_variable asignarValorCompartida (t_nombre_compartida variable, t_valor_variable valor)
 {
-	return NULL;
+	paquete  paqueteAEnviar;
+	int tamVariable=sizeof(variable);
+	char* variable_compartida=malloc(tamVariable);
+	memcpy(variable_compartida, &valor, tamVariable);
+	log_info(log,"Variable %s le asigno %d\n", variable, variable_compartida[0]);
+	paqueteAEnviar=serializar(variable_compartida, MENSAJE_VARIABLE_COMPARTIDA);
+	realizarHandshake(socketKernel,paqueteAEnviar);
+	destruirPaquete(&paqueteAEnviar);
+	free(variable_compartida);
+	return valor;
+
 }
 void irAlLabel (t_nombre_etiqueta t_nombre_etiqueta)
 {
-
+	t_puntero_instruccion instruccion;
+	int longitud_etiqueta=strlen(t_nombre_etiqueta);
+	log_info(log, "Busco la etiqueta: %s y mide: %d\n", t_nombre_etiqueta, longitud_etiqueta);
+	instruccion = metadata_buscar_etiqueta(t_nombre_etiqueta, PCB->etiquetas, PCB->tamEtiquetas);
+	log_info(log,"Ir a la instruccion %d\n", instruccion);
+	PCB->programCounter=instruccion-1; //(contador/2);
+	log_info(log,"Saliendo de label\n");
 }
 void llamarSinRetorno (t_nombre_etiqueta etiqueta)
 {
@@ -115,7 +131,7 @@ void llamarConRetorno (t_nombre_etiqueta etiqueta, t_puntero donde_retornar)
 void finalizar ()
 {
 
-}*/
+}
 void retornar(t_valor_variable retorno)
 {
 		log_info(log,"La posicion de retorno %d\n", retorno);

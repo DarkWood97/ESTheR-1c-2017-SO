@@ -7,6 +7,9 @@
 #include "funcionesCpu.h"
 #ifndef ANSISOP_H_
 #define ANSISOP_H_
+
+#define MENSAJE_VARIABLE_COMPARTIDA 111
+
 typedef struct __attribute__((packed))t_direccion{
 	int pagina;
 	int offset;

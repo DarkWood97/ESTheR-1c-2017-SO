@@ -16,6 +16,7 @@
 #define HANDSHAKE_KERNEL 1002
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
+#define MENSAJE_PCB 1015
 #define ERROR -1
 #define CORTO 0
 //---ANSISOP--------------------------------------------------------------
@@ -25,8 +26,8 @@ AnSISOP_funciones primitivas = {
 	//	.AnSISOP_dereferenciar			= dereferenciar,
 		.AnSISOP_asignar				= asignar,
 	//	.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
-	//	.AnSISOP_asignarValorCompartida = asignarValorCompartida,
-	//	.AnSISOP_irAlLabel				= irAlLabel,
+		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
+		.AnSISOP_irAlLabel				= irAlLabel,
 	//	.AnSISOP_llamarConRetorno		= llamarConRetorno,
 	//	.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
 		.AnSISOP_retornar				= retornar,
@@ -78,19 +79,14 @@ int obtenerLongitudBuff(char* path)
 
 }
 //----------------RECIBIR HANDSHAKE--------------------------------------------
-void recibirMensaje(int socket, void * aRecibir){
-	void *buff = malloc(sizeof(void*));
-	if(recv(socket,buff,16,0) == -1){
-		perror("Error de receive");
-		exit(-1);
-	}
-	aRecibir=buff;
-	free(buff);
-}
 void deserealizarMensaje(int socket)
 {
 	int *tamanio = 0;
-	recv(socket,tamanio,16,0);
+	if(recv(socket,tamanio,16,0)==-1);
+		{
+			perror("Error de receive");
+			exit(-1);
+		}
 	paquete recibido;
 	recv(socket,&recibido,(int)tamanio,0);
 	int caso=recibido.tipoMsj;
@@ -116,6 +112,9 @@ void deserealizarMensaje(int socket)
 	case MENSAJE_PATH:
 		printf("Path recibido: %p ", recibido.mensaje);
 		break;
+	case MENSAJE_PCB:
+			memcpy(&PCB,recibido.mensaje,sizeof(PCB));
+			PCB->programCounter++;
 	}
 }
 
@@ -125,11 +124,16 @@ int main(int argc, char *argv[]) {
 	cpu cpuDelSistema = inicializarCPU(argv[1]);
 	mostrarConfiguracionCPU(cpuDelSistema);
 	int socketParaMemoria, socketParaKernel;
+	//Me conecto con kernel.
+	socketParaKernel = conectarAServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
+	socketKernel=socketParaKernel;
+	//Me quedo a la espera de que me envie la PCB
+	deserealizarMensaje(socketParaKernel);
 	socketParaMemoria = conectarAServer(cpuDelSistema.ipMemoria.numero, cpuDelSistema.puertoMemoria);
 	socketMemoria=socketParaMemoria; /*para ansisop*/
 	deserealizarMensaje(socketParaMemoria);
-	socketParaKernel = conectarAServer(cpuDelSistema.ipKernel.numero, cpuDelSistema.puertoKernel);
-	deserealizarMensaje(socketParaKernel);
+
+
 	/*handshake con memoria */
 	paquete paqueteAEnviar,auxiliar;
 	auxiliar=serializar(NULL,HANDSHAKE_MEMORIA);
@@ -144,6 +148,7 @@ int main(int argc, char *argv[]) {
 	realizarHandshake(socketParaKernel,paqueteKernel);
 	destruirPaquete(&paqueteKernel);
 	destruirPaquete(&auxiliarKernel);
+
 	close(socketParaMemoria);
 	close(socketParaKernel);
 	return EXIT_SUCCESS;

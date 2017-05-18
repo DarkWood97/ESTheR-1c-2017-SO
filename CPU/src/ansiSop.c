@@ -6,8 +6,10 @@
 #define HANDSHAKE_KERNEL 1002
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
+#define MENSAJE_DIRECCION 110
 #define ERROR -1
 #define CORTO 0
+#define MENSAJE_VARIABLE_COMPARTIDA 111
 
 
 
@@ -157,13 +159,12 @@ void enviarDirAMemoria(t_direccion* direccion, long valor)
 		memcpy(escritura+4, &direccion->offset , 4);
 		memcpy(escritura+8, &direccion->tam , 4);
 		memcpy(escritura+12, &valor , 4);
-		auxiliar=serializar(escritura,HANDSHAKE_MEMORIA);
+		auxiliar=serializar(escritura,MENSAJE_DIRECCION);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 		realizarHandshake(socketMemoria,paqueteAEnviar);
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(escritura);
-
 }
 
 void punteroADir(int puntero, t_direccion* dir)

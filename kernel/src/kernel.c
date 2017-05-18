@@ -45,14 +45,17 @@ typedef struct {
 
 //--------------indice de de codigo-----
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	int PID;
-	int PC;
-	int paginas_Codigo;
+	unsigned int PC;
+	unsigned int paginas_Codigo;
 	codeIndex cod;
 	char* etiquetas;
 	Stack SP;
 	int exitCode;
+	t_list *contextoActual;
+	int tamContextoActual;
+	int tamEtiquetas;
 } PCB;
 
 typedef struct
