@@ -7,17 +7,16 @@
  Description : Hello World in C, Ansi-style
  ============================================================================
  */
-
+#include <pthread.h>
 #include "funcionesGenericas.h"
 #include "socket.h"
-#include <pthread.h>
 //--TYPEDEF-------------------------------------------------------------------
 typedef struct __attribute__((__packed__)){
 	int tamMsj;
 	int tipoMsj;
 	void* mensaje;
 }paquete;
-
+pthread_t a;
 typedef struct {
 	_ip ip_Kernel;
 	int puerto_kernel;
@@ -45,6 +44,7 @@ int sizePaquete=sizeof(paquete);
 int socketKernel;
 t_list * listaDeProgramas;
 programa * programaEjecutando;
+pthread_t usuario;
 //No puede inicializar mas de 20 prog
 //----FUNCIONES CONSOLA-------------------------------------------------------
 consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo si no tiene error
@@ -85,7 +85,6 @@ char * recibirArchivoPorTeclado(){
 }
 void verificarRecepcionMensaje(int socket, paquete mensajeAEnviar)
 {
-	bool llegoMensaje;
 	if(send(socket,&mensajeAEnviar,sizeof(mensajeAEnviar),0)){
 			perror("No se pudo enviar el mensaje");
 			free(mensajeAEnviar.mensaje);
@@ -141,16 +140,7 @@ void deserealizarMensaje(int socket, void * retornar, void* impresiones)
 
 	}
 }
-//-----------FUNCION PROGRAMA------------------------------------------
-programa * nuevoPrograma (int  pid)
-{
-	programa * auxiliar=malloc(sizeof(programa));
-	struct timeval inicioAux;
-	auxiliar->PID=pid;
-	gettimeofday(&inicioAux, NULL);
-	auxiliar->inicio=inicioAux;
-	return auxiliar;
-}
+//-------------------FUNCIONES DEL TIEMPO------------------------------
 int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
 {
     long int diff = (t2->tv_usec + 1000000 * t2->tv_sec) - (t1->tv_usec + 1000000 * t1->tv_sec);
@@ -168,6 +158,17 @@ void timeval_print(struct timeval *tv)
     strftime(buffer, 30, "%m-%d-%Y  %T", localtime(&curtime));
     printf(" = %s.%06ld\n", buffer, tv->tv_usec);
 }
+//-----------FUNCION PROGRAMA------------------------------------------
+programa * nuevoPrograma (int  pid)
+{
+	programa * auxiliar=malloc(sizeof(programa));
+	struct timeval inicioAux;
+	auxiliar->PID=pid;
+	gettimeofday(&inicioAux, NULL);
+	auxiliar->inicio=inicioAux;
+	return auxiliar;
+}
+
 void imprimirInformacion(programa *programaAImprimir)
 {
 	puts("Fecha y hora de inicio: \n ");
@@ -178,6 +179,7 @@ void imprimirInformacion(programa *programaAImprimir)
 	puts("Tiempo total de ejecucion: ");
 	timeval_print(&programaAImprimir->duracion);
 }
+
 //---------------------FUNCIONES DE INTERFAZ----------------------------
 void * iniciarProgramaAnsisop(char * pathPrograma)
 {
@@ -201,9 +203,7 @@ programa * buscoUnPid(int pidBuscado)
         {
  	       return unPrograma->PID == pidBuscado;
         }
-
-       programa * encontrado =NULL;
-       encontrado=list_find(listaDeProgramas, _pidEquivalentes_);
+       programa * encontrado = list_find(listaDeProgramas, (void *)_pidEquivalentes_);
        return encontrado;
 }
 void finalizarPrograma(int pid)
@@ -225,8 +225,13 @@ void finalizarPrograma(int pid)
 	}
 
 }
+
 void desconectarConsola()
 {
+	list_destroy_and_destroy_elements(listaDeProgramas,NULL);
+	pthread_join(usuario, NULL);
+	puts("Se desconecto la consola \n");
+	puts("Se abortaron todos los programas");
 
 }
 void mostrarAyuda()
@@ -240,7 +245,6 @@ void mostrarAyuda()
 }
 void buscarComandoCorrespondiente (int comando)
 {
-	char * argP;
 	char * path;
 	pthread_t programa;
 	int hiloPrograma=0;
@@ -251,7 +255,7 @@ void buscarComandoCorrespondiente (int comando)
 			//gettimeofday(&horario, NULL);
 			//int impresiones=0;
 			path=recibirArchivoPorTeclado();
-			hiloPrograma=pthread_create(&programa,NULL,iniciarProgramaAnsisop(path),argP);
+			hiloPrograma=pthread_create(&programa,NULL,iniciarProgramaAnsisop(path),NULL);
 			free(path);
 			break;
 		case FINALIZAR:
@@ -268,8 +272,7 @@ void buscarComandoCorrespondiente (int comando)
 			break;
 		default:
 			perror("Comando no reconocido");
-
-}
+		}
 }
 void * solicitarComando()
 {
@@ -279,11 +282,9 @@ void * solicitarComando()
 		mostrarAyuda();
 		scanf("%d",&comando);
 		buscarComandoCorrespondiente(comando);
-
 	}
 	return NULL;
 }
-
 //------------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
@@ -302,11 +303,10 @@ int main(int argc, char *argv[]) {
 	destruirPaquete(&auxiliar);
 	/*fin handshake*/
 	/*hilo usuario*/
-	pthread_t usuario;
-	char * argsU;
+
 	int hiloUsuario;
 	listaDeProgramas=list_create();
-	hiloUsuario=phtread_create(&usuario, NULL, solicitarComando(),argsU);
+	hiloUsuario=pthread_create(&usuario, NULL, solicitarComando(),NULL);
 	pthread_join(usuario,NULL);
 
 	close(socketKernel);
