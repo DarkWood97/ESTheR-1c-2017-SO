@@ -43,4 +43,6 @@ void destruirPaquete(paquete *);
 void enviarDirAMemoria(t_direccion*, long );
 void punteroADir(int, t_direccion*);
 void inicializarVariable(t_variable *, t_nombre_variable ,t_direccion *);
+void enviarDireccionALeerKernel(t_direccion*, int);
+void deserealizarConRetorno(int, paquete*);
 #endif /* ANSISOP_H_ */

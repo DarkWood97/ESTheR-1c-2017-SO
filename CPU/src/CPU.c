@@ -22,8 +22,8 @@
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
-	//	.AnSISOP_obtenerPosicionVariable= obtenerPosicionVariable,
-	//	.AnSISOP_dereferenciar			= dereferenciar,
+		.AnSISOP_obtenerPosicionVariable= obtenerPosicionVariable,
+		.AnSISOP_dereferenciar			= dereferenciar,
 		.AnSISOP_asignar				= asignar,
 	//	.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
 		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
@@ -79,7 +79,7 @@ int obtenerLongitudBuff(char* path)
 
 }
 //----------------RECIBIR HANDSHAKE--------------------------------------------
-void deserealizarMensaje(int socket)
+void * deserealizarMensaje(int socket)
 {
 	int *tamanio = 0;
 	if(recv(socket,tamanio,16,0)==-1);
@@ -115,6 +115,7 @@ void deserealizarMensaje(int socket)
 	case MENSAJE_PCB:
 			memcpy(&PCB,recibido.mensaje,sizeof(PCB));
 			PCB->programCounter++;
+			break;
 	}
 }
 

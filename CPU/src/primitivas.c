@@ -8,8 +8,9 @@
 //--------------------------------Algo---------------------------------------
 int convertirDireccionAPuntero(t_direccion* dire)
 {
-	int direccionOriginal,pag,desplazamiento;
-	pag=(dire->pagina)*tamPagina;
+	int direccionOriginal,pag,desplazamiento,auxiliar;
+	auxiliar=(dire->pagina);
+	pag=auxiliar*tamPagina;
 	desplazamiento=dire->offset;
 	direccionOriginal=pag+desplazamiento;
 	return direccionOriginal;
@@ -29,7 +30,6 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 		t_direccion *direccion_variable= malloc(sizeT_direccion);
 		t_variable *variable= malloc(sizeof(t_variable));
 		t_contexto *contexto = malloc(sizeof(t_contexto));
-		/* Hasta que no hagan PCB no se puede hacer */
 		contexto= (t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1));
 		if(PCB->tamContextoActual==1 &&  contexto->tamVars==0 )
 		{
@@ -68,7 +68,6 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 					}
 			}
 			long valor;
-			log_info(log,"Alocado %ld",valor);
 			int dirReturn = convertirDireccionAPuntero(direccion_variable);
 				if(dirReturn+3>variableMaxima){
 					log_info(log,"No hay espacio para definir variable %c. Abortando programa\n", identificador_variable);
@@ -83,14 +82,59 @@ return 1;
 }
 
 
-/*t_puntero obtenerPosicionVariable(t_nombre_variable identifcador_variable)
+t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 {
-	return NULL;
+	log_info(log,"Quiero obtener la variable %s", identificador_variable);
+	int posicionStack, direccionDeRetorno;
+	posicionStack=PCB->tamContextoActual;
+	bool _comparacionDeIdentificadorVariable_()
+	{
+		return identificador_variable>='0' && identificador_variable<='9';
+	}
+	if(_comparacionDeIdentificadorVariable_())
+	{
+		t_direccion * direccion;
+		direccion = (t_direccion*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, (int)identificador_variable-48));
+		direccionDeRetorno=convertirDireccionAPuntero(direccion);
+		log_info(log,"Obtuve el valor de %c: %d %d %d\n", identificador_variable, direccion->pagina, direccion->offset, direccion->tam);
+		return(direccionDeRetorno);
+	}
+	else
+	{
+		t_variable * nueva;
+		int posicionMaxima;
+		posicionMaxima=(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->tamVars)-1;
+		for(;posicionMaxima>=0;posicionMaxima--)
+			{
+				nueva=((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, posicionMaxima)));
+				log_info(log,"Etiqueta de variable: %c\n", nueva->etiqueta);
+				if(nueva->etiqueta==identificador_variable)
+				{
+					t_direccion * auxiliar;
+					auxiliar= ((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, posicionMaxima)))->direccion;
+					direccionDeRetorno= convertirDireccionAPuntero(auxiliar);
+					log_info(log,"Obtuve el valor de %c: %d %d %d\n", nueva->etiqueta, nueva->direccion->pagina, nueva->direccion->offset, nueva->direccion->tam);
+					return (direccionDeRetorno);
+			}
+		}
+	}
+	programaAbortado=1;
+	return -1;
 }
 t_puntero dereferenciar (t_puntero direccion_variable)
 {
-	return NULL;
-}*/
+	t_direccion * direccion =malloc(sizeT_direccion);
+	paquete * paquete, auxiliar;
+	int valor;
+	punteroADir(direccion_variable,direccion);
+	enviarDireccionALeerKernel(direccion,direccion_variable);
+	free(direccion);
+	deserealizarConRetorno(socketKernel,&auxiliar);
+	memcpy(&valor, paquete->mensaje, 4);
+	destruirPaquete(paquete);
+	log_info(log,"El valor dereferenciado es: %d", valor);
+	return valor;
+}
 
 /*t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
 {

@@ -77,6 +77,7 @@ int tamPagina;
 int variableMaxima;
 int socketMemoria;
 int socketKernel;
+int programaAbortado;
 
 //-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);
