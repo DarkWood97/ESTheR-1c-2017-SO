@@ -6,8 +6,10 @@
 #define HANDSHAKE_KERNEL 1002
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
+#define MENSAJE_DIRECCION 110
 #define ERROR -1
 #define CORTO 0
+#define MENSAJE_VARIABLE_COMPARTIDA 111
 
 
 
@@ -153,19 +155,28 @@ void enviarDirAMemoria(t_direccion* direccion, long valor)
 {
 		char* escritura= malloc(sizeof(char)*16);
 		paquete paqueteAEnviar,auxiliar;
-		memcpy(escritura, &direccion->pagina , 4);
-		memcpy(escritura+4, &direccion->offset , 4);
-		memcpy(escritura+8, &direccion->tam , 4);
-		memcpy(escritura+12, &valor , 4);
-		auxiliar=serializar(escritura,HANDSHAKE_MEMORIA);
+		memcpy(escritura, &direccion , 4);
+		memcpy(escritura+4, &valor , 4);
+		auxiliar=serializar(escritura,MENSAJE_DIRECCION);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 		realizarHandshake(socketMemoria,paqueteAEnviar);
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(escritura);
-
 }
-
+void enviarDireccionALeerKernel(t_direccion* direccion, int valor)
+{
+		char* leer= malloc(sizeof(char)*16);
+		paquete paqueteAEnviar,auxiliar;
+		memcpy(leer, &direccion,4);
+		memcpy(leer+4, &valor , 4);
+		auxiliar=serializar(leer,MENSAJE_DIRECCION);
+		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
+		realizarHandshake(socketKernel,paqueteAEnviar);
+		destruirPaquete(&paqueteAEnviar);
+		destruirPaquete(&auxiliar);
+		free(leer);
+}
 void punteroADir(int puntero, t_direccion* dir)
 {
 	if(tamPagina>puntero)
@@ -185,5 +196,15 @@ void inicializarVariable(t_variable *variable, t_nombre_variable identificador_v
 {
 	variable->direccion=direccion_variable;
 	variable->etiqueta=identificador_variable;
+}
+void deserealizarConRetorno(int socket, paquete* aRetornar)
+{
+	paquete * auxiliar=malloc(sizeof(paquete));
+			if(recv(socket,auxiliar,16,0)==-1)
+				{
+					perror("Error de receive");
+				}
+	auxiliar=aRetornar;
+	destruirPaquete(auxiliar);
 }
 

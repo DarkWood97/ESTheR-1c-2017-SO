@@ -7,6 +7,9 @@
 #include "funcionesCpu.h"
 #ifndef ANSISOP_H_
 #define ANSISOP_H_
+
+#define MENSAJE_VARIABLE_COMPARTIDA 111
+
 typedef struct __attribute__((packed))t_direccion{
 	int pagina;
 	int offset;
@@ -40,4 +43,6 @@ void destruirPaquete(paquete *);
 void enviarDirAMemoria(t_direccion*, long );
 void punteroADir(int, t_direccion*);
 void inicializarVariable(t_variable *, t_nombre_variable ,t_direccion *);
+void enviarDireccionALeerKernel(t_direccion*, int);
+void deserealizarConRetorno(int, paquete*);
 #endif /* ANSISOP_H_ */

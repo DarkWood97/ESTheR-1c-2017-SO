@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <pthread.h>
 #include <arpa/inet.h>
 #include <signal.h>
 #include <netdb.h>
@@ -34,16 +33,34 @@
 
 #ifndef FUNCIONESCPU_H_
 #define FUNCIONESCPU_H_
-
+typedef struct {
+	int comienzo;
+	int offset;
+} codeIndex;
+typedef struct {
+	int pagina;
+	int offset;
+	int size;
+} retVar;
+typedef struct {
+	int pos;
+	t_list* args;
+	t_list* vars;
+	int retPos;
+	retVar retVar;
+} Stack;
 typedef struct  __attribute__((packed)){
 
 	int ProgramID;
 	unsigned int programCounter, paginasCodigo;
 	void* referenciaTP; //no estoy segura de que tipo es
-	int stackPointer;
+	Stack stackPointer;
 	int exitCode;
 	t_list *contextoActual;
 	int tamContextoActual;
+	codeIndex cod;
+	char * etiquetas;
+	int tamEtiquetas;
 	/* faltan cosas, defini lo que necesita CPU NO CAMBIAR!!*/
 }pcb;
 
@@ -59,6 +76,8 @@ pcb * PCB;
 int tamPagina;
 int variableMaxima;
 int socketMemoria;
+int socketKernel;
+int programaAbortado;
 
 //-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);
