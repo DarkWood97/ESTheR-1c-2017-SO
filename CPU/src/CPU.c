@@ -13,7 +13,7 @@
 
 //----------------------VARIABLES GLOBALES-TIPO MENSAJES---------------------------
 #define HANDSHAKE_MEMORIA 1001
-#define HANDSHAKE_KERNEL 1002
+#define HANDSHAKE_KERNEL 1003
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
 #define MENSAJE_PCB 1015
