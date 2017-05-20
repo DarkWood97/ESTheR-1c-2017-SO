@@ -82,6 +82,7 @@ int socketMemoria;
 int socketKernel;
 int programaAbortado;
 
+
 //-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
@@ -90,5 +91,6 @@ void verificarParametrosCrear(t_config *,int);
 paquete serializar(void*,int);
 void realizarHandshake(int, paquete);
 void destruirPaquete(paquete *) ;
-
+int _obtenerSizeActual_(int);
+//void deserealizarPCB(paquete,PCB);
 #endif /* FUNCIONESCPU_H_ */

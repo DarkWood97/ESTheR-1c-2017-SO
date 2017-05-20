@@ -19,6 +19,7 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+
 typedef struct __attribute__((packed)) {
 	int pid;
 	int tamaniosPaginas;
@@ -122,8 +123,13 @@ void* serializarPCB(PCB  pcb){
 	memcpy(mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.paginas, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.pid, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.tamaniosPaginas, sizeof(int));
-
 	return mensaje;
 	free(mensaje);
 }
+int _obtenerSizeActual_(int b)
+	{
+		int auxiliar=sizeof(int)*b+sizeof(char)*16+sizeof(t_list)*16;
+		b++;
+		return auxiliar;
+	}
 

@@ -17,8 +17,11 @@
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
 #define MENSAJE_PCB 1015
+#define RECIBIR_PCB 1016
 #define ERROR -1
 #define CORTO 0
+int size_int=sizeof(int);
+int size_char=sizeof(char);
 //---ANSISOP--------------------------------------------------------------
 AnSISOP_funciones primitivas = {
 		.AnSISOP_definirVariable		= definirVariable,
@@ -79,6 +82,58 @@ int obtenerLongitudBuff(char* path)
 
 }
 //----------------RECIBIR HANDSHAKE--------------------------------------------
+void deserealizarPCB(paquete mensaje,PCB aux)
+{
+	char * recibido=malloc(sizeof(paquete));
+	recibido=mensaje.mensaje;
+	int sizeAuxiliar=sizeof(pcb->PID*size_int*2);
+	aux.PID=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.PID,recibido,sizeAuxiliar);
+	sizeAuxiliar=0;
+	sizeAuxiliar=sizeof(pcb->ProgramCounter*size_int*3);
+	aux.ProgramCounter=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.ProgramCounter,recibido+size_int,size_int);
+	sizeAuxiliar=(int)sizeof(pcb->paginas_Codigo*size_int*4);
+	aux.paginas_Codigo=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.paginas_Codigo,recibido+size_int*2,size_int);
+	sizeAuxiliar=sizeof(pcb->cod.comienzo*size_int*5);
+	aux.cod.comienzo=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.cod.comienzo,recibido+size_int*3,size_int);
+	sizeAuxiliar=sizeof(pcb->cod.offset*size_int*6);
+	aux.cod.offset=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.cod.offset,recibido+size_int*4,size_int);
+	sizeAuxiliar=sizeof(pcb->etiquetas+size_int*4);
+	aux.etiquetas=(char *)malloc(sizeAuxiliar);
+	memcpy(aux.etiquetas,recibido+size_int*5,size_char);
+	sizeAuxiliar=size_int*5+size_char*16;
+	aux.exitCode=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.exitCode,recibido+size_int*4+size_char*16,size_int);
+	sizeAuxiliar=size_int*6+size_char*16;
+	aux.contextoActual=malloc(sizeof(t_list));
+	memcpy(aux.contextoActual,recibido+size_int*5+size_char*16,sizeof(t_list));
+	int i=5;
+	int b=6;
+	sizeAuxiliar=_obtenerSizeActual_(b);
+	aux.tamContextoActual=(int)malloc(size_int);
+	memcpy(&aux.tamContextoActual,recibido+sizeof(int)*i+sizeof(char)*16+sizeof(t_list)*16,size_int);
+	i++;
+	sizeAuxiliar=_obtenerSizeActual_(b);
+	aux.tamEtiquetas=(int)malloc(size_int);
+	memcpy(&aux.tamEtiquetas,recibido+sizeof(int)*i+sizeof(char)*16+sizeof(t_list)*16,size_int);
+	sizeAuxiliar=_obtenerSizeActual_(b);
+	i++;
+	aux.tablaKernel.paginas=(int)malloc(size_int);
+	memcpy(&aux.tablaKernel.paginas,recibido+sizeof(int)*i+sizeof(char)*16+sizeof(t_list)*16,size_int);
+	sizeAuxiliar=_obtenerSizeActual_(b);
+	aux.tablaKernel.pid=(int)malloc(size_int);
+	i++;
+	memcpy(&aux.tablaKernel.tamaniosPaginas,recibido+sizeof(int)*i+sizeof(char)*16+sizeof(t_list)*16,size_int);
+	sizeAuxiliar=_obtenerSizeActual_(b);
+	i++;
+	aux.tablaKernel.tamaniosPaginas=(int)malloc(size_int);
+	memcpy(&aux.tablaKernel.tamaniosPaginas,recibido+sizeof(int)*i+sizeof(char)*16+sizeof(t_list)*16,size_int);
+
+}
 void * deserealizarMensaje(int socket)
 {
 	int *tamanio = 0;
@@ -88,6 +143,7 @@ void * deserealizarMensaje(int socket)
 			exit(-1);
 		}
 	paquete recibido;
+	PCB auxiliar;
 	recv(socket,&recibido,(int)tamanio,0);
 	int caso=recibido.tipoMsj;
 	switch(caso)
@@ -112,10 +168,10 @@ void * deserealizarMensaje(int socket)
 	case MENSAJE_PATH:
 		printf("Path recibido: %p ", recibido.mensaje);
 		break;
-	case MENSAJE_PCB:
-			memcpy(&pcb,recibido.mensaje,sizeof(PCB));
-			pcb->ProgramCounter++;
-			break;
+	case RECIBIR_PCB:
+
+
+		break;
 	default:
 		break;
 	}
