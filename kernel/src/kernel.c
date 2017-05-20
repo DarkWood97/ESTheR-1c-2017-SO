@@ -179,7 +179,7 @@ char* cargarEtiquetasIndex(t_metadata_program* metadata_program,int sizeEtiqueta
 	char* etiquetas = malloc(sizeEtiquetasIndex * sizeof(char));
 	memcpy(etiquetas, metadata_program->etiquetas,sizeEtiquetasIndex * sizeof(char));
 	return etiquetas;
-	}
+}
 
 t_list* inicializarStack(t_list *contexto) {
 	Stack* stack;
@@ -198,13 +198,12 @@ t_list* inicializarStack(t_list *contexto) {
 	free(contextocero);
 }
 
-PCB inicializarPCB(char* buffer, int tamanioPagina) {
-	PCB nuevoPCB;
+void inicializarPCB(char* buffer) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
 
 	nuevoPCB.PID = aumentarPID();
 	nuevoPCB.ProgramCounter = 0;
-	nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)tamanioPagina);
+	nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)cantPag);
 	nuevoPCB.cod = cargarCodeIndex(buffer, metadata_program);
 	nuevoPCB.tamEtiquetas = metadata_program->etiquetas_size;
 	nuevoPCB.etiquetas = cargarEtiquetasIndex(metadata_program,nuevoPCB.tamEtiquetas);
@@ -213,8 +212,6 @@ PCB inicializarPCB(char* buffer, int tamanioPagina) {
 	nuevoPCB.tamContextoActual = 1;
 
 	metadata_destruir(metadata_program);
-
-	return nuevoPCB;
 }
 
 void realizarHandshake(int socket, int HANDSHAKE) {
@@ -236,11 +233,11 @@ int recibirCantidadPaginas(char* codigo) {
 	return cantidad;
 }
 
-void prepararProgramaEnMemoria(int socket, int pid, int cantidadPaginas, int FUNCION) {
+void prepararProgramaEnMemoria(int socket,int FUNCION) {
 	paquete paqMemoria;
 	void* mensaje = malloc(sizeof(int) * 2);
-	memcpy(mensaje, pid, sizeof(int));
-	memcpy(mensaje + sizeof(int), cantidadPaginas, sizeof(int));
+	memcpy(mensaje, pid_actual, sizeof(int));
+	memcpy(mensaje + sizeof(int), cantPag, sizeof(int));
 	paqMemoria.mensaje = mensaje;
 	paqMemoria.tamMsj = sizeof(int) * 2;
 	paqMemoria.tipoMsj = FUNCION;
@@ -272,11 +269,11 @@ void* serializarPCB(){
 	free(mensaje);
 }
 
-void recibirPCB(int tamMsj, int socketConPeticionDeAsignacion){
+void recibirPCB(int tamMsj, int socket){
 	void* mensaje;
 	mensaje = malloc(tamMsj);
 
-	if (recv(socketConPeticionDeAsignacion,mensaje, tamMsj, 0)) {
+	if (recv(socket,mensaje, tamMsj, 0)) {
 		perror("Error al recibir PCB");
 		exit(-1);
 	}
@@ -300,7 +297,7 @@ void recibirPCB(int tamMsj, int socketConPeticionDeAsignacion){
 
 void enviarPCB(int socketCPU){
 	paquete paqCPU;
-	void* mensajePCB = serializarPCB(nuevoPCB);
+	void* mensajePCB = serializarPCB();
 	paqCPU.mensaje = mensajePCB;
 	paqCPU.tamMsj = sizeof(nuevoPCB);
 	paqCPU.tipoMsj = MENSAJE_PCB;
@@ -337,7 +334,6 @@ void *manejadorTeclado(){
 	char* comando = malloc(50*sizeof(char));
 	size_t tamanioMaximo = 50;
 
-
 	while(1){
 		puts("Esperando comando...");
 
@@ -353,8 +349,13 @@ void *manejadorTeclado(){
 			//consultarEstado();
 		}else if(string_equals_ignore_case(comando, "detener planificacion")){
 			//detenerPlanificacion();
+		}else{
+			puts("Error de comando");
 		}
+		comando = realloc(comando,50*sizeof(char));
 	}
+
+	free(comando);
 }
 
 void *manejadorConexionCPU (void* socketCPU){
@@ -382,15 +383,15 @@ void *manejadorConexionCPU (void* socketCPU){
   }
 
 
-void *manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void* socketParaMemoria){
+void* manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void* socketParaMemoria){
   while(1){
 	  paquete paqueteRecibidoDeConsola;
 	      if(recv(*(int*)socketConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de CPU");
+	        perror("Error al recibir el tipo de mensaje de Consola");
 	        exit(-1);
 	      }
 	      if(recv(*(int*)socketConsola, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de CPU");
+	        perror("Error al recibir tamanio de mensaje de Consola");
 	        exit(-1);
 	      }
 	      paquete mensajeAux;
@@ -411,9 +412,9 @@ void *manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void
 				  FILE *archivoRecibido = fopen(dataRecibida, "r+w");
 				  fscanf(archivoRecibido, "%s", buffer);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  int cantPag = recibirCantidadPaginas(buffer);
-				  nuevoPCB = inicializarPCB(buffer, cantPag);
-				  prepararProgramaEnMemoria(*(int*)socketParaMemoria,pid_actual,cantPag,ASIGNAR_PAGINAS);
+				  cantPag = recibirCantidadPaginas(buffer);
+				  inicializarPCB(buffer);
+				  prepararProgramaEnMemoria(*(int*)socketParaMemoria,ASIGNAR_PAGINAS);
 				  free(dataRecibida);
 				  free(buffer);
 				  break;
@@ -435,25 +436,25 @@ void *manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void
 				  }
 				  break;
 			  default:
-					perror("No se reconoce el mensaje enviado por CPU");
+					perror("No se reconoce el mensaje enviado por Consola");
 			  }
 	  }
   }
 
 void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* socketCPU){
   while(1){
-	  paquete paqueteRecibidoDeConsola;
-	      if(recv(*(int*)socketMemoria, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de CPU");
+	  paquete paqueteRecibidoDeMemoria;
+	      if(recv(*(int*)socketMemoria, &paqueteRecibidoDeMemoria.tipoMsj,sizeof(int),0)==-1){
+	        perror("Error al recibir el tipo de mensaje de Memoria");
 	        exit(-1);
 	      }
-	      if(recv(*(int*)socketMemoria, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de CPU");
+	      if(recv(*(int*)socketMemoria, &paqueteRecibidoDeMemoria.tamMsj,sizeof(int),0)==-1){
+	        perror("Error al recibir tamanio de mensaje de Memoria");
 	        exit(-1);
 	      }
 	      paquete mensajeAux;
 	      void* dataRecibida;
-	      switch (paqueteRecibidoDeConsola.tipoMsj) {
+	      switch (paqueteRecibidoDeMemoria.tipoMsj) {
 	      	  case TAMANIO_PAGINA:
 	      		  if (recv(*(int*)socketMemoria, &TAM_PAGINA, sizeof(int),0) == -1) {
 	      			perror("Error al recibir el tamanio de pagina");
@@ -475,10 +476,12 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      	  	  proceso->paginas = cantPag;
 	      	  	  list_add(tablaKernel, proceso);
 	      	  	  log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
-	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,pid_actual,cantPag,INICIAR_PROGRAMA);
+	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,INICIAR_PROGRAMA);
 	      	  	  enviarPCB(*(int*)socketCPU);
 	      	  	  break;
-	      }
+	      	  default:
+	      		  perror("No se reconoce el mensaje enviado por Memoria");
+	      	  }
 	  }
   }
 //-------------------FIN DE FUNCIONES MANEJADOR KERNEL----------------------------------
@@ -493,28 +496,25 @@ int main(int argc, char *argv[]) {
 	//inicializarKernel(path);
 	inicializarKernel(argv[1]);
 	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
-
 	int socketParaMemoria, socketCPU, socketConsola, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
 	FD_ZERO(&socketsMaster);
 	mostrarConfiguracionesKernel();
-
 	int socketEscucha = ponerseAEscucharClientes(puerto_Prog, 0);
 	socketParaMemoria = conectarAServer(ip_Memoria.numero, puerto_Memoria);
 	socketParaFileSystem = conectarAServer(ip_FS.numero, puerto_FS);
 	FD_SET(socketEscucha, &socketsCliente);
 	FD_SET(socketCPU, &socketsCliente);
-	FD_SET(socketConsola, &socketsCliente);
+	FD_SET(socketConsola, &socketsMaster);
 	FD_SET(socketParaMemoria, &socketsMaster);
 	FD_SET(socketParaFileSystem, &socketsMaster);
 	socketMaxCliente = calcularSocketMaximo(socketEscucha,socketCPU);
-	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
+	socketMaxMaster = calcularSocketMaximo(calcularSocketMaximo(socketParaMemoria,socketParaFileSystem),socketConsola);
 	realizarHandshake(socketParaMemoria,MEMORIA);
-	realizarHandshake(socketCPU,CONSOLA);
+	realizarHandshake(socketConsola,CONSOLA);
 	realizarHandshake(socketCPU,CPU);
-
 	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL);
 
 	while (1) {
@@ -551,7 +551,7 @@ int main(int argc, char *argv[]) {
 							case CPU:
 								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,socketAChequear);
 								log_info(loggerKernel,"Se registro nueva CPU...\n");
-								FD_CLR(socketAChequear,&socketsMaster);
+								FD_CLR(socketAChequear,&socketsCliente);
 								break;
 							case CORTO:
 								printf("El socket %d corto la conexion\n",socketAChequear);
