@@ -36,8 +36,9 @@ int sizePaquete=sizeof(paquete);
 #define MENSAJE_PATH  103
 #define MENSAJE_PID   105
 #define HANDSHAKE_CONSOLA 1005
+#define ESPACIO_INSUFICIENTE -2
 #define INICIAR 1
-#define FINALIZAR 2
+#define FINALIZAR 503
 #define DESCONECTAR 3
 #define LIMPIAR 4
 

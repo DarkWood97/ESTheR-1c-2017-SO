@@ -23,29 +23,31 @@ int stack_Size;
 
 //---------------indice de stack----
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	int pagina;
 	int offset;
 	int size;
 } retVar;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	int pos;
 	t_list* args;
 	t_list* vars;
 	int retPos;
 	retVar retVar;
+	int tamArgs;
+	int tamVars;
 } Stack;
 
 //--------------indice de codigo----
-typedef struct {
+typedef struct __attribute__((packed)) {
 	int comienzo;
 	int offset;
 } codeIndex;
 
 //--------------indice de codigo-----
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	int PID;
 	int PC;
 	int paginas_Codigo;
@@ -63,29 +65,32 @@ typedef struct __attribute__((packed)) {
 	void* mensaje;
 } paquete;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	int pid;
 	int tamaniosPaginas;
 	int paginas;
 } TablaKernel;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	uint32_t size;
 	bool isFree;
 } HeapMetadata;
 
 //--VARIABLES GLOBALES------------------------------------------------------
-#define  CONEXION_CONSOLA  201
-#define CORTO  0
+#define CONEXION_CONSOLA 1005
+#define CORTO 0
 #define ERROR -1
+#define ESPACIO_INSUFICIENTE -2
 #define MENSAJE_IMPRIMIR 101
 #define TAMANIO_PAGINA 102
 #define MENSAJE_PATH 103
 #define HANDSHAKE_MEMORIA 1002
+#define HANDSHAKE_CPU 1003
 #define INICIAR_PROGRAMA 501
 #define ASIGNAR_PAGINAS 502
 #define FINALIZAR_PROGRAMA 503
 #define INICIO_EXITOSO 50
+#define MENSAJE_PCB 1015
 
 t_log * loggerKernel;
 bool YA_HAY_UNA_CONSOLA = false;
@@ -109,7 +114,7 @@ void crearKernel(t_config *configuracion) {
 	sem_Init = config_get_array_value(configuracion, "SEM_INIT");
 	shared_Vars = config_get_array_value(configuracion, "SHARED_VARS");
 	stack_Size = config_get_int_value(configuracion, "STACK_SIZE");
-	}
+}
 
 void inicializarKernel(char *path) {
 	t_config *configuracionKernel = (t_config*) malloc(sizeof(t_config));
@@ -137,11 +142,18 @@ void mostrarConfiguracionesKernel() {
 	printf("STACK_SIZE=%d\n", stack_Size);
 }
 
-int obtenerPID() {
+int aumentarPID() {
 	int pid = pid_actual;
 	pid_actual = pid_actual + 1;
 	return pid;
 }
+
+int disminuirPID() {
+	int pid = pid_actual;
+	pid_actual = pid_actual - 1;
+	return pid;
+}
+
 
 codeIndex cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
 	codeIndex code[metadata_program->instrucciones_size];
@@ -170,6 +182,8 @@ t_list* inicializarStack(t_list *contexto) {
 	stack->args = list_create();
 	stack->vars = list_create();
 	stack->pos = 0;
+	stack->tamArgs = 0;
+	stack->tamVars = 0;
 
 	list_add(contextocero, stack);
 
@@ -181,7 +195,7 @@ PCB inicializarPCB(char* buffer, int tamanioPagina) {
 	PCB nuevoPCB;
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
 
-	nuevoPCB.PID = obtenerPID();
+	nuevoPCB.PID = aumentarPID();
 	nuevoPCB.PC = 0;
 	//nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)tamanioPagina);
 	//Hay que pasarle el argumento -lm al gcc al linkear para que funcione ceil
@@ -197,9 +211,9 @@ PCB inicializarPCB(char* buffer, int tamanioPagina) {
 	return nuevoPCB;
 }
 
-void realizarHandshake(int socket) {
-	int longitud = sizeof(HANDSHAKE_MEMORIA);
-	int tipoMensaje = HANDSHAKE_MEMORIA;
+void realizarHandshake(int socket, int HANDSHAKE) {
+	int longitud = sizeof(HANDSHAKE);
+	int tipoMensaje = HANDSHAKE;
 	if (send(socket, &tipoMensaje, longitud, 0) == -1) {
 		perror("Error de send");
 		close(socket);
@@ -216,22 +230,50 @@ int recibirCantidadPaginas(char* codigo) {
 	return cantidad;
 }
 
-int inicializarPrograma(int socket, char* buffer) {
+void prepararProgramaEnMemoria(int socket, int pid, int cantidadPaginas, int FUNCION) {
 	paquete paqMemoria;
 	void* mensaje = malloc(sizeof(int) * 2);
-	int cantidadPaginas = recibirCantidadPaginas(buffer);
-	PCB nuevoPCB = inicializarPCB(buffer, cantidadPaginas);
-	memcpy(mensaje, nuevoPCB.PID, sizeof(int));
+	memcpy(mensaje, pid, sizeof(int));
 	memcpy(mensaje + sizeof(int), cantidadPaginas, sizeof(int));
 	paqMemoria.mensaje = mensaje;
 	paqMemoria.tamMsj = sizeof(int) * 2;
-	paqMemoria.tipoMsj = ASIGNAR_PAGINAS;
+	paqMemoria.tipoMsj = FUNCION;
 	if ((send(socket, &paqMemoria, sizeof(int) * 2, 0)) == -1) {
 		perror("Error al enviar el PID y tamanio de pagina");
 		exit(-1);
 	}
 	free(mensaje);
-	return cantidadPaginas;
+}
+
+void* serializarPCB(PCB pcb){
+	void* mensaje = malloc(sizeof(pcb));
+
+	memcpy(mensaje, pcb.PID, sizeof(int));
+	memcpy(mensaje+sizeof(int), pcb.PC, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*2), pcb.paginas_Codigo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*3), pcb.cod.comienzo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*4), pcb.cod.offset, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*5), pcb.etiquetas, sizeof(char)*16);
+	memcpy(mensaje+(sizeof(int)*5)+(sizeof(char)*16), pcb.exitCode, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16), pcb.contextoActual, sizeof(t_list*)*16);
+	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tamContextoActual, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tamEtiquetas, sizeof(int));
+
+	return mensaje;
+	free(mensaje);
+}
+
+void enviarPCB(int socketCPU, PCB pcb){
+	paquete paqCPU;
+	void* mensajePCB = serializarPCB(pcb);
+	paqCPU.mensaje = mensajePCB;
+	paqCPU.tamMsj = sizeof(pcb);
+	paqCPU.tipoMsj = MENSAJE_PCB;
+	if ((send(socketCPU, &paqCPU, sizeof(pcb), 0)) == -1) {
+		perror("Error al enviar PCB al CPU");
+		exit(-1);
+	}
+	free(mensajePCB);
 }
 
 //------FUNCIONES DE ARRAY----------------------------------------
@@ -268,7 +310,7 @@ int main(int argc, char *argv[]) {
 	FD_ZERO(&socketsConPeticion);
 	FD_ZERO(&socketsMaster);
 	mostrarConfiguracionesKernel();
-	int socketParaMemoria, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
+	int socketParaMemoria, socketCPU, socketConsola, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
 	int socketEscucha = ponerseAEscucharClientes(puerto_Prog, 0);
 	socketParaMemoria = conectarAServer(ip_Memoria.numero, puerto_Memoria);
 	socketParaFileSystem = conectarAServer(ip_FS.numero, puerto_FS);
@@ -277,7 +319,8 @@ int main(int argc, char *argv[]) {
 	FD_SET(socketParaFileSystem, &socketsMaster);
 	socketMaxCliente = socketEscucha;
 	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
-	realizarHandshake(socketParaMemoria);
+	realizarHandshake(socketParaMemoria,HANDSHAKE_MEMORIA);
+	realizarHandshake(socketCPU,HANDSHAKE_CPU);
 
 	while (1) {
 		socketsConPeticion = socketsCliente;
@@ -326,13 +369,23 @@ int main(int argc, char *argv[]) {
 							FILE *archivoRecibido = fopen(dataRecibida, "r+w");
 							fscanf(archivoRecibido, "%s", buffer);
 							log_info(loggerKernel,"Archivo recibido correctamente...\n");
-							int cantPag = inicializarPrograma(socketParaMemoria,buffer);
+							int cantPag = recibirCantidadPaginas(buffer);
+							PCB nuevoPCB = inicializarPCB(buffer, cantPag);
+							prepararProgramaEnMemoria(socketParaMemoria,pid_actual,cantPag,ASIGNAR_PAGINAS);
 							free(dataRecibida);
 							free(buffer);
 							break;
 						case TAMANIO_PAGINA:
 							if (recv(socketAChequear, &TAM_PAGINA, sizeof(int),0) == -1) {
 								perror("Error al recibir el tamanio de pagina");
+								exit(-1);
+							}
+							break;
+						case ESPACIO_INSUFICIENTE:
+							disminuirPID();
+							int espacioInsuficiente = ESPACIO_INSUFICIENTE;
+							if(send(socketConsola, &espacioInsuficiente, sizeof(int),0) == -1) {
+								perror("Error de send");
 								exit(-1);
 							}
 							break;
@@ -343,6 +396,8 @@ int main(int argc, char *argv[]) {
 							proceso->paginas = cantPag;
 							list_add(tablaKernel, proceso);
 							log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
+							prepararProgramaEnMemoria(socketParaMemoria,pid_actual,cantPag,INICIAR_PROGRAMA);
+							enviarPCB(socketCPU,nuevoPCB);
 							break;
 						case CONEXION_CONSOLA:
 							if (YA_HAY_UNA_CONSOLA) {
@@ -357,6 +412,7 @@ int main(int argc, char *argv[]) {
 								recv(socketAChequear, &mensajeAux.tamMsj,sizeof(int), 0);
 								dataRecibida = malloc(mensajeAux.tamMsj);
 								recv(socketAChequear, &dataRecibida,mensajeAux.tamMsj, 0);
+								socketConsola = socketAChequear;
 								printf("Handshake con Consola: %s\n",dataRecibida);
 								free(dataRecibida);
 							}
