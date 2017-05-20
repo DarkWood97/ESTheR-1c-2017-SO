@@ -127,3 +127,39 @@ void* serializarPCB(PCB  pcb){
 	free(mensaje);
 }
 
+
+char* loQueTengoQueLeer (int pagina,int desplazamiento, int tam)
+{
+	if((tam+desplazamiento)<=tamPagina){
+
+					char *datos= malloc(sizeof(char*)*16);
+					retVar *datosMemoria=malloc(sizeof(retVar));
+					datosMemoria->offset=desplazamiento;
+					datosMemoria->pagina=pagina;
+					datosMemoria->tam=tam;
+					enviarDirALeerMemoria(datos,datosMemoria);
+
+					paquete* instruccion;
+
+					instruccion = deserealizarMensaje(socketMemoria);
+
+					char* sentencia=malloc(datosMemoria->tam);
+					memcpy(sentencia, instruccion->mensaje, datosMemoria->tam);
+					free(datos);
+					free(datosMemoria);
+					destruirPaquete(instruccion);
+					return sentencia;}
+	else{
+		char* datos = leer(pagina,desplazamiento,(tamPagina-desplazamiento));
+		if(datos==NULL) return NULL;
+		char* datos2 = leer(pagina+1,0,tam-(tamPagina-desplazamiento));
+		if(datos2==NULL) return NULL;
+
+		char* nuevo =malloc((tamPagina-desplazamiento)+tam-(tamPagina-desplazamiento));
+		memcpy(nuevo,datos,(tamPagina-desplazamiento));
+		memcpy(nuevo+(tamPagina-desplazamiento),datos2,tam-(tamPagina-desplazamiento));
+		free(datos);
+		free(datos2);
+		return nuevo;
+	}
+}
