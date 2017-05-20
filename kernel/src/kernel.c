@@ -55,7 +55,7 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
 	int PID;
-	int PC;
+	int ProgramCounter;
 	int paginas_Codigo;
 	codeIndex cod;
 	char* etiquetas;
@@ -205,7 +205,7 @@ PCB inicializarPCB(char* buffer, int tamanioPagina) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
 
 	nuevoPCB.PID = aumentarPID();
-	nuevoPCB.PC = 0;
+	nuevoPCB.ProgramCounter = 0;
 	nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)tamanioPagina);
 	nuevoPCB.cod = cargarCodeIndex(buffer, metadata_program);
 	nuevoPCB.tamEtiquetas = metadata_program->etiquetas_size;
@@ -257,7 +257,7 @@ void* serializarPCB(PCB pcb){
 	void* mensaje = malloc(sizeof(pcb));
 
 	memcpy(mensaje, pcb.PID, sizeof(int));
-	memcpy(mensaje+sizeof(int), pcb.PC, sizeof(int));
+	memcpy(mensaje+sizeof(int), pcb.ProgramCounter, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*2), pcb.paginas_Codigo, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*3), pcb.cod.comienzo, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*4), pcb.cod.offset, sizeof(int));

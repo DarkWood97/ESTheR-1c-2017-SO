@@ -71,6 +71,19 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
+
+void proximaInstruccion ()
+{
+	retVar* direccion = malloc(sizeof(char*)*16);
+	char* sentencia= loQueTengoQueLeer (direccion->pagina,direccion->offset,direccion->tam);
+	char* barraCero="\0";
+	memcpy(sentencia+(direccion->tam-1), barraCero, 1);
+	analizadorLinea(depurarSentencia(sentencia), &primitivas, &primitivas_kernel);
+	free(direccion);
+	free(sentencia);
+	pcb->ProgramCounter++;
+
+}
 //-------------------SERIALIZACION---------------------------------------------
 int obtenerLongitudBuff(char* path)
 {
@@ -113,8 +126,8 @@ void * deserealizarMensaje(int socket)
 		printf("Path recibido: %p ", recibido.mensaje);
 		break;
 	case MENSAJE_PCB:
-			memcpy(&PCB,recibido.mensaje,sizeof(PCB));
-			PCB->programCounter++;
+			memcpy(&pcb,recibido.mensaje,sizeof(PCB));
+			pcb->ProgramCounter++;
 			break;
 	default:
 		break;

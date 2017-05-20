@@ -19,6 +19,27 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+typedef struct __attribute__((packed)) {
+	int pid;
+	int tamaniosPaginas;
+	int paginas;
+} TablaKernel;
+typedef struct __attribute__((packed)) {
+	int comienzo;
+	int offset;
+} codeIndex;
+typedef struct __attribute__((packed)) {
+	int PID;
+	int ProgramCounter;
+	int paginas_Codigo;
+	codeIndex cod;
+	char* etiquetas;
+	int exitCode;
+	t_list *contextoActual;
+	int tamContextoActual;
+	int tamEtiquetas;
+	TablaKernel tablaKernel;
+} PCB;
 typedef struct __attribute__((__packed__)){
 	int tamMsj;
 	int tipoMsj;
@@ -84,4 +105,61 @@ void destruirPaquete(paquete * paquete)
 {
 	free(paquete->mensaje);
 	free(paquete);
+}
+
+void* serializarPCB(PCB  pcb){
+	void* mensaje = malloc(sizeof(pcb));
+	memcpy(mensaje, &pcb.PID, sizeof(int));
+	memcpy(mensaje+sizeof(int), &pcb.ProgramCounter, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*2), &pcb.paginas_Codigo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*3), &pcb.cod.comienzo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*4), &pcb.cod.offset, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*5), pcb.etiquetas, sizeof(char)*16);
+	memcpy(mensaje+(sizeof(int)*5)+(sizeof(char)*16), &pcb.exitCode, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16), &pcb.contextoActual, sizeof(t_list*)*16);
+	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tamContextoActual, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tamEtiquetas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.paginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.pid, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.tamaniosPaginas, sizeof(int));
+
+	return mensaje;
+	free(mensaje);
+}
+
+
+char* loQueTengoQueLeer (int pagina,int desplazamiento, int tam)
+{
+	if((tam+desplazamiento)<=tamPagina){
+
+					char *datos= malloc(sizeof(char*)*16);
+					retVar *datosMemoria=malloc(sizeof(retVar));
+					datosMemoria->offset=desplazamiento;
+					datosMemoria->pagina=pagina;
+					datosMemoria->tam=tam;
+					enviarDirALeerMemoria(datos,datosMemoria);
+
+					paquete* instruccion;
+
+					instruccion = deserealizarMensaje(socketMemoria);
+
+					char* sentencia=malloc(datosMemoria->tam);
+					memcpy(sentencia, instruccion->mensaje, datosMemoria->tam);
+					free(datos);
+					free(datosMemoria);
+					destruirPaquete(instruccion);
+					return sentencia;}
+	else{
+		char* datos = leer(pagina,desplazamiento,(tamPagina-desplazamiento));
+		if(datos==NULL) return NULL;
+		char* datos2 = leer(pagina+1,0,tam-(tamPagina-desplazamiento));
+		if(datos2==NULL) return NULL;
+
+		char* nuevo =malloc((tamPagina-desplazamiento)+tam-(tamPagina-desplazamiento));
+		memcpy(nuevo,datos,(tamPagina-desplazamiento));
+		memcpy(nuevo+(tamPagina-desplazamiento),datos2,tam-(tamPagina-desplazamiento));
+		free(datos);
+		free(datos2);
+		return nuevo;
+	}
 }

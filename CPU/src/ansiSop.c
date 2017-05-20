@@ -6,6 +6,7 @@
 #define HANDSHAKE_KERNEL 1002
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
+#define PETICION_LECTURA 104
 #define MENSAJE_DIRECCION 110
 #define ERROR -1
 #define CORTO 0
@@ -44,17 +45,17 @@ void proximaDireccion(retVar* direccionOriginal,int posicionStack, int ultimaPos
 {
 	t_direccion *auxiliar;
 	auxiliar=malloc(sizeT_direccion);
-	int offsetAux=((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->offset + 4;
+	int offsetAux=((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->offset + 4;
 	if(offsetAux>=tamPagina)
 	{
-				auxiliar->pagina = ((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->pagina + 1;
+				auxiliar->pagina = ((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->pagina + 1;
 				auxiliar->offset = 0;
 				auxiliar->tam=4;
 				memcpy(direccionOriginal, auxiliar , sizeof(retVar));
 				free(auxiliar);
 	}
 	else
-	{			auxiliar->pagina = ((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->pagina;
+	{			auxiliar->pagina = ((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->pagina;
 				auxiliar->offset = offsetAux;
 				auxiliar->tam=4;
 				memcpy(direccionOriginal, auxiliar , sizeof(retVar));
@@ -67,41 +68,41 @@ void armarDireccionPagina(retVar * direccionOriginal)
 	auxiliar=malloc(sizeT_direccion);
 	auxiliar->tam=4;
 	auxiliar->offset=0;
-	auxiliar->pagina = PCB->paginasCodigo;
+	auxiliar->pagina = pcb->paginas_Codigo;
 	memcpy(direccionOriginal,auxiliar,sizeT_direccion);
 	free(auxiliar);
 }
 void armarDireccionDeArgumento(retVar * direccionOriginal)
 {
-	if(((t_contexto*)list_get(PCB->contextoActual, PCB->tamContextoActual-1))->tamArgs == 0){
+	if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamArgs == 0){
 		log_info(log,"No hay argumentos\n");
-		int posicionAnterior = PCB->tamContextoActual-2;
-		int UltimaPocisionVariable = ((t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-2)))->tamVars-1;
+		int posicionAnterior = pcb->tamContextoActual-2;
+		int UltimaPocisionVariable = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-2)))->tamVars-1;
 		proximaDireccion(direccionOriginal,posicionAnterior, UltimaPocisionVariable);
 		}
 		else {
 		log_info(log,"Busco ultimo argumento\n");
-		int posicionStackActual = PCB->tamContextoActual-1;
-		int posicionUltimoArgumento = ((t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1)))->tamArgs-1;
+		int posicionStackActual = pcb->tamContextoActual-1;
+		int posicionUltimoArgumento = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1)))->tamArgs-1;
 		proximaDireccion(direccionOriginal,posicionStackActual, posicionUltimoArgumento);
 		}
 }
 void armarProximaDireccion(retVar* direccionOriginal){
 	int ultimaPosicionStack;
-	ultimaPosicionStack= PCB->tamContextoActual-1;
+	ultimaPosicionStack= pcb->tamContextoActual-1;
 	int posicionUltimaVariable;
-	posicionUltimaVariable= ((t_contexto*)(list_get(PCB->contextoActual, ultimaPosicionStack)))->tamVars-1;
+	posicionUltimaVariable= ((t_contexto*)(list_get(pcb->contextoActual, ultimaPosicionStack)))->tamVars-1;
 	proximaDireccion(direccionOriginal,ultimaPosicionStack, posicionUltimaVariable);
 }
 void proximaDireccionArgumento(retVar* direccionOriginal, int posicionStack, int posicionUltimaVariable ){
 	retVar *direccion;
 	int offset;
 	direccion= malloc(sizeT_direccion);
-	offset= ((retVar*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->offset + 4;
+	offset= ((retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->offset + 4;
 	log_info(log,"Entre a proxima direccion Argumento\n");
 	log_info(log,"Offset siguiente es %d\n", offset);
 		if(offset>=tamPagina){
-			direccion->pagina = ((retVar*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->pagina + 1;
+			direccion->pagina = ((retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->pagina + 1;
 			direccion->offset = 0;
 			direccion->tam=4;
 			memcpy(direccionOriginal, direccion ,sizeT_direccion);
@@ -109,7 +110,7 @@ void proximaDireccionArgumento(retVar* direccionOriginal, int posicionStack, int
 		}
 		else
 			{
-				direccion->pagina = ((retVar*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->pagina;
+				direccion->pagina = ((retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->pagina;
 				direccion->offset = offset;
 				direccion->tam=4;
 				memcpy(direccionOriginal, direccion , sizeT_direccion);
@@ -121,30 +122,30 @@ void proximaDireccionArgumento(retVar* direccionOriginal, int posicionStack, int
 
 void armarDireccionDeFuncion(retVar* direccionOriginal)
 {
-	if(((t_contexto*)list_get(PCB->contextoActual, PCB->tamContextoActual-1))->tamArgs == 0 && ((t_contexto*)list_get(PCB->contextoActual, PCB->tamContextoActual-1))->tamVars == 0)
+	if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamArgs == 0 && ((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamVars == 0)
 		{
 			log_info(log,"Entrando a definir variable en contexto sin argumentos y sin vars\n");
-			int posicionStackAnterior = PCB->tamContextoActual-2;
-			int posicionUltimaVariable = ((t_contexto*)(list_get(PCB->contextoActual,PCB->tamContextoActual-2)))->tamVars-1;
+			int posicionStackAnterior = pcb->tamContextoActual-2;
+			int posicionUltimaVariable = ((t_contexto*)(list_get(pcb->contextoActual,pcb->tamContextoActual-2)))->tamVars-1;
 			proximaDireccion(direccionOriginal,posicionStackAnterior, posicionUltimaVariable);
 		}
 	else
 		{
-			if(((t_contexto*)list_get(PCB->contextoActual, PCB->tamContextoActual-1))->tamArgs != 0 && ((t_contexto*)list_get(PCB->contextoActual, PCB->tamContextoActual-1))->tamVars == 0)
+			if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamArgs != 0 && ((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamVars == 0)
 				{
 
 			log_info(log,"Entrando a definir variable a partir del ultimo argumento\n");
-			int posicionStackActual = PCB->tamContextoActual-1;
-			int posicionUltimoArgumento = ((t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1)))->tamArgs-1;
+			int posicionStackActual = pcb->tamContextoActual-1;
+			int posicionUltimoArgumento = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1)))->tamArgs-1;
 			proximaDireccionArgumento(direccionOriginal,posicionStackActual, posicionUltimoArgumento);
 			}
 			else
 			{
-				if(((t_contexto*)list_get(PCB->contextoActual, PCB->tamContextoActual-1))->tamVars != 0){
+				if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamVars != 0){
 
 				log_info(log,"Entrando a definir variable a partir de la ultima variable\n");
-				int posicionStackActual = PCB->tamContextoActual-1;
-				int posicionUltimaVariable = ((t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1)))->tamVars-1;
+				int posicionStackActual = pcb->tamContextoActual-1;
+				int posicionUltimaVariable = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1)))->tamVars-1;
 				proximaDireccion(direccionOriginal,posicionStackActual, posicionUltimaVariable);
 			}
 			}
@@ -163,6 +164,20 @@ void enviarDirAMemoria(retVar* direccion, long valor)
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(escritura);
+}
+
+void enviarDirALeerMemoria(char* datosMemoria, retVar* dir)
+{
+	memcpy(datosMemoria, &dir->pagina , 4);
+	memcpy(datosMemoria+4, &dir->offset , 4);
+	memcpy(datosMemoria+8, &dir->tam , 4);
+	paquete paqueteAEnviar,auxiliar;
+	auxiliar=serializar(datosMemoria,PETICION_LECTURA);
+	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
+	realizarHandshake(socketMemoria,paqueteAEnviar);
+	destruirPaquete(&paqueteAEnviar);
+	destruirPaquete(&auxiliar);
+	free(datosMemoria);
 }
 void enviarDireccionALeerKernel(retVar* direccion, int valor)
 {
