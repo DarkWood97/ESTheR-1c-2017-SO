@@ -6,7 +6,7 @@
  */
 #include "ansiSop.h"
 //--------------------------------Algo---------------------------------------
-int convertirDireccionAPuntero(t_direccion* dire)
+int convertirDireccionAPuntero(retVar * dire)
 {
 	int direccionOriginal,pag,desplazamiento,auxiliar;
 	auxiliar=(dire->pagina);
@@ -18,7 +18,7 @@ int convertirDireccionAPuntero(t_direccion* dire)
 //--------------------------------------------------------------------------
 void asignar (t_puntero direccion_variable, t_valor_variable valor)
 {
-	t_direccion *dir= malloc(sizeT_direccion);
+	retVar *dir= malloc(size_retVar);
 	punteroADir(direccion_variable, dir);
 	log_info(log, "%ld\n", valor);
 	enviarDirAMemoria(dir, valor);
@@ -27,7 +27,7 @@ void asignar (t_puntero direccion_variable, t_valor_variable valor)
 t_puntero definirVariable(t_nombre_variable identificador_variable)
 {
 		log_info(log,"Definir una variable %c\n", identificador_variable);
-		t_direccion *direccion_variable= malloc(sizeT_direccion);
+		retVar *direccion_variable= malloc(size_retVar);
 		t_variable *variable= malloc(sizeof(t_variable));
 		t_contexto *contexto = malloc(sizeof(t_contexto));
 		contexto= (t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1));
@@ -67,7 +67,7 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 						contexto->tamVars++;
 					}
 			}
-			long valor;
+			long valor=0;
 			int dirReturn = convertirDireccionAPuntero(direccion_variable);
 				if(dirReturn+3>variableMaxima){
 					log_info(log,"No hay espacio para definir variable %c. Abortando programa\n", identificador_variable);
@@ -87,16 +87,16 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 	log_info(log,"Quiero obtener la variable %s", identificador_variable);
 	int posicionStack, direccionDeRetorno;
 	posicionStack=PCB->tamContextoActual;
+	retVar * auxiliar;
 	bool _comparacionDeIdentificadorVariable_()
 	{
 		return identificador_variable>='0' && identificador_variable<='9';
 	}
 	if(_comparacionDeIdentificadorVariable_())
 	{
-		t_direccion * direccion;
-		direccion = (t_direccion*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, (int)identificador_variable-48));
-		direccionDeRetorno=convertirDireccionAPuntero(direccion);
-		log_info(log,"Obtuve el valor de %c: %d %d %d\n", identificador_variable, direccion->pagina, direccion->offset, direccion->tam);
+		auxiliar = (retVar*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, (int)identificador_variable-48));
+		direccionDeRetorno=convertirDireccionAPuntero(auxiliar);
+		log_info(log,"Obtuve el valor de %c: %d %d %d\n", identificador_variable, auxiliar->pagina, auxiliar->offset, auxiliar->tam);
 		return(direccionDeRetorno);
 	}
 	else
@@ -110,7 +110,7 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 				log_info(log,"Etiqueta de variable: %c\n", nueva->etiqueta);
 				if(nueva->etiqueta==identificador_variable)
 				{
-					t_direccion * auxiliar;
+					retVar* auxiliar;
 					auxiliar= ((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, posicionMaxima)))->direccion;
 					direccionDeRetorno= convertirDireccionAPuntero(auxiliar);
 					log_info(log,"Obtuve el valor de %c: %d %d %d\n", nueva->etiqueta, nueva->direccion->pagina, nueva->direccion->offset, nueva->direccion->tam);
@@ -123,16 +123,19 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 }
 t_puntero dereferenciar (t_puntero direccion_variable)
 {
-	t_direccion * direccion =malloc(sizeT_direccion);
-	paquete * paquete, auxiliar;
+	retVar * direccion =malloc(size_retVar);
+	paquete * paquete, *auxiliar;
+	paquete=malloc(sizeof(paquete));
+	auxiliar=malloc(sizeof(paquete));
 	int valor;
 	punteroADir(direccion_variable,direccion);
 	enviarDireccionALeerKernel(direccion,direccion_variable);
 	free(direccion);
-	deserealizarConRetorno(socketKernel,&auxiliar);
+	deserealizarConRetorno(socketKernel,auxiliar);
 	memcpy(&valor, paquete->mensaje, 4);
 	destruirPaquete(paquete);
 	log_info(log,"El valor dereferenciado es: %d", valor);
+	destruirPaquete(auxiliar);
 	return valor;
 }
 
@@ -196,7 +199,7 @@ void retornar(t_valor_variable retorno)
 		log_info(log,"Se destruyeron vars de funcion\n");
 		while(contextoFinal->tamVars!=0){
 				log_info(log,"Antes del free\n");
-				free((t_direccion*)list_get(contextoFinal->args, contextoFinal->tamArgs-1));
+				free((retVar*)list_get(contextoFinal->args, contextoFinal->tamArgs-1));
 				log_info(log,"Despues del free\n");
 				contextoFinal->tamArgs--;
 			}

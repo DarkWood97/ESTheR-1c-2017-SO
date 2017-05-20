@@ -10,8 +10,8 @@
 
 t_puntero definirVariable(t_nombre_variable);
 t_puntero obtenerPosicionVariable(t_nombre_variable);
-t_puntero dereferenciar (t_puntero );
-void asignar (t_puntero direccion_variable, t_valor_variable );
+t_puntero dereferenciar (t_puntero);
+void asignar (t_puntero, t_valor_variable );
 /*t_valor_variable obtenerValorCompartida (t_nombre_compartida );*/
 t_valor_variable asignarValorCompartida (t_nombre_compartida , t_valor_variable );
 void irAlLabel (t_nombre_etiqueta );

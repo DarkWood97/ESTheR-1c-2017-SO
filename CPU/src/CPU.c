@@ -82,7 +82,7 @@ int obtenerLongitudBuff(char* path)
 void * deserealizarMensaje(int socket)
 {
 	int *tamanio = 0;
-	if(recv(socket,tamanio,16,0)==-1);
+	if(recv(socket,tamanio,16,0)==-1)
 		{
 			perror("Error de receive");
 			exit(-1);
@@ -116,11 +116,14 @@ void * deserealizarMensaje(int socket)
 			memcpy(&PCB,recibido.mensaje,sizeof(PCB));
 			PCB->programCounter++;
 			break;
+	default:
+		break;
 	}
 }
 
 //----------------------MAIN---------------------------------------------------
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	verificarParametrosInicio(argc);
 	cpu cpuDelSistema = inicializarCPU(argv[1]);
 	mostrarConfiguracionCPU(cpuDelSistema);

@@ -10,15 +10,10 @@
 
 #define MENSAJE_VARIABLE_COMPARTIDA 111
 
-typedef struct __attribute__((packed))t_direccion{
-	int pagina;
-	int offset;
-	int tam;
-}t_direccion;
 typedef struct __attribute__((packed))t_variable
 {
 	char etiqueta;
-	t_direccion *direccion;
+	retVar *direccion;
 } t_variable;
 typedef struct __attribute__((packed))t_contexto
 {
@@ -26,23 +21,23 @@ typedef struct __attribute__((packed))t_contexto
 	t_list *args;
 	t_list *vars;
 	int retPos;
-	t_direccion retVar;
+	retVar retVar;
 	int tamArgs;
 	int tamVars;
 }t_contexto;
-int sizeT_direccion;
+int size_retVar;
 
 
-void proximaDireccion(t_direccion* ,int, int);
-void armarDireccionPagina(t_direccion *);
-void armarDireccionDeArgumento(t_direccion *);
-void armarProximaDireccion(t_direccion*);
-void proximaDireccionArgumento(t_direccion*, int, int);
-void armarDireccionDeFuncion(t_direccion* );
+void proximaDireccion(retVar* ,int, int);
+void armarDireccionPagina(retVar *);
+void armarDireccionDeArgumento(retVar *);
+void armarProximaDireccion(retVar*);
+void proximaDireccionArgumento(retVar*, int, int);
+void armarDireccionDeFuncion(retVar* );
 void destruirPaquete(paquete *);
-void enviarDirAMemoria(t_direccion*, long );
-void punteroADir(int, t_direccion*);
-void inicializarVariable(t_variable *, t_nombre_variable ,t_direccion *);
-void enviarDireccionALeerKernel(t_direccion*, int);
+void enviarDirAMemoria(retVar*, long );
+void punteroADir(int, retVar*);
+void inicializarVariable(t_variable *, t_nombre_variable ,retVar *);
+void enviarDireccionALeerKernel(retVar*, int);
 void deserealizarConRetorno(int, paquete*);
 #endif /* ANSISOP_H_ */

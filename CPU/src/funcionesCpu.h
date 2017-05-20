@@ -37,10 +37,10 @@ typedef struct {
 	int comienzo;
 	int offset;
 } codeIndex;
-typedef struct {
+typedef struct __attribute__((packed)){
 	int pagina;
 	int offset;
-	int size;
+	int tam;
 } retVar;
 typedef struct {
 	int pos;
