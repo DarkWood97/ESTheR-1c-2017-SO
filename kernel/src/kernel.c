@@ -26,7 +26,7 @@ int stack_Size;
 typedef struct __attribute__((packed)) {
 	int pagina;
 	int offset;
-	int size;
+	int tam;
 } retVar;
 
 typedef struct __attribute__((packed)) {
@@ -48,6 +48,12 @@ typedef struct __attribute__((packed)) {
 //--------------indice de codigo-----
 
 typedef struct __attribute__((packed)) {
+	int pid;
+	int tamaniosPaginas;
+	int paginas;
+} TablaKernel;
+
+typedef struct __attribute__((packed)) {
 	int PID;
 	int PC;
 	int paginas_Codigo;
@@ -57,6 +63,7 @@ typedef struct __attribute__((packed)) {
 	t_list *contextoActual;
 	int tamContextoActual;
 	int tamEtiquetas;
+	TablaKernel tablaKernel;
 } PCB;
 
 typedef struct __attribute__((packed)) {
@@ -64,12 +71,6 @@ typedef struct __attribute__((packed)) {
 	int tamMsj;
 	void* mensaje;
 } paquete;
-
-typedef struct __attribute__((packed)) {
-	int pid;
-	int tamaniosPaginas;
-	int paginas;
-} TablaKernel;
 
 typedef struct __attribute__((packed)) {
 	uint32_t size;
@@ -197,8 +198,7 @@ PCB inicializarPCB(char* buffer, int tamanioPagina) {
 
 	nuevoPCB.PID = aumentarPID();
 	nuevoPCB.PC = 0;
-	//nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)tamanioPagina);
-	//Hay que pasarle el argumento -lm al gcc al linkear para que funcione ceil
+	nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)tamanioPagina);
 	nuevoPCB.cod = cargarCodeIndex(buffer, metadata_program);
 	nuevoPCB.tamEtiquetas = metadata_program->etiquetas_size;
 	nuevoPCB.etiquetas = cargarEtiquetasIndex(metadata_program,nuevoPCB.tamEtiquetas);
@@ -258,6 +258,9 @@ void* serializarPCB(PCB pcb){
 	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16), pcb.contextoActual, sizeof(t_list*)*16);
 	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tamContextoActual, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tamEtiquetas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tablaKernel.paginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tablaKernel.pid, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), pcb.tablaKernel.tamaniosPaginas, sizeof(int));
 
 	return mensaje;
 	free(mensaje);
@@ -315,9 +318,10 @@ int main(int argc, char *argv[]) {
 	socketParaMemoria = conectarAServer(ip_Memoria.numero, puerto_Memoria);
 	socketParaFileSystem = conectarAServer(ip_FS.numero, puerto_FS);
 	FD_SET(socketEscucha, &socketsCliente);
+	FD_SET(socketCPU, &socketsCliente);
 	FD_SET(socketParaMemoria, &socketsMaster);
 	FD_SET(socketParaFileSystem, &socketsMaster);
-	socketMaxCliente = socketEscucha;
+	socketMaxCliente = calcularSocketMaximo(socketEscucha,socketCPU);
 	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
 	realizarHandshake(socketParaMemoria,HANDSHAKE_MEMORIA);
 	realizarHandshake(socketCPU,HANDSHAKE_CPU);
