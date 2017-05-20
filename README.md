@@ -90,3 +90,4 @@ typedef struct __attribute__((packed)) {
  int tamaniosPaginas;
  int paginas;
 } TablaKernel;
+
