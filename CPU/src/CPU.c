@@ -113,8 +113,8 @@ void * deserealizarMensaje(int socket)
 		printf("Path recibido: %p ", recibido.mensaje);
 		break;
 	case MENSAJE_PCB:
-			memcpy(&PCB,recibido.mensaje,sizeof(PCB));
-			PCB->programCounter++;
+			memcpy(&pcb,recibido.mensaje,sizeof(PCB));
+			pcb->ProgramCounter++;
 			break;
 	default:
 		break;

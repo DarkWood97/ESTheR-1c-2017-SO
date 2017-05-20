@@ -33,6 +33,11 @@
 
 #ifndef FUNCIONESCPU_H_
 #define FUNCIONESCPU_H_
+typedef struct __attribute__((packed)) {
+	int pid;
+	int tamaniosPaginas;
+	int paginas;
+} TablaKernel;
 typedef struct {
 	int comienzo;
 	int offset;
@@ -49,20 +54,18 @@ typedef struct {
 	int retPos;
 	retVar retVar;
 } Stack;
-typedef struct  __attribute__((packed)){
-
-	int ProgramID;
-	unsigned int programCounter, paginasCodigo;
-	void* referenciaTP; //no estoy segura de que tipo es
-	Stack stackPointer;
+typedef struct __attribute__((packed)) {
+	int PID;
+	int ProgramCounter;
+	int paginas_Codigo;
+	codeIndex cod;
+	char* etiquetas;
 	int exitCode;
 	t_list *contextoActual;
 	int tamContextoActual;
-	codeIndex cod;
-	char * etiquetas;
 	int tamEtiquetas;
-	/* faltan cosas, defini lo que necesita CPU NO CAMBIAR!!*/
-}pcb;
+	TablaKernel tablaKernel;
+} PCB;
 
 typedef struct __attribute__((__packed__)){
 	int tamMsj;
@@ -72,7 +75,7 @@ typedef struct __attribute__((__packed__)){
 
 //------------------------DEFINE--------------------------------------
 t_log* log;
-pcb * PCB;
+PCB * pcb;
 int tamPagina;
 int variableMaxima;
 int socketMemoria;

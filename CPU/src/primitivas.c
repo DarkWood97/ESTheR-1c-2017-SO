@@ -30,8 +30,8 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 		retVar *direccion_variable= malloc(size_retVar);
 		t_variable *variable= malloc(sizeof(t_variable));
 		t_contexto *contexto = malloc(sizeof(t_contexto));
-		contexto= (t_contexto*)(list_get(PCB->contextoActual, PCB->tamContextoActual-1));
-		if(PCB->tamContextoActual==1 &&  contexto->tamVars==0 )
+		contexto= (t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1));
+		if(pcb->tamContextoActual==1 &&  contexto->tamVars==0 )
 		{
 				armarDireccionPagina(direccion_variable); /* falta funcion*/
 				variable->direccion=direccion_variable;
@@ -51,7 +51,7 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 				}
 			else
 			{
-				if(contexto->tamVars == 0 && (PCB->tamContextoActual)>1)
+				if(contexto->tamVars == 0 && (pcb->tamContextoActual)>1)
 				{
 					log_info(log,"Declarando variable %c de funcion\n", identificador_variable);
 					armarDireccionDeFuncion(direccion_variable);
@@ -86,7 +86,7 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 {
 	log_info(log,"Quiero obtener la variable %s", identificador_variable);
 	int posicionStack, direccionDeRetorno;
-	posicionStack=PCB->tamContextoActual;
+	posicionStack=pcb->tamContextoActual;
 	retVar * auxiliar;
 	bool _comparacionDeIdentificadorVariable_()
 	{
@@ -94,7 +94,7 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 	}
 	if(_comparacionDeIdentificadorVariable_())
 	{
-		auxiliar = (retVar*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->args, (int)identificador_variable-48));
+		auxiliar = (retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, (int)identificador_variable-48));
 		direccionDeRetorno=convertirDireccionAPuntero(auxiliar);
 		log_info(log,"Obtuve el valor de %c: %d %d %d\n", identificador_variable, auxiliar->pagina, auxiliar->offset, auxiliar->tam);
 		return(direccionDeRetorno);
@@ -103,15 +103,15 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
 	{
 		t_variable * nueva;
 		int posicionMaxima;
-		posicionMaxima=(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->tamVars)-1;
+		posicionMaxima=(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->tamVars)-1;
 		for(;posicionMaxima>=0;posicionMaxima--)
 			{
-				nueva=((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, posicionMaxima)));
+				nueva=((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, posicionMaxima)));
 				log_info(log,"Etiqueta de variable: %c\n", nueva->etiqueta);
 				if(nueva->etiqueta==identificador_variable)
 				{
 					retVar* auxiliar;
-					auxiliar= ((t_variable*)(list_get(((t_contexto*)(list_get(PCB->contextoActual, posicionStack)))->vars, posicionMaxima)))->direccion;
+					auxiliar= ((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, posicionMaxima)))->direccion;
 					direccionDeRetorno= convertirDireccionAPuntero(auxiliar);
 					log_info(log,"Obtuve el valor de %c: %d %d %d\n", nueva->etiqueta, nueva->direccion->pagina, nueva->direccion->offset, nueva->direccion->tam);
 					return (direccionDeRetorno);
@@ -162,9 +162,9 @@ void irAlLabel (t_nombre_etiqueta t_nombre_etiqueta)
 	t_puntero_instruccion instruccion;
 	int longitud_etiqueta=strlen(t_nombre_etiqueta);
 	log_info(log, "Busco la etiqueta: %s y mide: %d\n", t_nombre_etiqueta, longitud_etiqueta);
-	instruccion = metadata_buscar_etiqueta(t_nombre_etiqueta, PCB->etiquetas, PCB->tamEtiquetas);
+	instruccion = metadata_buscar_etiqueta(t_nombre_etiqueta, pcb->etiquetas, pcb->tamEtiquetas);
 	log_info(log,"Ir a la instruccion %d\n", instruccion);
-	PCB->programCounter=instruccion-1; //(contador/2);
+	pcb->ProgramCounter=instruccion-1; //(contador/2);
 	log_info(log,"Saliendo de label\n");
 }
 void llamarSinRetorno (t_nombre_etiqueta etiqueta)
@@ -185,11 +185,11 @@ void retornar(t_valor_variable retorno)
 		int posicionContextoActual;
 		int direccion;
 		t_contexto * contextoFinal;
-		posicionContextoActual= (PCB->tamContextoActual)-1;
-		contextoFinal= list_get(PCB->contextoActual, posicionContextoActual);
+		posicionContextoActual= (pcb->tamContextoActual)-1;
+		contextoFinal= list_get(pcb->contextoActual, posicionContextoActual);
 		direccion=convertirDireccionAPuntero(&(contextoFinal->retVar));
 		asignar(direccion,retorno);
-		PCB->programCounter=contextoFinal->retPos;
+		pcb->ProgramCounter=contextoFinal->retPos;
 		while(contextoFinal->tamVars!=0){
 			free(((t_variable*)list_get(contextoFinal->vars, contextoFinal->tamVars-1))->direccion);
 			free(list_get(contextoFinal->vars, contextoFinal->tamVars-1));
@@ -205,9 +205,9 @@ void retornar(t_valor_variable retorno)
 			}
 		list_destroy(contextoFinal->args);
 		log_info(log,"Destrui args de funcion\n");
-		free(list_get(PCB->contextoActual, PCB->tamContextoActual-1));
+		free(list_get(pcb->contextoActual, pcb->tamContextoActual-1));
 		log_info(log,"Contexto Destruido\n");
-		PCB->tamContextoActual--;
+		pcb->tamContextoActual--;
 
 	}
 

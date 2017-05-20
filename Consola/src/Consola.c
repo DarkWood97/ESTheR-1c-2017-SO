@@ -185,7 +185,7 @@ void imprimirInformacion(programa *programaAImprimir)
 void * iniciarProgramaAnsisop(char * pathPrograma)
 {
 	paquete auxiliar,paquetePath;
-	int PIDPrograma;
+	int PIDPrograma=0;
 	auxiliar=serializar(MENSAJE_PATH,pathPrograma);
 	memcpy(&paquetePath,&auxiliar,sizeof(auxiliar));
 	verificarRecepcionMensaje(socketKernel,paquetePath);
@@ -213,8 +213,7 @@ void finalizarPrograma(int pid)
 	auxiliar=buscoUnPid(pid);
 	if(auxiliar!=NULL)
 	{
-		int finalizarHilo;
-		finalizarHilo=pthread_join(auxiliar->hilo, NULL);
+		pthread_join(auxiliar->hilo, NULL);
 		gettimeofday(&auxiliar->fin, NULL);
 		timeval_subtract(&auxiliar->duracion, &auxiliar->fin, &auxiliar->inicio);
 		imprimirInformacion(auxiliar);
