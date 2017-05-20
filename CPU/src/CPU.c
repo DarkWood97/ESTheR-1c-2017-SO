@@ -74,6 +74,19 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
+
+void proximaInstruccion ()
+{
+	retVar* direccion = malloc(sizeof(char*)*16);
+	char* sentencia= loQueTengoQueLeer (direccion->pagina,direccion->offset,direccion->tam);
+	char* barraCero="\0";
+	memcpy(sentencia+(direccion->tam-1), barraCero, 1);
+	analizadorLinea(depurarSentencia(sentencia), &primitivas, &primitivas_kernel);
+	free(direccion);
+	free(sentencia);
+	pcb->ProgramCounter++;
+
+}
 //-------------------SERIALIZACION---------------------------------------------
 int obtenerLongitudBuff(char* path)
 {

@@ -6,6 +6,7 @@
 #define HANDSHAKE_KERNEL 1002
 #define MENSAJE_IMPRIMIR 101
 #define MENSAJE_PATH  103
+#define PETICION_LECTURA 104
 #define MENSAJE_DIRECCION 110
 #define ERROR -1
 #define CORTO 0
@@ -163,6 +164,20 @@ void enviarDirAMemoria(retVar* direccion, long valor)
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(escritura);
+}
+
+void enviarDirALeerMemoria(char* datosMemoria, retVar* dir)
+{
+	memcpy(datosMemoria, &dir->pagina , 4);
+	memcpy(datosMemoria+4, &dir->offset , 4);
+	memcpy(datosMemoria+8, &dir->tam , 4);
+	paquete paqueteAEnviar,auxiliar;
+	auxiliar=serializar(datosMemoria,PETICION_LECTURA);
+	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
+	realizarHandshake(socketMemoria,paqueteAEnviar);
+	destruirPaquete(&paqueteAEnviar);
+	destruirPaquete(&auxiliar);
+	free(datosMemoria);
 }
 void enviarDireccionALeerKernel(retVar* direccion, int valor)
 {
