@@ -44,7 +44,6 @@ int sizePaquete=sizeof(paquete);
 
 int socketKernel;
 t_list * listaDeProgramas;
-programa * programaEjecutando;
 pthread_t usuario;
 //No puede inicializar mas de 20 prog
 //----FUNCIONES CONSOLA-------------------------------------------------------
@@ -84,7 +83,7 @@ char * recibirArchivoPorTeclado(){
 	verificarArchivoAEnviar(archivoARecibir);
 	return archivoARecibir;
 }
-void verificarRecepcionMensaje(int socket, paquete mensajeAEnviar)
+void verificarRecepcionMensaje(int socket, paquete  mensajeAEnviar)
 {
 	if(send(socket,&mensajeAEnviar,sizeof(mensajeAEnviar),0)){
 			perror("No se pudo enviar el mensaje");
@@ -100,28 +99,25 @@ void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
 			close(socket);
 			exit(-1);
 	}
-
+//
 }
 //---------------FUNCIONES DE SERIALIZACION--------------------------------
-int obtenerLongitudPath(char* path)
-{
-	int longitudPath=strlen(path)+1;
-	return longitudPath;
+void destruirPaquete(paquete * paquete) {
+	free(paquete->mensaje);
 
 }
-paquete serializar(int tipoMensaje, char*bufferDeData) {
-  paquete paqueteAEnviar;
-  int longitud= obtenerLongitudPath(bufferDeData);
-  paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
-  paqueteAEnviar.tamMsj = longitud;
-  paqueteAEnviar.tipoMsj= tipoMensaje;
-  paqueteAEnviar.mensaje = bufferDeData;
-  return paqueteAEnviar;
+paquete  serializar(int tipoMensaje, char*bufferDeData) {
+  paquete  auxiliar;
+  paquete aEnviar;
+  aEnviar.mensaje=malloc(sizeof(char)*16);
+  aEnviar.tamMsj = string_length(bufferDeData)+1;
+  aEnviar.tipoMsj= tipoMensaje;
+  aEnviar.mensaje = bufferDeData;
+  auxiliar=aEnviar;
+  destruirPaquete(&aEnviar);
+  return auxiliar;
 }
-void destruirPaquete(paquete *paquete) {
-	free(paquete->mensaje);
-	free(paquete);
-}
+
 void deserealizarMensaje(int socket, void * retornar, void* impresiones)
 {
 	int *tamanio = 0;
@@ -137,8 +133,6 @@ void deserealizarMensaje(int socket, void * retornar, void* impresiones)
 		break;
 	case MENSAJE_PID:
 		retornar=recibido.mensaje;
-
-
 	}
 }
 //-------------------FUNCIONES DEL TIEMPO------------------------------
@@ -160,14 +154,12 @@ void timeval_print(struct timeval *tv)
     printf(" = %s.%06ld\n", buffer, tv->tv_usec);
 }
 //-----------FUNCION PROGRAMA------------------------------------------
-programa * nuevoPrograma (int  pid)
+void nuevoPrograma (programa * programaNuevo,int  pid)
 {
-	programa * auxiliar=malloc(sizeof(programa));
 	struct timeval inicioAux;
-	auxiliar->PID=pid;
+	programaNuevo->PID=pid;
 	gettimeofday(&inicioAux, NULL);
-	auxiliar->inicio=inicioAux;
-	return auxiliar;
+	programaNuevo->inicio=inicioAux;
 }
 
 void imprimirInformacion(programa *programaAImprimir)
@@ -182,20 +174,22 @@ void imprimirInformacion(programa *programaAImprimir)
 }
 
 //---------------------FUNCIONES DE INTERFAZ----------------------------
-void * iniciarProgramaAnsisop(char * pathPrograma)
+void * iniciarProgramaAnsisop(char * pathPrograma, programa * programaEjecutando)
 {
-	paquete auxiliar,paquetePath;
+	paquete  auxiliar;
+	paquete paquetePath;
 	int PIDPrograma=0;
 	auxiliar=serializar(MENSAJE_PATH,pathPrograma);
 	memcpy(&paquetePath,&auxiliar,sizeof(auxiliar));
 	verificarRecepcionMensaje(socketKernel,paquetePath);
 	destruirPaquete(&auxiliar);
 	destruirPaquete(&paquetePath);
-	deserealizarMensaje(socketKernel,PIDPrograma,NULL);
-	programaEjecutando=nuevoPrograma(PIDPrograma);
+	deserealizarMensaje(socketKernel,&PIDPrograma,NULL);
+	nuevoPrograma(programaEjecutando,PIDPrograma);
 	printf("El programa ejecutando tiene el PID: %d",PIDPrograma);
 	deserealizarMensaje(socketKernel, NULL,&programaEjecutando->impresiones); //queda a la espera de mensajes para imprimir
 	list_add(listaDeProgramas,programaEjecutando);
+	free(pathPrograma);
 	return NULL;
 }
 programa * buscoUnPid(int pidBuscado)
@@ -217,7 +211,7 @@ void finalizarPrograma(int pid)
 		gettimeofday(&auxiliar->fin, NULL);
 		timeval_subtract(&auxiliar->duracion, &auxiliar->fin, &auxiliar->inicio);
 		imprimirInformacion(auxiliar);
-		free(programaEjecutando);
+		free(auxiliar);
 	}
 	else
 	{
@@ -246,17 +240,14 @@ void mostrarAyuda()
 void buscarComandoCorrespondiente (int comando)
 {
 	char * path;
-	pthread_t programa;
-	int hiloPrograma=0;
+	programa * nuevo =malloc(sizeof(programa));
 	switch(comando)
 		{
 		case INICIAR:
-			//fijarme como paso lo demas
-			//gettimeofday(&horario, NULL);
-			//int impresiones=0;
 			path=recibirArchivoPorTeclado();
-			hiloPrograma=pthread_create(&programa,NULL,iniciarProgramaAnsisop(path),NULL);
+			pthread_create(&nuevo->hilo,NULL,iniciarProgramaAnsisop(path,nuevo),NULL);
 			free(path);
+			free(nuevo);
 			break;
 		case FINALIZAR:
 			puts("Ingresar PID del programa a finalizar");
@@ -295,7 +286,8 @@ int main(int argc, char *argv[]) {
 	mostrar_consola(nuevaConsola);
 	socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	/* HANDSHAKE CON KERNEL */
-	paquete paqueteAEnviar,auxiliar;
+	paquete paqueteAEnviar;
+	paquete auxiliar;
 	auxiliar=serializar(HANDSHAKE_CONSOLA, NULL);
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 	realizarHandshake(socketKernel,paqueteAEnviar);
@@ -304,9 +296,8 @@ int main(int argc, char *argv[]) {
 	/*fin handshake*/
 	/*hilo usuario*/
 
-	int hiloUsuario;
 	listaDeProgramas=list_create();
-	hiloUsuario=pthread_create(&usuario, NULL, solicitarComando(),NULL);
+	pthread_create(&usuario, NULL, solicitarComando(),NULL);
 	pthread_join(usuario,NULL);
 
 	close(socketKernel);
