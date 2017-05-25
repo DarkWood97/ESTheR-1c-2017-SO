@@ -81,14 +81,25 @@ void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
 			exit(-1);
 		}
 }
-paquete serializar(void *bufferDeData, int tipoDeMensaje)
+paquete serializar(char* bufferDeData, int tipoDeMensaje)
 {
   paquete paqueteAEnviar;
-  int longitud= obtenerLongitudBuff(bufferDeData);
+  int longitud= string_length(bufferDeData);
   paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
   paqueteAEnviar.tamMsj = longitud;
   paqueteAEnviar.tipoMsj=tipoDeMensaje;
   paqueteAEnviar.mensaje = bufferDeData;
+  return paqueteAEnviar;
+}
+
+paquete serializarCod(codeIndex* cod, int tipoDeMensaje)
+{
+  paquete paqueteAEnviar;
+  int longitud= sizeof(codeIndex);
+  paqueteAEnviar.mensaje=malloc(longitud);
+  paqueteAEnviar.tamMsj = longitud;
+  paqueteAEnviar.tipoMsj= tipoDeMensaje;
+  paqueteAEnviar.mensaje = cod;
   return paqueteAEnviar;
 }
 
@@ -168,4 +179,14 @@ char* loQueTengoQueLeer (int pagina,int desplazamiento, int tam)
 		free(datos2);
 		return nuevo;
 	}
+}
+
+char* lineaParaElAnalizador(char* sentencia){
+
+		int i = string_length(sentencia);
+		while (string_ends_with(sentencia, "\n")) {
+			i--;
+			sentencia = string_substring_until(sentencia, i);
+		}
+		return sentencia;
 }

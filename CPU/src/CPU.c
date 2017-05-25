@@ -37,6 +37,12 @@ AnSISOP_funciones primitivas = {
 		.AnSISOP_retornar				= retornar,
 	//	.AnSISOP_finalizar				= finalizar,
 };
+
+AnSISOP_kernel primitivas_kernel = {
+//		.AnSISOP_wait					=wait_kernel,
+//		.AnSISOP_signal					=signal_kernel,
+};
+
 //--TYPEDEF----------------------------------------------------------------
 typedef struct {
 	char *numero;
@@ -71,33 +77,6 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("IP_KERNEL=%s\n",cpuAMostrar.ipKernel.numero);
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
-}
-//---FUNCIONES DE CONEXION CON MEMORIA----------------------------------
-void proximaInstruccion ()
-{
-	retVar* direccion = malloc(sizeof(char*)*16);
-	char* sentencia= loQueTengoQueLeer (direccion->pagina,direccion->offset,direccion->tam);
-	char* barraCero="\0";
-	memcpy(sentencia+(direccion->tam-1), barraCero, 1);
-//	analizadorLinea(depurarSentencia(sentencia), &primitivas, &primitivas_kernel);
-	free(direccion);
-	free(sentencia);
-	pcb->ProgramCounter++;
-}
-void pedirProximaInstruccion()
-{
-	paquete aEnviar;
-	aEnviar=serializar(pcb->cod,PROXIMA_INSTRUCCION);
-	realizarHandshake(socketMemoria,aEnviar);
-	deserealizar(socketMemoria);
-
-}
-//-------------------SERIALIZACION---------------------------------------------
-int obtenerLongitudBuff(char* path)
-{
-	int longitudPath=strlen(path)+1;
-	return longitudPath;
-
 }
 //----------------PCB--------------------------------------------
 
@@ -153,6 +132,19 @@ void deserealizarPCB(paquete mensaje,PCB aux)
 	memcpy(&aux.tablaKernel.tamaniosPaginas,recibido+sizeof(int)*i+sizeof(char)*16+sizeof(t_list)*16,size_int);
 
 }
+
+void deserealizarProxInstruccion (paquete mensaje,PCB aux)
+{
+	char * recibido=malloc(sizeof(paquete));
+	recibido=mensaje.mensaje;
+	int sizeAuxiliar=sizeof(codeIndex);
+	sizeAuxiliar=sizeof(pcb->cod.comienzo*size_int);
+	aux.cod.comienzo=(int)malloc(sizeAuxiliar);
+	memcpy(&aux.cod.comienzo,recibido+size_int,size_int);
+	sizeAuxiliar=sizeof(pcb->cod.offset*size_int*2);
+	aux.cod.offset=(int)malloc(sizeAuxiliar);
+}
+
 //-----------------FUNCIONES MENSAJES--------------------------------------
 void * deserealizarMensaje(int socket)
 {
@@ -193,10 +185,32 @@ void * deserealizarMensaje(int socket)
 		auxiliar.ProgramCounter++;
 		break;
 	case PROXIMA_INSTRUCCION:
+		deserealizarProxInstruccion(recibido, auxiliar);
 		break;
 	default:
 		break;
 	}
+}
+
+//---FUNCIONES DE CONEXION CON MEMORIA----------------------------------
+void proximaInstruccion ()
+{
+	retVar* direccion = malloc(sizeof(char*)*16);
+	char* sentencia= loQueTengoQueLeer (direccion->pagina,direccion->offset,direccion->tam);
+	char* barraCero="\0";
+	memcpy(sentencia+(direccion->tam-1), barraCero, 1);
+	analizadorLinea(lineaParaElAnalizador(sentencia), &primitivas, &primitivas_kernel);
+	free(direccion);
+	free(sentencia);
+	pcb->ProgramCounter++;
+}
+void pedirProximaInstruccion()
+{
+	paquete aEnviar;
+	aEnviar=serializar(pcb->cod,PROXIMA_INSTRUCCION);
+	realizarHandshake(socketMemoria,aEnviar);
+	deserealizarMensaje(socketMemoria);
+
 }
 
 //----------------------MAIN---------------------------------------------------
@@ -230,8 +244,8 @@ int main(int argc, char *argv[])
 	{
 	deserealizarMensaje(socketParaKernel);
 	//Pedir a la memoria proxima sentencia
-	pedirProximaSentencia();
-	proximaSentencia();
+	pedirProximaInstruccion();
+	proximaInstruccion();
 	//
 	}
 	close(socketParaMemoria);
