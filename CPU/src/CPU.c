@@ -207,7 +207,7 @@ void proximaInstruccion ()
 void pedirProximaInstruccion()
 {
 	paquete aEnviar;
-	aEnviar=serializar(pcb->cod,PROXIMA_INSTRUCCION);
+	aEnviar=serializar(NULL,PROXIMA_INSTRUCCION);
 	realizarHandshake(socketMemoria,aEnviar);
 	deserealizarMensaje(socketMemoria);
 
