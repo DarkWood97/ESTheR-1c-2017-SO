@@ -93,7 +93,7 @@ void verificarRecepcionMensaje(int socket, paquete  mensajeAEnviar)
 }
 void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
 
-	int longitud = sizeof(mensaje); //sino no lee \0
+	int longitud = sizeof(mensaje); //sino no lee \0 (ACA POR QUE NO ES PAQUETE?)
 		if (send(socket, &mensaje, longitud, 0) == -1) {
 			perror("Error de send");
 			close(socket);
@@ -102,20 +102,17 @@ void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
 //
 }
 //---------------FUNCIONES DE SERIALIZACION--------------------------------
-void destruirPaquete(paquete * paquete) {
-	free(paquete->mensaje);
 
-}
-paquete  serializar(int tipoMensaje, char*bufferDeData) {
-  paquete  auxiliar;
+paquete  serializar(int tipoMensaje, char* bufferDeData) {
   paquete aEnviar;
-  aEnviar.mensaje=malloc(sizeof(char)*16);
+
   aEnviar.tamMsj = string_length(bufferDeData)+1;
+  aEnviar.mensaje=malloc(aEnviar.tamMsj);
   aEnviar.tipoMsj= tipoMensaje;
   aEnviar.mensaje = bufferDeData;
-  auxiliar=aEnviar;
-  destruirPaquete(&aEnviar);
-  return auxiliar;
+
+  //free(aEnviar.mensaje);
+  return aEnviar;
 }
 
 void deserealizarMensaje(int socket, void * retornar, void* impresiones)
@@ -182,8 +179,8 @@ void * iniciarProgramaAnsisop(char * pathPrograma, programa * programaEjecutando
 	auxiliar=serializar(MENSAJE_PATH,pathPrograma);
 	memcpy(&paquetePath,&auxiliar,sizeof(auxiliar));
 	verificarRecepcionMensaje(socketKernel,paquetePath);
-	destruirPaquete(&auxiliar);
-	destruirPaquete(&paquetePath);
+	free(auxiliar.mensaje);
+	free(paquetePath.mensaje);
 	deserealizarMensaje(socketKernel,&PIDPrograma,NULL);
 	nuevoPrograma(programaEjecutando,PIDPrograma);
 	printf("El programa ejecutando tiene el PID: %d",PIDPrograma);
@@ -288,11 +285,11 @@ int main(int argc, char *argv[]) {
 	/* HANDSHAKE CON KERNEL */
 	paquete paqueteAEnviar;
 	paquete auxiliar;
-	auxiliar=serializar(HANDSHAKE_CONSOLA, NULL);
+	auxiliar=serializar(HANDSHAKE_CONSOLA, "0");
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 	realizarHandshake(socketKernel,paqueteAEnviar);
-	destruirPaquete(&paqueteAEnviar);
-	destruirPaquete(&auxiliar);
+	free(paqueteAEnviar.mensaje);
+	free(auxiliar.mensaje);
 	/*fin handshake*/
 	/*hilo usuario*/
 

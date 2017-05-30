@@ -33,8 +33,12 @@ int main(void) {
 //	  copiarAArchivoDump(cadenaDeEstructuracionDump);
 //	  free(cadenaDeEstructuracionDump);
 
-	int a = 7;
-	int b = 3;
-	int c = a%b;
-	printf("%d",c);
+//	int a = 7;
+//	int b = 3;
+//	int c = a%b;
+//	printf("%d",c);
+
+	char* bufferDeData = "Hola como estas";
+	int tamMsj = string_length(bufferDeData)+1;
+	printf("%d", tamMsj);
 }
