@@ -4,6 +4,7 @@
 #include <math.h>
 #include <parser/metadata_program.h>
 #include <pthread.h>
+#include <commons/collections/queue.h>
 
 //--TYPEDEF------------------------------------------------------
 
@@ -78,6 +79,22 @@ typedef struct __attribute__((packed)) {
 	bool isFree;
 } HeapMetadata;
 
+typedef struct Estados {
+	t_queue* nuevo;
+	t_queue* listo;
+	t_queue* ejecutando;
+	t_queue* bloqueado;
+	t_queue* finalizado;
+} Estados;
+
+typedef struct {
+  int socket_CPU;
+  int socket_CONSOLA;
+  PCB *pcb;
+  bool abortado;
+
+} t_proceso;
+
 //--VARIABLES GLOBALES------------------------------------------------------
 #define CONEXION_CONSOLA 1005
 #define CORTO 0
@@ -103,6 +120,111 @@ int TAM_PAGINA;
 int cantPag=0;
 PCB nuevoPCB;
 t_list* tablaKernel;
+Estados* estado;
+t_queue* cola_CPU_libres;
+pthread_mutex_t mutexColaListos;
+pthread_mutex_t mutexColaEjecutando;
+
+
+void* comenzarAEjecutar(){
+	while(1){
+		//Semaforos
+		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
+			t_proceso* proceso = queue_peek(estado->listo);
+			queue_pop(estado->listo);
+			queue_push(estado->ejecutando,proceso);
+
+			int cpuUtilizada = queue_peek(cola_CPU_libres);
+			queue_pop(cola_CPU_libres);
+
+			pthread_t hilo_manejadorProceso;
+			//pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,cpuUtilizada);
+		}
+	}
+}
+
+t_proceso* dameProceso(t_queue *cola, int pid ) {
+	int a = 0, t;t_proceso *w;
+	while (w = (t_proceso*)list_get(cola->elements, a))
+	{
+		if (w->pcb->PID == pid){
+			return (t_proceso*)list_remove(cola->elements, a);
+		}
+		a++;
+	}
+	return NULL;
+}
+
+t_proceso* chequearListas(int pid){
+	t_proceso* proceso;
+	if((proceso=dameProceso(estado->nuevo,pid))!=NULL){
+		return proceso;
+	}
+	else if((proceso=dameProceso(estado->listo,pid))!=NULL){
+		return proceso;
+	}
+	else if((proceso=dameProceso(estado->ejecutando,pid))!=NULL){
+			return proceso;
+	}
+	else if((proceso=dameProceso(estado->bloqueado,pid))!=NULL){
+			return proceso;
+	}
+	else{
+		return NULL;
+	}
+}
+
+
+void finalizarPrograma(int pid){
+	t_proceso* proceso;
+	if((proceso=chequearListas(pid))!=NULL){
+		proceso->abortado=true;
+		queue_push(estado->finalizado,proceso);
+	}
+	else{
+		log_info(loggerKernel,"No se encontro el proceso a finalizar xD");
+	}
+}
+
+void consultarListado(){
+	int tamanio = list_size(tablaKernel);
+	int posicion = 0;
+	for(; posicion<tamanio;posicion++){
+		TablaKernel* tk = list_get(tablaKernel, posicion); //A los gomasos
+		printf("%d ", tk->pid);
+	}
+}
+
+t_queue* chequearQueCuliluliEs(char* estadoRecibido){
+	if(string_equals_ignore_case(estadoRecibido, "ready")){
+		return estado->listo;
+	} else if(string_equals_ignore_case(estadoRecibido, "exec")){
+		return estado->ejecutando;
+	} else if(string_equals_ignore_case(estadoRecibido, "new")){
+		return estado->nuevo;
+	} else if(string_equals_ignore_case(estadoRecibido, "blocked")){
+		return estado->bloqueado;
+	} else if(string_equals_ignore_case(estadoRecibido, "exit")){
+		return estado->finalizado;
+	} else {
+		return NULL;
+	}
+}
+
+void consultarEstado(char* estado){
+	t_queue* culiluli = chequearQueCuliluliEs(estado);
+	int tamanio = list_size(culiluli);
+	int posicion = 0;
+	if(culiluli!=NULL){
+		for(; posicion<tamanio;posicion++){
+			t_proceso* tp = list_get(culiluli, posicion);
+			printf("%d ", tp->pcb->PID);
+		}
+	}
+	else{
+		puts("Ecolecua");
+	}
+}
 
 //-----FUNCIONES KERNEL------------------------------------------
 void crearKernel(t_config *configuracion) {
@@ -540,25 +662,26 @@ int main(int argc, char *argv[]) {
 					}else{
 						switch (mensajeAux.tipoMsj) {
 							case CONSOLA:
-								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionConsola,(socketAChequear,&socketsMaster,socketParaMemoria));
+								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(socketAChequear,&socketsMaster,socketParaMemoria));
 								log_info(loggerKernel,"Se conecto nueva consola...\n");
 								FD_CLR(socketAChequear,&socketsMaster);
 								break;
 							case MEMORIA:
-								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionMemoria,(socketAChequear,socketConsola,socketCPU));
+								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(socketAChequear,socketConsola,socketCPU));
 								FD_CLR(socketAChequear,&socketsMaster);
 								break;
 							case CPU:
-								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,socketAChequear);
+								queue_push(cola_CPU_libres,socketAChequear);
+								//pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,socketAChequear);
 								log_info(loggerKernel,"Se registro nueva CPU...\n");
 								FD_CLR(socketAChequear,&socketsCliente);
 								break;
-							case CORTO:
-								printf("El socket %d corto la conexion\n",socketAChequear);
-								close(socketAChequear);
-								FD_CLR(socketAChequear, &socketsMaster);
-								FD_CLR(socketAChequear, &socketsCliente);
-								break;
+//							case CORTO:
+//								printf("El socket %d corto la conexion\n",socketAChequear);
+//								close(socketAChequear);
+//								FD_CLR(socketAChequear, &socketsMaster);
+//								FD_CLR(socketAChequear, &socketsCliente);
+//								break;
 							case ERROR:
 								perror("Error de recv");
 								close(socketAChequear);
