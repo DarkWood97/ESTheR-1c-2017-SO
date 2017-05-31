@@ -736,11 +736,11 @@ int main(int argc, char *argv[]) {
 	sem_init(&sem_cpu, 0, 0);
 	sem_init(&sem_new, 0, 0);
 	sem_init(&sem_ready, 0, 0);
-	estado->nuevo = queue_create();
-	estado->listo= queue_create();
-	estado->ejecutando= queue_create();
-	estado->bloqueado = queue_create();
-	estado->finalizado = queue_create();
+//	estado->nuevo = queue_create();
+//	estado->listo= queue_create();
+//	estado->ejecutando= queue_create();
+//	estado->bloqueado = queue_create();
+//	estado->finalizado = queue_create();
 	cola_CPU_libres = queue_create();
 	pthread_mutex_init(&mutexColaNuevos, NULL);
 	pthread_mutex_init(&mutexColaFinalizados, NULL);
