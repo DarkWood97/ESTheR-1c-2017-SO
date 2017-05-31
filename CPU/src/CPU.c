@@ -19,6 +19,7 @@
 #define MENSAJE_PCB 1015
 #define RECIBIR_PCB 1016
 #define PROXIMA_INSTRUCCION 1020
+#define CONCLUYE_EJECUCION 503
 #define ERROR -1
 #define CORTO 0
 int size_int=sizeof(int);
@@ -53,7 +54,13 @@ typedef struct {
 	ip ipMemoria;
 	int puertoMemoria;
 }cpu;
+typedef struct
+{
+	char * sentencia;
+	int tam;
+}instruccion;
 
+instruccion instruccionAEjecutar;
 //----FUNCIONES CPU--------------------------------------------------------
 cpu cpuCrear(t_config *configuracionCPU){
 	cpu nuevaCPU;
@@ -133,7 +140,7 @@ void deserealizarPCB(paquete mensaje,PCB aux)
 
 }
 
-void deserealizarProxInstruccion (paquete mensaje,PCB aux)
+/*void deserealizarProxInstruccion (paquete mensaje,PCB aux)
 {
 	char * recibido=malloc(sizeof(paquete));
 	recibido=mensaje.mensaje;
@@ -143,7 +150,8 @@ void deserealizarProxInstruccion (paquete mensaje,PCB aux)
 	memcpy(&aux.cod.comienzo,recibido+size_int,size_int);
 	sizeAuxiliar=sizeof(pcb->cod.offset*size_int*2);
 	aux.cod.offset=(int)malloc(sizeAuxiliar);
-}
+	free(recibido);
+}*/
 
 //-----------------FUNCIONES MENSAJES--------------------------------------
 void * deserealizarMensaje(int socket)
@@ -185,32 +193,68 @@ void * deserealizarMensaje(int socket)
 		auxiliar.ProgramCounter++;
 		break;
 	case PROXIMA_INSTRUCCION:
-		deserealizarProxInstruccion(recibido, auxiliar);
+		//deserealizarProxInstruccion(recibido, auxiliar);
+		instruccionAEjecutar.sentencia=malloc(recibido.tamMsj);
+		instruccionAEjecutar.sentencia=recibido.mensaje;
+		instruccionAEjecutar.tam=recibido.tamMsj;
 		break;
 	default:
 		break;
 	}
+	return NULL;
 }
 
+
 //---FUNCIONES DE CONEXION CON MEMORIA----------------------------------
-void proximaInstruccion ()
+/*void proximaInstruccion ()
 {
 	retVar* direccion = malloc(sizeof(char*)*16);
-	char* sentencia= loQueTengoQueLeer (direccion->pagina,direccion->offset,direccion->tam);
+	char* sentencia= loQueTengoQueLeer(direccion->pagina,direccion->offset,direccion->tam);
 	char* barraCero="\0";
 	memcpy(sentencia+(direccion->tam-1), barraCero, 1);
 	analizadorLinea(lineaParaElAnalizador(sentencia), &primitivas, &primitivas_kernel);
 	free(direccion);
 	free(sentencia);
 	pcb->ProgramCounter++;
+}*/
+void parsear()
+{
+	retVar * direccion=malloc(sizeof(char*)*16);
+	char * sentencia = instruccionAEjecutar.sentencia;
+	char * barraCero='\0';
+	memcpy(sentencia+(direccion->tam-1), barraCero, 1);
+	char * textoLiteral=malloc(instruccionAEjecutar.tam);
+	lineaParaElAnalizador(sentencia,textoLiteral);
+	analizadorLinea(textoLiteral, &primitivas, &primitivas_kernel);
+	free(direccion);
+	free(sentencia);
+	free(textoLiteral);
 }
 void pedirProximaInstruccion()
 {
 	paquete aEnviar;
-	aEnviar=serializar(NULL,PROXIMA_INSTRUCCION);
-	realizarHandshake(socketMemoria,aEnviar);
+	codeIndex * auxiliar= &pcb->cod;
+	aEnviar=serializar(auxiliar,PROXIMA_INSTRUCCION);
+	enviar(socketMemoria,aEnviar);
 	deserealizarMensaje(socketMemoria);
-
+}
+void recibirSentencia()
+{	deserealizarMensaje(socketMemoria);
+}
+void enviarPCB()
+{
+	paquete auxiliar;
+	PCB * pcbAuxiliar;
+	pcbAuxiliar=pcb;
+	auxiliar=serializar(pcbAuxiliar,MENSAJE_PCB);
+	enviar(socketMemoria,auxiliar);
+	pcb->ProgramCounter++;
+}
+void notificarKernel()
+{
+	paquete auxiliar;
+	auxiliar=serializar(NULL,CONCLUYE_EJECUCION);
+	enviar(socketKernel,auxiliar);
 }
 
 //----------------------MAIN---------------------------------------------------
@@ -227,25 +271,20 @@ int main(int argc, char *argv[])
 	socketMemoria=socketParaMemoria; /*para ansisop*/
 	deserealizarMensaje(socketParaMemoria);
 	//Handshake con kernel
-	paquete paqueteAEnviar,auxiliar;
-	auxiliar=serializar(NULL,HANDSHAKE_KERNEL);
-	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
-	realizarHandshake(socketParaKernel,paqueteAEnviar);
-	destruirPaquete(&paqueteAEnviar);
-	destruirPaquete(&auxiliar);
+	realizarHandshake(socketKernel,HANDSHAKE_KERNEL);
 	/*handshake con memoria */
-	auxiliar=serializar(NULL,HANDSHAKE_MEMORIA);
-	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
-	realizarHandshake(socketParaMemoria,paqueteAEnviar);
-	destruirPaquete(&paqueteAEnviar);
-	destruirPaquete(&auxiliar);
+	realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
 	//Me quedo a la espera de que kernel me envie la PCB
 	while(1)
 	{
-	deserealizarMensaje(socketParaKernel);
-	//Pedir a la memoria proxima sentencia
-	pedirProximaInstruccion();
-	proximaInstruccion();
+		deserealizarMensaje(socketParaKernel);
+		//Pedir a la memoria proxima sentencia
+		pedirProximaInstruccion();
+		recibirSentencia();
+		parsear();
+		enviarPCB();
+		notificarKernel();
+
 	//
 	}
 	close(socketParaMemoria);

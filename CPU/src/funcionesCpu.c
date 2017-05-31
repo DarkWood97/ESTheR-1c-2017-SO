@@ -103,7 +103,7 @@ paquete serializarCod(codeIndex* cod, int tipoDeMensaje)
   return paqueteAEnviar;
 }
 
-void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
+void enviar(int socket, paquete mensaje) { //Socket que envia mensaje
 
 	int longitud = sizeof(mensaje); //sino no lee \0
 		if (send(socket, &mensaje, longitud, 0) == -1) {
@@ -111,6 +111,16 @@ void realizarHandshake(int socket, paquete mensaje) { //Socket que envia mensaje
 			close(socket);
 			exit(-1);
 	}
+
+}
+void realizarHandshake(int socket, int handshake)
+{ //Socket que envia mensaje
+	paquete paqueteAEnviar,auxiliar;
+	auxiliar=serializar(NULL,handshake);
+	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
+	enviar(socket,paqueteAEnviar);
+	free(paqueteAEnviar);
+	free(auxiliar);
 
 }
 void destruirPaquete(paquete * paquete)
@@ -145,12 +155,12 @@ int _obtenerSizeActual_(int b)
 	}
 
 
-char* lineaParaElAnalizador(char* sentencia){
+void lineaParaElAnalizador(char* sentencia, char * aDevolver){
 
 		int i = string_length(sentencia);
 		while (string_ends_with(sentencia, "\n")) {
 			i--;
 			sentencia = string_substring_until(sentencia, i);
 		}
-		return sentencia;
+		aDevolver=sentencia;
 }

@@ -292,7 +292,6 @@ int main(int argc, char *argv[]) {
 	free(auxiliar.mensaje);
 	/*fin handshake*/
 	/*hilo usuario*/
-
 	listaDeProgramas=list_create();
 	pthread_create(&usuario, NULL, solicitarComando(),NULL);
 	pthread_join(usuario,NULL);

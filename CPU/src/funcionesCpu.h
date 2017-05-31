@@ -89,8 +89,10 @@ void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);
 void verificarParametrosCrear(t_config *,int);
 paquete serializar(void*,int);
-void realizarHandshake(int, paquete);
+void enviar(int,paquete);
+void realizarHandshake(int, int);
 void destruirPaquete(paquete *) ;
 int _obtenerSizeActual_(int);
 //void deserealizarPCB(paquete,PCB);
+void lineaParaElAnalizador(char * ,char *);
 #endif /* FUNCIONESCPU_H_ */
