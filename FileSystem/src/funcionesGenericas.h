@@ -34,6 +34,11 @@ typedef struct {
 	char *numero;
 }_ip;
 
+typedef struct __attribute__((__packed__)){
+	int tamMsj;
+	int tipoMsj;
+	void* mensaje;
+}paquete;
 
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
