@@ -151,7 +151,7 @@ t_valor_variable asignarValorCompartida (t_nombre_compartida variable, t_valor_v
 	memcpy(variable_compartida, &valor, tamVariable);
 	log_info(log,"Variable %s le asigno %d\n", variable, variable_compartida[0]);
 	paqueteAEnviar=serializar(variable_compartida, MENSAJE_VARIABLE_COMPARTIDA);
-	realizarHandshake(socketKernel,paqueteAEnviar);
+	realizarHandshake(socketKernel,1002);
 	destruirPaquete(&paqueteAEnviar);
 	free(variable_compartida);
 	return valor;

@@ -160,7 +160,7 @@ void enviarDirAMemoria(retVar* direccion, long valor)
 		memcpy(escritura+4, &valor , 4);
 		auxiliar=serializar(escritura,MENSAJE_DIRECCION);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
-		realizarHandshake(socketMemoria,paqueteAEnviar);
+		realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(escritura);
@@ -174,7 +174,7 @@ void enviarDirALeerMemoria(char* datosMemoria, retVar* dir)
 	paquete paqueteAEnviar,auxiliar;
 	auxiliar=serializar(datosMemoria,PETICION_LECTURA);
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
-	realizarHandshake(socketMemoria,paqueteAEnviar);
+	realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
 	destruirPaquete(&paqueteAEnviar);
 	destruirPaquete(&auxiliar);
 	free(datosMemoria);
@@ -187,7 +187,7 @@ void enviarDireccionALeerKernel(retVar* direccion, int valor)
 		memcpy(leer+4, &valor , 4);
 		auxiliar=serializar(leer,MENSAJE_DIRECCION);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
-		realizarHandshake(socketKernel,paqueteAEnviar);
+		realizarHandshake(socketKernel,HANDSHAKE_MEMORIA);
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(leer);
