@@ -160,11 +160,8 @@ void enviarDirAMemoria(retVar* direccion, long valor)
 		memcpy(escritura+4, &valor , 4);
 		auxiliar=serializar(escritura,MENSAJE_DIRECCION);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
-<<<<<<< HEAD
 		enviar(socketMemoria,paqueteAEnviar);
-=======
 		realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
->>>>>>> ee396b6506a203bd2855ab9bd88b71999de4cd5a
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(escritura);
@@ -178,11 +175,8 @@ void enviarDirALeerMemoria(char* datosMemoria, retVar* dir)
 	paquete paqueteAEnviar,auxiliar;
 	auxiliar=serializar(datosMemoria,PETICION_LECTURA);
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
-<<<<<<< HEAD
 	enviar(socketMemoria,paqueteAEnviar);
-=======
 	realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
->>>>>>> ee396b6506a203bd2855ab9bd88b71999de4cd5a
 	destruirPaquete(&paqueteAEnviar);
 	destruirPaquete(&auxiliar);
 	free(datosMemoria);
@@ -195,11 +189,8 @@ void enviarDireccionALeerKernel(retVar* direccion, int valor)
 		memcpy(leer+4, &valor , 4);
 		auxiliar=serializar(leer,MENSAJE_DIRECCION);
 		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
-<<<<<<< HEAD
 		enviar(socketKernel,paqueteAEnviar);
-=======
 		realizarHandshake(socketKernel,HANDSHAKE_MEMORIA);
->>>>>>> ee396b6506a203bd2855ab9bd88b71999de4cd5a
 		destruirPaquete(&paqueteAEnviar);
 		destruirPaquete(&auxiliar);
 		free(leer);
