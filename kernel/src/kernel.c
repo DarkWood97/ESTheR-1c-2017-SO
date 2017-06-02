@@ -5,6 +5,7 @@
 #include <parser/metadata_program.h>
 #include <pthread.h>
 #include <commons/collections/queue.h>
+#include <semaphore.h>
 
 //--TYPEDEF------------------------------------------------------
 
@@ -79,15 +80,15 @@ typedef struct __attribute__((packed)) {
 	bool isFree;
 } HeapMetadata;
 
-typedef struct Estados {
+typedef struct __attribute__((packed)) {
 	t_queue* nuevo;
 	t_queue* listo;
-	t_queue* ejecutando;
-	t_queue* bloqueado;
+	t_list* ejecutando;
+	t_queue** bloqueado;
 	t_queue* finalizado;
 } Estados;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
   int socket_CPU;
   int socket_CONSOLA;
   PCB *pcb;
@@ -118,13 +119,121 @@ bool YA_HAY_UNA_CONSOLA = false;
 int pid_actual = 1;
 int TAM_PAGINA;
 int cantPag=0;
-PCB nuevoPCB;
+PCB* nuevoPCB;
 t_list* tablaKernel;
 Estados* estado;
 t_queue* cola_CPU_libres;
+t_queue** colas_semaforos;
 pthread_mutex_t mutexColaListos;
 pthread_mutex_t mutexColaEjecutando;
+pthread_mutex_t mutexColaNuevos;
+pthread_mutex_t mutexColaFinalizados;
+pthread_mutex_t mutexColaSemaforos;
+pthread_mutex_t mutex_CPU_libres;
+int programaBloqueado;
+int programaFinalizado;
+int programaAbortado;
 
+//semaforos
+sem_t sem_ready;
+sem_t sem_cpu;
+sem_t sem_new;
+
+//////////////////////////////FUNCIONES SEMAFOROS/////////////////////////////////////////////////////////////////////////////////////
+void wait_kernel(t_nombre_semaforo identificador_semaforo){
+	log_info(loggerKernel,"Tamanio semaforo %d", strlen(identificador_semaforo));
+	char* nombre_semaforo=malloc(strlen(identificador_semaforo)+1);
+	char* barra_cero="\0";
+	memcpy(nombre_semaforo, identificador_semaforo, strlen(identificador_semaforo));
+	memcpy(nombre_semaforo+strlen(identificador_semaforo), barra_cero, 1);
+	log_info(log,"Pedir semaforo %s de tamnio %d\n", nombre_semaforo, strlen(nombre_semaforo)+1);
+	//enviar(strlen(nombre_semaforo)+1, nombre_semaforo); A QUIEN ENVIO?
+	paquete* paquete;
+	void* mensaje = malloc(sizeof(strlen(nombre_semaforo)+1));
+	paquete->tamMsj = strlen(nombre_semaforo)+1;
+	paquete->mensaje = nombre_semaforo;
+	//paquete = recibir; DE QUIEN RECIBO?
+	memcpy(&programaBloqueado, paquete->mensaje, 4);
+	log_info(loggerKernel,"programaBloqueado= %d\n", programaBloqueado);
+	free(nombre_semaforo);
+	free(mensaje);
+}
+
+void signal_kernel(t_nombre_semaforo identificador_semaforo){
+	log_info(loggerKernel,"Tamanio semafaro %d", strlen(identificador_semaforo));
+	char* nombre_semaforo=malloc(strlen(identificador_semaforo)+1);
+	char* barra_cero="\0";
+	memcpy(nombre_semaforo, identificador_semaforo, strlen(identificador_semaforo));
+	memcpy(nombre_semaforo+strlen(identificador_semaforo), barra_cero, 1);
+	log_info(loggerKernel,"Devolviendo semaforo %s\n", nombre_semaforo);
+	paquete* paquete;
+	void* mensaje = malloc(sizeof(strlen(nombre_semaforo)+1));
+	paquete->tamMsj = strlen(nombre_semaforo)+1;
+	paquete->mensaje = nombre_semaforo;
+	//enviar(strlen(nombre_semaforo)+1, nombre_semaforo); A QUIEN ENVIO?
+	free(nombre_semaforo);
+	log_info(loggerKernel,"Saliendo del signal\n");
+	free(mensaje);
+}
+
+int *pideSemaforo(char *semaforo) {
+	int i;
+	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
+		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
+			return (&sem_Init[i]);
+		}
+	}
+	printf("No encontre SEM id, exit\n");
+	exit(0);
+}
+
+void escribeSemaforo(char *semaforo,int valor){
+	int i;
+
+	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
+		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
+			sem_Init[i]=valor;
+			return;
+		}
+	}
+	printf("No encontre SEM id, exit\n");exit(0);
+}
+
+void liberaSemaforo(char *semaforo) {
+	int i; t_proceso *proceso;
+
+	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
+		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
+
+			if(list_size(colas_semaforos[i]->elements)){
+				proceso = queue_pop(colas_semaforos[i]);
+				pthread_mutex_lock(&mutexColaListos);
+				queue_push(estado->listo, proceso);
+				pthread_mutex_unlock(&mutexColaListos);
+				sem_post(&sem_ready);
+			}else{
+				sem_Init[i]++;
+			}
+
+			return;
+		}
+	}
+	printf("No encontre SEM id, exit\n");exit(0);
+}
+
+
+void  bloqueoSemaforo(t_proceso *proceso, char *semaforo) {
+	int i;
+
+	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
+		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
+			queue_push(colas_semaforos[i], proceso);
+			return;
+		}
+	}
+	printf("No encontre SEM id, exit\n");exit(0);
+}
+////////////////////////////////////////FUNCIONES COLAS////////////////////////////////////////////////////////////////////////////////
 
 void* comenzarAEjecutar(){
 	while(1){
@@ -323,15 +432,15 @@ t_list* inicializarStack(t_list *contexto) {
 void inicializarPCB(char* buffer) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
 
-	nuevoPCB.PID = aumentarPID();
-	nuevoPCB.ProgramCounter = 0;
-	nuevoPCB.paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)cantPag);
-	nuevoPCB.cod = cargarCodeIndex(buffer, metadata_program);
-	nuevoPCB.tamEtiquetas = metadata_program->etiquetas_size;
-	nuevoPCB.etiquetas = cargarEtiquetasIndex(metadata_program,nuevoPCB.tamEtiquetas);
-	nuevoPCB.contextoActual = list_create();
-	nuevoPCB.contextoActual = inicializarStack(nuevoPCB.contextoActual);
-	nuevoPCB.tamContextoActual = 1;
+	nuevoPCB->PID = aumentarPID();
+	nuevoPCB->ProgramCounter = 0;
+	nuevoPCB->paginas_Codigo = (int)ceil((double)strlen(buffer) / (double)cantPag);
+	nuevoPCB->cod = cargarCodeIndex(buffer, metadata_program);
+	nuevoPCB->tamEtiquetas = metadata_program->etiquetas_size;
+	nuevoPCB->etiquetas = cargarEtiquetasIndex(metadata_program,nuevoPCB->tamEtiquetas);
+	nuevoPCB->contextoActual = list_create();
+	nuevoPCB->contextoActual = inicializarStack(nuevoPCB->contextoActual);
+	nuevoPCB->tamContextoActual = 1;
 
 	metadata_destruir(metadata_program);
 }
@@ -373,19 +482,19 @@ void prepararProgramaEnMemoria(int socket,int FUNCION) {
 void* serializarPCB(){
 	void* mensaje = malloc(sizeof(nuevoPCB));
 
-	memcpy(mensaje, nuevoPCB.PID, sizeof(int));
-	memcpy(mensaje+sizeof(int), nuevoPCB.ProgramCounter, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*2), nuevoPCB.paginas_Codigo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*3), nuevoPCB.cod.comienzo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*4), nuevoPCB.cod.offset, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*5), nuevoPCB.etiquetas, sizeof(char)*16);
-	memcpy(mensaje+(sizeof(int)*5)+(sizeof(char)*16), nuevoPCB.exitCode, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16), nuevoPCB.contextoActual, sizeof(t_list*)*16);
-	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB.tamContextoActual, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB.tamEtiquetas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB.tablaKernel.paginas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB.tablaKernel.pid, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB.tablaKernel.tamaniosPaginas, sizeof(int));
+	memcpy(mensaje, nuevoPCB->PID, sizeof(int));
+	memcpy(mensaje+sizeof(int), nuevoPCB->ProgramCounter, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*2), nuevoPCB->paginas_Codigo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*3), nuevoPCB->cod.comienzo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*4), nuevoPCB->cod.offset, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*5), nuevoPCB->etiquetas, sizeof(char)*16);
+	memcpy(mensaje+(sizeof(int)*5)+(sizeof(char)*16), nuevoPCB->exitCode, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16), nuevoPCB->contextoActual, sizeof(t_list*)*16);
+	memcpy(mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB->tamContextoActual, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB->tablaKernel.paginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB->tablaKernel.pid, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), nuevoPCB->tablaKernel.tamaniosPaginas, sizeof(int));
 
 	return mensaje;
 	free(mensaje);
@@ -400,19 +509,19 @@ void recibirPCB(int tamMsj, int socket){
 		exit(-1);
 	}
 
-	memcpy(nuevoPCB.PID,mensaje, sizeof(int));
-	memcpy(nuevoPCB.ProgramCounter,mensaje+sizeof(int), sizeof(int));
-	memcpy(nuevoPCB.paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
-	memcpy(nuevoPCB.cod.comienzo,mensaje+(sizeof(int)*3), sizeof(int));
-	memcpy(nuevoPCB.cod.offset,mensaje+(sizeof(int)*4), sizeof(int));
-	memcpy(nuevoPCB.etiquetas, mensaje+(sizeof(int)*5), sizeof(char)*16);
-	memcpy(nuevoPCB.exitCode,mensaje+(sizeof(int)*5)+(sizeof(char)*16), sizeof(int));
-	memcpy(nuevoPCB.contextoActual,mensaje+(sizeof(int)*6)+(sizeof(char)*16), sizeof(t_list*)*16);
-	memcpy(nuevoPCB.tamContextoActual,mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16),sizeof(int));
-	memcpy(nuevoPCB.tamEtiquetas,mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16),sizeof(int));
-	memcpy(nuevoPCB.tablaKernel.paginas,mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), sizeof(int));
-	memcpy(nuevoPCB.tablaKernel.pid,mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), sizeof(int));
-	memcpy(nuevoPCB.tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), sizeof(int));
+	memcpy(nuevoPCB->PID,mensaje, sizeof(int));
+	memcpy(nuevoPCB->ProgramCounter,mensaje+sizeof(int), sizeof(int));
+	memcpy(nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
+	memcpy(nuevoPCB->cod.comienzo,mensaje+(sizeof(int)*3), sizeof(int));
+	memcpy(nuevoPCB->cod.offset,mensaje+(sizeof(int)*4), sizeof(int));
+	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*5), sizeof(char)*16);
+	memcpy(nuevoPCB->exitCode,mensaje+(sizeof(int)*5)+(sizeof(char)*16), sizeof(int));
+	memcpy(nuevoPCB->contextoActual,mensaje+(sizeof(int)*6)+(sizeof(char)*16), sizeof(t_list*)*16);
+	memcpy(nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*6)+(sizeof(char)*16)+(sizeof(t_list*)*16),sizeof(int));
+	memcpy(nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*7)+(sizeof(char)*16)+(sizeof(t_list*)*16),sizeof(int));
+	memcpy(nuevoPCB->tablaKernel.paginas,mensaje+(sizeof(int)*8)+(sizeof(char)*16)+(sizeof(t_list*)*16), sizeof(int));
+	memcpy(nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), sizeof(int));
+	memcpy(nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), sizeof(int));
 
 	free(mensaje);
 }
@@ -593,6 +702,8 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      		  break;
 	      	  case INICIO_EXITOSO: ;
 	      	  	  TablaKernel *proceso;
+	      	  	  t_proceso* t_proceso;
+	      	  	  t_proceso = malloc(sizeof(t_proceso));
 	      	  	  proceso->pid = pid_actual;
 	      	  	  proceso->tamaniosPaginas = TAM_PAGINA;
 	      	  	  proceso->paginas = cantPag;
@@ -600,6 +711,11 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      	  	  log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
 	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,INICIAR_PROGRAMA);
 	      	  	  enviarPCB(*(int*)socketCPU);
+	      	  	  t_proceso->abortado=true;
+	      	  	  t_proceso->pcb = nuevoPCB;
+	      	  	  t_proceso->socket_CPU = socketCPU;
+	      	  	  t_proceso->socket_CONSOLA = socketConsola;
+	      	  	  queue_push(estado->listo,t_proceso);
 	      	  	  break;
 	      	  default:
 	      		  perror("No se reconoce el mensaje enviado por Memoria");
@@ -617,6 +733,19 @@ int main(int argc, char *argv[]) {
 	//char *path = "Debug/kernel.config";
 	//inicializarKernel(path);
 	inicializarKernel(argv[1]);
+	sem_init(&sem_cpu, 0, 0);
+	sem_init(&sem_new, 0, 0);
+	sem_init(&sem_ready, 0, 0);
+//	estado->nuevo = queue_create();
+//	estado->listo= queue_create();
+//	estado->ejecutando= queue_create();
+//	estado->bloqueado = queue_create();
+//	estado->finalizado = queue_create();
+	cola_CPU_libres = queue_create();
+	pthread_mutex_init(&mutexColaNuevos, NULL);
+	pthread_mutex_init(&mutexColaFinalizados, NULL);
+	pthread_mutex_init(&mutexColaListos, NULL);
+	pthread_mutex_init(&mutexColaSemaforos, NULL);
 	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
 	int socketParaMemoria, socketCPU, socketConsola, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;

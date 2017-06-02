@@ -90,6 +90,7 @@ paquete serializar(void* bufferDeData, int tipoDeMensaje)
   paqueteAEnviar.tipoMsj=tipoDeMensaje;
   paqueteAEnviar.mensaje = bufferDeData;
   return paqueteAEnviar;
+  free(paqueteAEnviar.mensaje);
 }
 
 paquete serializarCod(codeIndex* cod, int tipoDeMensaje)
@@ -116,11 +117,16 @@ void enviar(int socket, paquete mensaje) { //Socket que envia mensaje
 void realizarHandshake(int socket, int handshake)
 { //Socket que envia mensaje
 	paquete paqueteAEnviar,auxiliar;
+	paqueteAEnviar.mensaje=malloc(sizeof(char)*16);
 	auxiliar=serializar(NULL,handshake);
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 	enviar(socket,paqueteAEnviar);
+<<<<<<< HEAD
 
 
+=======
+	free(paqueteAEnviar.mensaje);
+>>>>>>> ee396b6506a203bd2855ab9bd88b71999de4cd5a
 }
 void destruirPaquete(paquete * paquete)
 {
