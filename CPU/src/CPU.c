@@ -85,6 +85,25 @@ void mostrarConfiguracionCPU(cpu cpuAMostrar){
 	printf("PUERTO_MEMORIA=%d\n",cpuAMostrar.puertoMemoria);
 	printf("IP_MEMORIA=%s\n",cpuAMostrar.ipMemoria.numero);
 }
+//------------------------SIGNAL--------------------------------
+void manejadorSenial(int signal)
+{
+	printf("---------------Se recibio una signal-------------");
+	switch(signal)
+	{
+		case SIGUSR1:
+			printf("Se recibio la signal: %d", signal);
+			printf("---------------------------------");
+			printf("--------DESCONECTANDO CPU--------");
+			printf("---------------------------------");
+			close(socketKernel);
+			close(socketMemoria);
+			break;
+		default:
+			printf("No se le presta servicio a la signal recibida");
+	}
+}
+
 //----------------PCB--------------------------------------------
 
 void deserealizarPCB(paquete mensaje,PCB aux)
@@ -284,10 +303,8 @@ int main(int argc, char *argv[])
 		parsear();
 		enviarPCB();
 		notificarKernel();
-
-	//
+	/* Aplico la senial para poder recibirla en cualquier momento*/
+		signal (SIGUSR1,manejadorSenial);
 	}
-	close(socketParaMemoria);
-	close(socketParaKernel);
 	return EXIT_SUCCESS;
 }

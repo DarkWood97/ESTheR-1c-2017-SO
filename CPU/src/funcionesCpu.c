@@ -119,8 +119,7 @@ void realizarHandshake(int socket, int handshake)
 	auxiliar=serializar(NULL,handshake);
 	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
 	enviar(socket,paqueteAEnviar);
-	free(paqueteAEnviar);
-	free(auxiliar);
+
 
 }
 void destruirPaquete(paquete * paquete)
