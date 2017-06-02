@@ -84,7 +84,7 @@ typedef struct __attribute__((packed)) {
 	t_queue* nuevo;
 	t_queue* listo;
 	t_queue* ejecutando;
-	t_queue** bloqueado;
+	t_queue* bloqueado;
 	t_queue* finalizado;
 } Estados;
 
@@ -236,13 +236,35 @@ void  bloqueoSemaforo(t_proceso *proceso, char *semaforo) {
 	printf("No encontre SEM id, exit\n");exit(0);
 }
 
-////////////////////////////////////////MANEJADOR DE PROCESOS//////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////VARIABLES COMPARTIDAS/////////////////////////////////////////////////////////////////////////
+int *inicializarDesdeArrays(char** array1, char** array2){
+  int contador;
+  int* arrayInicializado;
+  arrayInicializado = malloc(tamanioDeArray(array2));
+  int i = 0;
+  for(; array2[i]!=NULL && array1[i]!=NULL; i++){
+    arrayInicializado[i]=atoi(array1[i]);
+  }
+  return arrayInicializado;
+}
 
-void* manejadorProceso (int cpuUtilizada){
+int *crearArrayDeIntAPartirDe(char** arrayAConvertir){
+  int i = 0;
+  int* arrayConvertido;
+  arrayConvertido = malloc(tamanioDeArray(arrayAConvertir));
+  for(;arrayAConvertir[i]!=NULL;i++){
+    arrayConvertido[i]=atoi(arrayAConvertir[i]);
+  }
+  return arrayConvertido;
+}
 
+int tamanioDeArray(char** array){
+  int tamanio = ((strlen((char*)array)/sizeof(char*))*sizeof(int)); //Asi se saca el tamanio del array, calculo cuantos char* hay, lo divido por el tamanio de char*, lo que me da la cantidad de elementos, y lo multiplico por el tamanio de un int
+  return tamanio;
 }
 
 ////////////////////////////////////////FUNCIONES COLAS////////////////////////////////////////////////////////////////////////////////
+
 t_proceso* dameProceso(t_queue *cola, int pid ) {
 	int a = 0;
 
@@ -251,7 +273,6 @@ t_proceso* dameProceso(t_queue *cola, int pid ) {
 		if (procesoAux->pcb->PID == pid){
 			return (t_proceso*)list_remove(cola->elements, a);
 		}
-		a++;
 	}
 	return NULL;
 }
@@ -261,7 +282,12 @@ void enviarANuevo(PCB* pcbNuevo){
 	t_proceso* proceso;
 	proceso->pcb = pcbNuevo;
 	proceso->abortado=false;
-	queue_push(estado->nuevo,proceso);
+	if(queue_size(estado->nuevo)<grado_Multiprog){
+	  log_info(loggerKernel, "Se agrega nuevo proceso a ejecutar.");
+	  queue_push(estado->nuevo,proceso);
+	}else{
+	  log_info(loggerKernel, "No se pudo agregar el proceso %d, por el grado de multiprogramacion",proceso->pcb->PID);
+	}
 }
 
 void enviarAListo(int pid){
@@ -274,29 +300,55 @@ void enviarAEjecutar(int pid){
 	queue_push(estado->ejecutando,proceso);
 }
 
-void enviarASalida(int pid){
-	t_proceso *proceso = dameProceso(estado->nuevo,pid);
+void enviarASalida(t_queue* cola,int pid){
+	t_proceso *proceso = dameProceso(cola,pid);
 	queue_push(estado->finalizado,proceso);
 }
+//////////////////////////////////////////MANEJADOR DE CPU/////////////////////////////////////////////////////////////////////////
+void *manejadorProceso (void* socketCPU,void* pid){
+  while(1){
+	  paquete paqueteRecibidoDeCPU;
+	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
+	        perror("Error al recibir el tipo de mensaje de CPU");
+	        exit(-1);
+	      }
+	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tamMsj,sizeof(int),0)==-1){
+	        perror("Error al recibir tamanio de mensaje de CPU");
+	        exit(-1);
+	      }
+	      switch (paqueteRecibidoDeCPU.tipoMsj) {
+	        case MENSAJE_PCB:
+	          enviarPCB(*(int*)socketCPU);
+	          break;
+	        case RECIBIR_PCB:
+	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
+	          t_proceso* proceso = dameProceso(estado->ejecutando,*(int*)pid);
+	          proceso->pcb = nuevoPCB;
+	          break;
+	        case FINALIZAR_PROGRAMA:
+	        	enviarASalida(estado->ejecutando,pid);
+	        break;
+	        default:
+	        	perror("No se reconoce el mensaje enviado por CPU");
+	      }
+	  }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void* comenzarAEjecutar(int pid){
 	while(estadoPlanificacion){
 		//Semaforos
 		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
 			t_proceso* proceso = queue_peek(estado->ejecutando);
-			queue_pop(estado->ejecutando);
 
 			int cpuUtilizada = queue_peek(cola_CPU_libres);
 			queue_pop(cola_CPU_libres);
 
 			pthread_t hilo_manejadorProceso;
-			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,cpuUtilizada);
+			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->PID));
 		}
 	}
 }
-
-
-
 
 t_proceso* chequearListas(int pid){
 	t_proceso* proceso;
@@ -317,14 +369,97 @@ t_proceso* chequearListas(int pid){
 	}
 }
 
+t_queue* chequearEstado(int pid){
+	t_proceso* proceso;
+	if((proceso=dameProceso(estado->nuevo,pid))!=NULL){
+		return estado->nuevo;
+	}
+	else if((proceso=dameProceso(estado->listo,pid))!=NULL){
+		return estado->listo;
+	}
+	else if((proceso=dameProceso(estado->ejecutando,pid))!=NULL){
+			return estado->ejecutando;
+	}
+	else if((proceso=dameProceso(estado->bloqueado,pid))!=NULL){
+			return estado->bloqueado;
+	}
+	else{
+		return NULL;
+	}
+}
+
 
 //-----------------------------------------------FUNCIONES DE CONSOLA KERNEL------------------------------------------
+
+t_list* filtrarLista(int socket){
+	t_list* listaFiltrada;
+	int i = 0;
+
+	t_queue* colaAuxiliar = malloc(sizeof(estado->ejecutando));
+	colaAuxiliar = estado->ejecutando;
+	for(;i<(queue_size(estado->ejecutando));i++){
+		t_proceso* proceso = queue_peek(colaAuxiliar);
+		queue_pop(colaAuxiliar);
+		if((proceso->socket_CONSOLA)==socket){
+			list_add(listaFiltrada, proceso);
+		}
+	}
+	free(colaAuxiliar);
+
+	colaAuxiliar = malloc(sizeof(estado->bloqueado));
+	colaAuxiliar = estado->bloqueado;
+	for(;i<(queue_size(estado->bloqueado));i++){
+		t_proceso* proceso = queue_peek(colaAuxiliar);
+		queue_pop(colaAuxiliar);
+		if((proceso->socket_CONSOLA)==socket){
+			list_add(listaFiltrada, proceso);
+		}
+	}
+	free(colaAuxiliar);
+
+	colaAuxiliar = malloc(sizeof(estado->listo));
+	colaAuxiliar = estado->listo;
+	for(;i<(queue_size(estado->listo));i++){
+		t_proceso* proceso = queue_peek(colaAuxiliar);
+		queue_pop(colaAuxiliar);
+		if((proceso->socket_CONSOLA)==socket){
+			list_add(listaFiltrada, proceso);
+		}
+	}
+	free(colaAuxiliar);
+
+	colaAuxiliar = malloc(sizeof(estado->nuevo));
+	colaAuxiliar = estado->nuevo;
+	for(;i<(queue_size(estado->nuevo));i++){
+		t_proceso* proceso = queue_peek(colaAuxiliar);
+		queue_pop(colaAuxiliar);
+		if((proceso->socket_CONSOLA)==socket){
+			list_add(listaFiltrada, proceso);
+		}
+	}
+	free(colaAuxiliar);
+
+	return listaFiltrada;
+}
+
+void verificarProcesos(socketConsola){
+	t_list* listaFiltrada = filtrarLista(socketConsola);
+	int i=0;
+	for(;i<(list_size(listaFiltrada));i++){
+		t_proceso* proceso = list_get(listaFiltrada, i);
+		proceso->pcb->exitCode = -6;
+		t_queue* cola = chequearEstado(proceso->pcb->PID);
+		enviarASalida(cola,proceso->pcb->PID);
+	}
+}
 
 void finalizarPrograma(int pid){
 	t_proceso* proceso;
 	if((proceso=chequearListas(pid))!=NULL){
 		proceso->abortado=true;
-		queue_push(estado->finalizado,proceso);
+		t_queue* cola = chequearEstado(pid);
+		enviarASalida(cola,proceso->pcb->PID);
+		proceso->pcb->exitCode=-7;
 	}
 	else{
 		log_info(loggerKernel,"No se encontro el proceso a finalizar xD");
@@ -643,29 +778,29 @@ void *manejadorTeclado(){
 }
 //-----------------------------------MANEJADOR CPU----------------------------------
 
-void *manejadorConexionCPU (void* socketCPU){
-  while(1){
-	  paquete paqueteRecibidoDeCPU;
-	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de CPU");
-	        exit(-1);
-	      }
-	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de CPU");
-	        exit(-1);
-	      }
-	      switch (paqueteRecibidoDeCPU.tipoMsj) {
-	        case MENSAJE_PCB:
-	          enviarPCB(*(int*)socketCPU);
-	          break;
-	        case RECIBIR_PCB:
-	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
-	          break;
-	        default:
-	        	perror("No se reconoce el mensaje enviado por CPU");
-	      }
-	  }
-  }
+//void *manejadorConexionCPU (void* socketCPU){
+//  while(1){
+//	  paquete paqueteRecibidoDeCPU;
+//	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
+//	        perror("Error al recibir el tipo de mensaje de CPU");
+//	        exit(-1);
+//	      }
+//	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tamMsj,sizeof(int),0)==-1){
+//	        perror("Error al recibir tamanio de mensaje de CPU");
+//	        exit(-1);
+//	      }
+//	      switch (paqueteRecibidoDeCPU.tipoMsj) {
+//	        case MENSAJE_PCB:
+//	          enviarPCB(*(int*)socketCPU);
+//	          break;
+//	        case RECIBIR_PCB:
+//	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
+//	          break;
+//	        default:
+//	        	perror("No se reconoce el mensaje enviado por CPU");
+//	      }
+//	  }
+//  }
 
 //-----------------------------------MANEJADOR CONSOLA----------------------------------
 void* manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void* socketParaMemoria){
@@ -702,6 +837,18 @@ void* manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void
 				  prepararProgramaEnMemoria(*(int*)socketParaMemoria,ASIGNAR_PAGINAS);
 				  free(dataRecibida);
 				  free(buffer);
+				  break;
+			  case CORTO:
+				  printf("El socket %d corto la conexion\n",socketConsola);
+				  verificarProcesos(socketConsola);
+				  close(socketConsola);
+				  puts("Te la comes igual que ivan el trolazo");
+				  break;
+			  case FINALIZAR_PROGRAMA:
+				  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  dataRecibida = malloc(mensajeAux.tamMsj);
+				  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  finalizarPrograma((int)dataRecibida);
 				  break;
 //			  case CONEXION_CONSOLA:
 //				  if (YA_HAY_UNA_CONSOLA) {
@@ -788,14 +935,6 @@ int main(int argc, char *argv[]) {
 	//char *path = "Debug/kernel.config";
 	//inicializarKernel(path);
 	inicializarKernel(argv[1]);
-	sem_init(&sem_cpu, 0, 0);
-	sem_init(&sem_new, 0, 0);
-	sem_init(&sem_ready, 0, 0);
-//	estado->nuevo = queue_create();
-//	estado->listo= queue_create();
-//	estado->ejecutando= queue_create();
-//	estado->bloqueado = queue_create();
-//	estado->finalizado = queue_create();
 	cola_CPU_libres = queue_create();
 	pthread_mutex_init(&mutexColaNuevos, NULL);
 	pthread_mutex_init(&mutexColaFinalizados, NULL);
@@ -858,9 +997,9 @@ int main(int argc, char *argv[]) {
 								break;
 							case CPU:
 								queue_push(cola_CPU_libres,socketAChequear);
-								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void*)socketAChequear);
+								//enviarAEjecutar(int pid);
+								//comenzarAEjecutar(int pid)
 								log_info(loggerKernel,"Se registro nueva CPU...\n");
-								FD_CLR(socketAChequear,&socketsCliente);
 								break;
 //							case CORTO:
 //								printf("El socket %d corto la conexion\n",socketAChequear);
