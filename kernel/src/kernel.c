@@ -83,7 +83,7 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
 	t_queue* nuevo;
 	t_queue* listo;
-	t_list* ejecutando;
+	t_queue* ejecutando;
 	t_queue** bloqueado;
 	t_queue* finalizado;
 } Estados;
@@ -114,6 +114,7 @@ typedef struct __attribute__((packed)) {
 #define MENSAJE_PCB 1015
 #define RECIBIR_PCB 1016
 
+//variables globales
 t_log * loggerKernel;
 bool YA_HAY_UNA_CONSOLA = false;
 int pid_actual = 1;
@@ -133,6 +134,7 @@ pthread_mutex_t mutex_CPU_libres;
 int programaBloqueado;
 int programaFinalizado;
 int programaAbortado;
+bool estadoPlanificacion =true;
 
 //semaforos
 sem_t sem_ready;
@@ -233,36 +235,68 @@ void  bloqueoSemaforo(t_proceso *proceso, char *semaforo) {
 	}
 	printf("No encontre SEM id, exit\n");exit(0);
 }
-////////////////////////////////////////FUNCIONES COLAS////////////////////////////////////////////////////////////////////////////////
 
-void* comenzarAEjecutar(){
-	while(1){
-		//Semaforos
-		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
-			t_proceso* proceso = queue_peek(estado->listo);
-			queue_pop(estado->listo);
-			queue_push(estado->ejecutando,proceso);
+////////////////////////////////////////MANEJADOR DE PROCESOS//////////////////////////////////////////////////////////////////////////
 
-			int cpuUtilizada = queue_peek(cola_CPU_libres);
-			queue_pop(cola_CPU_libres);
+void* manejadorProceso (int cpuUtilizada){
 
-			pthread_t hilo_manejadorProceso;
-			//pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,cpuUtilizada);
-		}
-	}
 }
 
+////////////////////////////////////////FUNCIONES COLAS////////////////////////////////////////////////////////////////////////////////
 t_proceso* dameProceso(t_queue *cola, int pid ) {
-	int a = 0, t;t_proceso *w;
-	while (w = (t_proceso*)list_get(cola->elements, a))
-	{
-		if (w->pcb->PID == pid){
+	int a = 0;
+
+	for (; a<queue_size(cola); a++ ){
+		t_proceso *procesoAux=(t_proceso*)list_get(cola->elements, a);
+		if (procesoAux->pcb->PID == pid){
 			return (t_proceso*)list_remove(cola->elements, a);
 		}
 		a++;
 	}
 	return NULL;
 }
+
+
+void enviarANuevo(PCB* pcbNuevo){
+	t_proceso* proceso;
+	proceso->pcb = pcbNuevo;
+	proceso->abortado=false;
+	queue_push(estado->nuevo,proceso);
+}
+
+void enviarAListo(int pid){
+	t_proceso *proceso = dameProceso(estado->nuevo,pid);
+	queue_push(estado->listo,proceso);
+}
+
+void enviarAEjecutar(int pid){
+	t_proceso* proceso = dameProceso(estado->listo,pid);
+	queue_push(estado->ejecutando,proceso);
+}
+
+void enviarASalida(int pid){
+	t_proceso *proceso = dameProceso(estado->nuevo,pid);
+	queue_push(estado->finalizado,proceso);
+}
+
+void* comenzarAEjecutar(int pid){
+	while(estadoPlanificacion){
+		//Semaforos
+		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
+			t_proceso* proceso = queue_peek(estado->ejecutando);
+			queue_pop(estado->ejecutando);
+
+			int cpuUtilizada = queue_peek(cola_CPU_libres);
+			queue_pop(cola_CPU_libres);
+
+			pthread_t hilo_manejadorProceso;
+			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,cpuUtilizada);
+		}
+	}
+}
+
+
+
 
 t_proceso* chequearListas(int pid){
 	t_proceso* proceso;
@@ -284,6 +318,8 @@ t_proceso* chequearListas(int pid){
 }
 
 
+//-----------------------------------------------FUNCIONES DE CONSOLA KERNEL------------------------------------------
+
 void finalizarPrograma(int pid){
 	t_proceso* proceso;
 	if((proceso=chequearListas(pid))!=NULL){
@@ -304,15 +340,13 @@ void consultarListado(){
 	}
 }
 
-t_queue* chequearQueCuliluliEs(char* estadoRecibido){
+t_queue* chequearQueColaEs(char* estadoRecibido){
 	if(string_equals_ignore_case(estadoRecibido, "ready")){
 		return estado->listo;
 	} else if(string_equals_ignore_case(estadoRecibido, "exec")){
 		return estado->ejecutando;
 	} else if(string_equals_ignore_case(estadoRecibido, "new")){
 		return estado->nuevo;
-	} else if(string_equals_ignore_case(estadoRecibido, "blocked")){
-		return estado->bloqueado;
 	} else if(string_equals_ignore_case(estadoRecibido, "exit")){
 		return estado->finalizado;
 	} else {
@@ -321,12 +355,12 @@ t_queue* chequearQueCuliluliEs(char* estadoRecibido){
 }
 
 void consultarEstado(char* estado){
-	t_queue* culiluli = chequearQueCuliluliEs(estado);
-	int tamanio = list_size(culiluli);
+	t_queue* cola = chequearQueColaEs(estado);
+	int tamanio = list_size(cola);
 	int posicion = 0;
-	if(culiluli!=NULL){
+	if(cola!=NULL){
 		for(; posicion<tamanio;posicion++){
-			t_proceso* tp = list_get(culiluli, posicion);
+			t_proceso* tp = list_get(cola, posicion);
 			printf("%d ", tp->pcb->PID);
 		}
 	}
@@ -335,7 +369,20 @@ void consultarEstado(char* estado){
 	}
 }
 
-//-----FUNCIONES KERNEL------------------------------------------
+void modificarGradoMultiprogramacion (){
+	if (!queue_is_empty(estado->nuevo)){
+		grado_Multiprog = queue_size(estado->nuevo);
+	}
+}
+
+void detenerPlanificacion(){
+	estadoPlanificacion=false;
+}
+
+void reanudarPlanificacion(){
+	estadoPlanificacion=true;
+}
+//----------------------------------------FUNCIONES KERNEL------------------------------------------
 void crearKernel(t_config *configuracion) {
 	verificarParametrosCrear(configuracion, 14);
 	puerto_Prog = config_get_int_value(configuracion, "PUERTO_PROG");
@@ -539,7 +586,7 @@ void enviarPCB(int socketCPU){
 	free(mensajePCB);
 }
 
-//------FUNCIONES DE ARRAY----------------------------------------
+//--------------------------------------FUNCIONES DE ARRAY----------------------------------------
 
 void imprimirArrayDeChar(char* arrayDeChar[]) {
 	int i = 0;
@@ -572,22 +619,29 @@ void *manejadorTeclado(){
 
 		int tamanioRecibido = strlen(comando);
 		comando[tamanioRecibido-1] = '\0';
-		if(string_equals_ignore_case(comando,"finalizar programa")){
-			//finalizarPrograma();
-		}else if(string_equals_ignore_case(comando, "consultar listado")){
-			//consultarListado();
-		}else if(string_equals_ignore_case(comando, "consultar estado")){
-			//consultarEstado();
-		}else if(string_equals_ignore_case(comando, "detener planificacion")){
-			//detenerPlanificacion();
-		}else{
-			puts("Error de comando");
+		char* posibleFinalizarPrograma = string_substring_until(comando, strlen(finalizarPrograma));
+		char* posibleConsultarEstado = string_substring_until(comando, strlen(consultarEstado));
+
+		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
+			char* valorPid=string_substring_from(comando,strlen(finalizarPrograma)+1);
+			finalizarPrograma((int)valorPid);
+		}else if(string_equals_ignore_case(comando, "consultarListado")){
+			consultarListado();
+		}else if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
+			char* estado=string_substring_from(comando,strlen(finalizarPrograma)+1);
+			consultarEstado(estado);
+		}else if(string_equals_ignore_case(comando, "detenerPlanificacion")){
+			detenerPlanificacion();
+		}else if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
+			reanudarPlanificacion();
+		}else{ puts("Error de comando");
 		}
 		comando = realloc(comando,50*sizeof(char));
 	}
 
 	free(comando);
 }
+//-----------------------------------MANEJADOR CPU----------------------------------
 
 void *manejadorConexionCPU (void* socketCPU){
   while(1){
@@ -613,7 +667,7 @@ void *manejadorConexionCPU (void* socketCPU){
 	  }
   }
 
-
+//-----------------------------------MANEJADOR CONSOLA----------------------------------
 void* manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void* socketParaMemoria){
   while(1){
 	  paquete paqueteRecibidoDeConsola;
@@ -649,29 +703,30 @@ void* manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void
 				  free(dataRecibida);
 				  free(buffer);
 				  break;
-			  case CONEXION_CONSOLA:
-				  if (YA_HAY_UNA_CONSOLA) {
-					  perror("Ya hay una consola conectada");
-					  FD_CLR(*(int*)socketConsola, &(*socketsMaster));
-					  close(socketConsola);
-				  }
-				  else {
-					  YA_HAY_UNA_CONSOLA = true;
-					  log_info(loggerKernel,"Se registro conexion de Consola...\n");
-					  FD_SET(*(int*)socketConsola, &(*socketsMaster));
-					  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
-					  dataRecibida = malloc(mensajeAux.tamMsj);
-					  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
-					  printf("Handshake con Consola: %p\n",dataRecibida);
-					  free(dataRecibida);
-				  }
-				  break;
+//			  case CONEXION_CONSOLA:
+//				  if (YA_HAY_UNA_CONSOLA) {
+//					  perror("Ya hay una consola conectada");
+//					  FD_CLR(*(int*)socketConsola, &(*socketsMaster));
+//					  close(socketConsola);
+//				  }
+//				  else {
+//					  YA_HAY_UNA_CONSOLA = true;
+//					  log_info(loggerKernel,"Se registro conexion de Consola...\n");
+//					  FD_SET(*(int*)socketConsola, &(*socketsMaster));
+//					  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+//					  dataRecibida = malloc(mensajeAux.tamMsj);
+//					  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+//					  printf("Handshake con Consola: %p\n",dataRecibida);
+//					  free(dataRecibida);
+//				  }
+//				  break;
 			  default:
 					perror("No se reconoce el mensaje enviado por Consola");
 			  }
 	  }
   }
 
+//-----------------------------------MANEJADOR MEMORIA----------------------------------
 void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* socketCPU){
   while(1){
 	  paquete paqueteRecibidoDeMemoria;
@@ -722,7 +777,7 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      	  }
 	  }
   }
-//-------------------FIN DE FUNCIONES MANEJADOR KERNEL----------------------------------
+
 
 //-----------------------------------MAIN-----------------------------------------------
 
@@ -766,6 +821,8 @@ int main(int argc, char *argv[]) {
 	realizarHandshake(socketParaMemoria,MEMORIA);
 	realizarHandshake(socketConsola,CONSOLA);
 	realizarHandshake(socketCPU,CPU);
+	//realizarHandshake(socketParaFileSystem,FILESYSTEM);
+
 	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL);
 
 	while (1) {
@@ -791,17 +848,17 @@ int main(int argc, char *argv[]) {
 					}else{
 						switch (mensajeAux.tipoMsj) {
 							case CONSOLA:
-								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(socketAChequear,&socketsMaster,socketParaMemoria));
+								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)(socketAChequear,&socketsMaster,socketParaMemoria));
 								log_info(loggerKernel,"Se conecto nueva consola...\n");
 								FD_CLR(socketAChequear,&socketsMaster);
 								break;
 							case MEMORIA:
-								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(socketAChequear,socketConsola,socketCPU));
+								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)(socketAChequear,socketConsola,socketCPU));
 								FD_CLR(socketAChequear,&socketsMaster);
 								break;
 							case CPU:
 								queue_push(cola_CPU_libres,socketAChequear);
-								//pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,socketAChequear);
+								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void*)socketAChequear);
 								log_info(loggerKernel,"Se registro nueva CPU...\n");
 								FD_CLR(socketAChequear,&socketsCliente);
 								break;
