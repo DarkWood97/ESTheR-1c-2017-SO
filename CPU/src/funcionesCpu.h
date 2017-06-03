@@ -82,7 +82,7 @@ int socketMemoria;
 int socketKernel;
 int programaAbortado;
 int programaFinalizado;
-
+int intMultiproposito;
 
 //-----------------------------FUNCIONES------------------------------
 t_config generarT_ConfigParaCargar(char *);

@@ -20,6 +20,7 @@
 #define RECIBIR_PCB 1016
 #define PROXIMA_INSTRUCCION 1020
 #define CONCLUYE_EJECUCION 503
+#define VARIABLE 1534
 #define ERROR -1
 #define CORTO 0
 int size_int=sizeof(int);
@@ -34,9 +35,9 @@ AnSISOP_funciones primitivas = {
 		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
 		.AnSISOP_irAlLabel				= irAlLabel,
 		.AnSISOP_llamarConRetorno		= llamarConRetorno,
-	//	.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
+		.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
 		.AnSISOP_retornar				= retornar,
-	//	.AnSISOP_finalizar				= finalizar,
+		.AnSISOP_finalizar				= finalizar,
 };
 
 AnSISOP_kernel primitivas_kernel = {
@@ -217,6 +218,9 @@ void * deserealizarMensaje(int socket)
 		instruccionAEjecutar.sentencia=recibido.mensaje;
 		instruccionAEjecutar.tam=recibido.tamMsj;
 		break;
+	case VARIABLE:
+			memcpy(&intMultiproposito, recibido.mensaje, sizeof(int));
+			break;
 	default:
 		break;
 	}

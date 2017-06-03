@@ -5,6 +5,7 @@
  *      Author: utnso
  */
 #include "ansiSop.h"
+#define VARIABLE 1534
 //--------------------------------Algo---------------------------------------
 int convertirDireccionAPuntero(retVar * dire)
 {
@@ -14,6 +15,22 @@ int convertirDireccionAPuntero(retVar * dire)
 	desplazamiento=dire->offset;
 	direccionOriginal=pag+desplazamiento;
 	return direccionOriginal;
+}
+t_valor_variable obtenerValor(int socketKernel, t_nombre_compartida valor)
+{
+	char *nombre= malloc(string_length(valor)+1);
+	//char* barra_cero="\0";
+	int loQueVale;
+	memcpy(nombre, valor, string_length(valor));
+	memcpy(nombre+(string_length(valor)), "\0", 1);
+	paquete paquete_nuevo;
+	paquete_nuevo = serializar(valor, VARIABLE);
+	enviar(socketKernel, paquete_nuevo);
+	intMultiproposito=loQueVale;
+	deserealizarMensaje(socketKernel);
+	free(nombre);
+	destruirPaquete(&paquete_nuevo);
+	return loQueVale;
 }
 //--------------------------------------------------------------------------
 void asignar (t_puntero direccion_variable, t_valor_variable valor)
@@ -141,8 +158,10 @@ t_puntero dereferenciar (t_puntero direccion_variable)
 
 t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
 {
-	return NULL;
+	t_valor_variable valor = obtenerValor(socketKernel,variable);
+	return valor;
 }
+
 t_valor_variable asignarValorCompartida (t_nombre_compartida variable, t_valor_variable valor)
 {
 	paquete  paqueteAEnviar;
