@@ -81,6 +81,7 @@ int variableMaxima;
 int socketMemoria;
 int socketKernel;
 int programaAbortado;
+int programaFinalizado;
 
 
 //-----------------------------FUNCIONES------------------------------
@@ -95,4 +96,5 @@ void destruirPaquete(paquete *) ;
 int _obtenerSizeActual_(int);
 //void deserealizarPCB(paquete,PCB);
 void lineaParaElAnalizador(char * ,char *);
+bool estadoDelPrograma();
 #endif /* FUNCIONESCPU_H_ */

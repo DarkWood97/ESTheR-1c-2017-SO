@@ -197,6 +197,7 @@ void enviarDireccionALeerKernel(retVar* direccion, int valor)
 }
 void punteroADir(int puntero, retVar* dir)
 {
+	dir=malloc(sizeof(retVar));
 	if(tamPagina>puntero)
 	{
 		dir->pagina=0;
@@ -262,4 +263,38 @@ char* loQueTengoQueLeer (int pagina,int desplazamiento, int tam)
 		free(datos2);
 		return nuevo;
 	}
+}
+int obtenerPosicionStack()
+{
+	int auxiliar = pcb->tamContextoActual;
+	auxiliar--;
+	return auxiliar;
+}
+t_contexto * crearContexto()
+{
+	int tam= sizeof(t_contexto);
+	t_contexto * auxiliar =malloc(tam);
+	auxiliar->posicion= obtenerPosicionStack();
+	auxiliar->args=list_create();
+	auxiliar->vars=list_create();
+	auxiliar->tamArgs=0;
+	auxiliar->tamVars=0;
+	auxiliar->retPos=pcb->ProgramCounter;
+	return auxiliar;
+}
+void destruirContextoActual( int size_pagina){
+	pcb->cod.offset--;
+	t_contexto* contextoActual = &(pcb->contextoActual);
+	pcb->ProgramCounter = contextoActual->retPos;
+	if(contextoActual->vars!=NULL)
+	{
+		free(contextoActual->vars);
+	}
+	if(contextoActual->args!=NULL)
+	{
+		free(contextoActual->args);
+	}
+	pcb->cod.offset -= (contextoActual->tamVars*sizeof(uint32_t));
+	pcb->cod.offset -= (contextoActual->tamArgs*sizeof(uint32_t));
+	/*Falta realocar stack*/
 }

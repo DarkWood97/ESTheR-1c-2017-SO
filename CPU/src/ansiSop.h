@@ -40,4 +40,6 @@ void punteroADir(int, retVar*);
 void inicializarVariable(t_variable *, t_nombre_variable ,retVar *);
 void enviarDireccionALeerKernel(retVar*, int);
 void deserealizarConRetorno(int, paquete*);
+t_contexto * crearContexto();
+void destruirContextoActual(int);
 #endif /* ANSISOP_H_ */

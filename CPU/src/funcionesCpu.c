@@ -67,6 +67,7 @@ t_config generarT_ConfigParaCargar(char *path) {
 	printf("%s\n",buff);
 	free(buff);
 }*/
+PCB pcb;
 void verificarParametrosInicio(int argc)
 {
 	if(argc!=2){

@@ -33,7 +33,7 @@ AnSISOP_funciones primitivas = {
 	//	.AnSISOP_obtenerValorCompartida = obtenerValorCompartida,
 		.AnSISOP_asignarValorCompartida = asignarValorCompartida,
 		.AnSISOP_irAlLabel				= irAlLabel,
-	//	.AnSISOP_llamarConRetorno		= llamarConRetorno,
+		.AnSISOP_llamarConRetorno		= llamarConRetorno,
 	//	.AnSISOP_llamarSinRetorno		= llamarSinRetorno,
 		.AnSISOP_retornar				= retornar,
 	//	.AnSISOP_finalizar				= finalizar,
@@ -269,13 +269,26 @@ void enviarPCB()
 	enviar(socketMemoria,auxiliar);
 	pcb->ProgramCounter++;
 }
-void notificarKernel()
+void notificarFinalizacion()
 {
 	paquete auxiliar;
 	auxiliar=serializar(NULL,CONCLUYE_EJECUCION);
 	enviar(socketKernel,auxiliar);
 }
-
+bool estadoDelPrograma(){
+	int programCounter = pcb->ProgramCounter;
+	int cod = pcb->cod.offset;
+	int resta =cod-programCounter;
+	if(resta <= 0)
+	{
+		programaFinalizado=1;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 //----------------------MAIN---------------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -302,7 +315,10 @@ int main(int argc, char *argv[])
 		recibirSentencia();
 		parsear();
 		enviarPCB();
-		notificarKernel();
+		if(programaFinalizado==true)
+		{
+			notificarFinalizacion();
+		}
 	/* Aplico la senial para poder recibirla en cualquier momento*/
 		signal (SIGUSR1,manejadorSenial);
 	}

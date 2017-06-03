@@ -43,7 +43,7 @@ t_puntero definirVariable(t_nombre_variable identificador_variable)
 		else
 		{
 			if(identificador_variable>='0' && identificador_variable<='9'){
-					log_info(log,"Se esta creando el argumento %c\n", identificador_variable);
+					log_info(log,"Creando el argumento %c\n", identificador_variable);
 					armarDireccionDeArgumento(direccion_variable);
 					list_add(contexto->args, direccion_variable);
 					log_info(log,"La direccion de argumento %c es %d %d %d\n", identificador_variable, direccion_variable->pagina, direccion_variable->offset, direccion_variable->tam);
@@ -139,10 +139,10 @@ t_puntero dereferenciar (t_puntero direccion_variable)
 	return valor;
 }
 
-/*t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
+t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
 {
 	return NULL;
-}*/
+}
 t_valor_variable asignarValorCompartida (t_nombre_compartida variable, t_valor_variable valor)
 {
 	paquete  paqueteAEnviar;
@@ -160,57 +160,43 @@ t_valor_variable asignarValorCompartida (t_nombre_compartida variable, t_valor_v
 }
 void irAlLabel (t_nombre_etiqueta t_nombre_etiqueta)
 {
+	log_info(log,"Se encuentra ejecutando ir a label: %s", t_nombre_etiqueta);
 	t_puntero_instruccion instruccion;
-	int longitud_etiqueta=strlen(t_nombre_etiqueta);
-	log_info(log, "Busco la etiqueta: %s y mide: %d\n", t_nombre_etiqueta, longitud_etiqueta);
 	instruccion = metadata_buscar_etiqueta(t_nombre_etiqueta, pcb->etiquetas, pcb->tamEtiquetas);
-	log_info(log,"Ir a la instruccion %d\n", instruccion);
-	pcb->ProgramCounter=instruccion-1; //(contador/2);
-	log_info(log,"Saliendo de label\n");
+	pcb->ProgramCounter=instruccion-1;
 }
 void llamarSinRetorno (t_nombre_etiqueta etiqueta)
 {
+	log_info(log, "Se encuentra ejecutando Llamar sin retorno en la funcion: %s \n",etiqueta);
 
 }
 void llamarConRetorno (t_nombre_etiqueta etiqueta, t_puntero donde_retornar)
 {
-
+	log_info(log, "Se encuentra ejecutando Llamar con retorno a funcion: %s, Retorno: %d\n",etiqueta,donde_retornar);
+	t_puntero_instruccion posicion= pcb->tamContextoActual;
+	log_info(log, "El indice de la funcion es: %d",posicion);
+	t_contexto * nuevoContexto= crearContexto();
+	log_info(log,"Se ha creado el contexto con la posicion: %d que debe volver en la sentencia %d y retorno en la variable de pos %d %d\n", nuevoContexto->posicion, nuevoContexto->retPos, nuevoContexto->retVar.pagina, nuevoContexto->retVar.offset);
+	nuevoContexto->retPos = pcb->ProgramCounter;
+	pcb->ProgramCounter = posicion;
+	retVar * direccionDeRetorno;
+	punteroADir(donde_retornar, direccionDeRetorno);
+	nuevoContexto->retVar.pagina = direccionDeRetorno->pagina;
+	nuevoContexto->retVar.offset = direccionDeRetorno->offset;
+	nuevoContexto->retVar.tam = direccionDeRetorno->tam;
+	free(direccionDeRetorno);
 }
 void finalizar ()
 {
-
+	log_info(log,"Se encuentra ejecutando finalizar");
+	programaFinalizado = 1;
 }
 void retornar(t_valor_variable retorno)
 {
-		log_info(log,"La posicion de retorno %d\n", retorno);
-		int posicionContextoActual;
-		int direccion;
-		t_contexto * contextoFinal;
-		posicionContextoActual= (pcb->tamContextoActual)-1;
-		contextoFinal= list_get(pcb->contextoActual, posicionContextoActual);
-		direccion=convertirDireccionAPuntero(&(contextoFinal->retVar));
-		asignar(direccion,retorno);
-		pcb->ProgramCounter=contextoFinal->retPos;
-		while(contextoFinal->tamVars!=0){
-			free(((t_variable*)list_get(contextoFinal->vars, contextoFinal->tamVars-1))->direccion);
-			free(list_get(contextoFinal->vars, contextoFinal->tamVars-1));
-			contextoFinal->tamVars--;
-		}
-		list_destroy(contextoFinal->vars);
-		log_info(log,"Se destruyeron vars de funcion\n");
-		while(contextoFinal->tamVars!=0){
-				log_info(log,"Antes del free\n");
-				free((retVar*)list_get(contextoFinal->args, contextoFinal->tamArgs-1));
-				log_info(log,"Despues del free\n");
-				contextoFinal->tamArgs--;
-			}
-		list_destroy(contextoFinal->args);
-		log_info(log,"Destrui args de funcion\n");
-		free(list_get(pcb->contextoActual, pcb->tamContextoActual-1));
-		log_info(log,"Contexto Destruido\n");
-		pcb->tamContextoActual--;
-
-	}
-
-
+		log_info(log,"Se encuentra ejecutando retornar\n");
+		retVar * direccion= pcb->cod.offset-1;
+		log_info(log,"Escribir en variable (%d,%d,%d) el valor de retorno: %d",direccion->pagina,direccion->offset,direccion->tam,retorno);
+		destruirContextoActual(tamPagina);
+		//escribirMemoria(retorno,direccion)
+}
 
