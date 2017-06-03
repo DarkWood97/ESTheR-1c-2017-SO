@@ -89,6 +89,11 @@ typedef struct __attribute__((packed)) {
 } Estados;
 
 typedef struct __attribute__((packed)) {
+	unsigned char nombreVariables;
+	int valorVariables;
+} SharedVars;
+
+typedef struct __attribute__((packed)) {
   int socket_CPU;
   int socket_CONSOLA;
   PCB *pcb;
@@ -113,8 +118,16 @@ typedef struct __attribute__((packed)) {
 #define INICIO_EXITOSO 50
 #define MENSAJE_PCB 1015
 #define RECIBIR_PCB 1016
+#define WAIT_SEMAFORO 1017
+#define SIGNAL_SEMAFORO 1018
+#define SEMAFORO_BLOQUEADO 1019
+#define SEMAFORO_NO_BLOQUEADO 1020
+#define ASIGNAR_VARIABLE_COMPARTIDA 666
+#define OBTENER_VARIABLE_COMPARTIDA 667
+#define ESCRIBIR_DATOS 505
+#define LEER_DATOS 504
 
-//variables globales
+//VARIABLES GLOBALES
 t_log * loggerKernel;
 bool YA_HAY_UNA_CONSOLA = false;
 int pid_actual = 1;
@@ -125,118 +138,16 @@ t_list* tablaKernel;
 Estados* estado;
 t_queue* cola_CPU_libres;
 t_queue** colas_semaforos;
-pthread_mutex_t mutexColaListos;
-pthread_mutex_t mutexColaEjecutando;
-pthread_mutex_t mutexColaNuevos;
-pthread_mutex_t mutexColaFinalizados;
-pthread_mutex_t mutexColaSemaforos;
-pthread_mutex_t mutex_CPU_libres;
-int programaBloqueado;
-int programaFinalizado;
-int programaAbortado;
 bool estadoPlanificacion =true;
-
-//semaforos
+t_list* variablesCompartidas;
 sem_t sem_ready;
-sem_t sem_cpu;
-sem_t sem_new;
 
 //////////////////////////////FUNCIONES SEMAFOROS/////////////////////////////////////////////////////////////////////////////////////
-void wait_kernel(t_nombre_semaforo identificador_semaforo){
-	log_info(loggerKernel,"Tamanio semaforo %d", strlen(identificador_semaforo));
-	char* nombre_semaforo=malloc(strlen(identificador_semaforo)+1);
-	char* barra_cero="\0";
-	memcpy(nombre_semaforo, identificador_semaforo, strlen(identificador_semaforo));
-	memcpy(nombre_semaforo+strlen(identificador_semaforo), barra_cero, 1);
-	log_info(log,"Pedir semaforo %s de tamnio %d\n", nombre_semaforo, strlen(nombre_semaforo)+1);
-	//enviar(strlen(nombre_semaforo)+1, nombre_semaforo); A QUIEN ENVIO?
-	paquete* paquete;
-	void* mensaje = malloc(sizeof(strlen(nombre_semaforo)+1));
-	paquete->tamMsj = strlen(nombre_semaforo)+1;
-	paquete->mensaje = nombre_semaforo;
-	//paquete = recibir; DE QUIEN RECIBO?
-	memcpy(&programaBloqueado, paquete->mensaje, 4);
-	log_info(loggerKernel,"programaBloqueado= %d\n", programaBloqueado);
-	free(nombre_semaforo);
-	free(mensaje);
+int tamanioDeArray(char** array){
+	int tamanio = ((strlen((char*)array)/sizeof(char*))*sizeof(int)); //Asi se saca el tamanio del array, calculo cuantos char* hay, lo divido por el tamanio de char*, lo que me da la cantidad de elementos, y lo multiplico por el tamanio de un int
+	return tamanio;
 }
 
-void signal_kernel(t_nombre_semaforo identificador_semaforo){
-	log_info(loggerKernel,"Tamanio semafaro %d", strlen(identificador_semaforo));
-	char* nombre_semaforo=malloc(strlen(identificador_semaforo)+1);
-	char* barra_cero="\0";
-	memcpy(nombre_semaforo, identificador_semaforo, strlen(identificador_semaforo));
-	memcpy(nombre_semaforo+strlen(identificador_semaforo), barra_cero, 1);
-	log_info(loggerKernel,"Devolviendo semaforo %s\n", nombre_semaforo);
-	paquete* paquete;
-	void* mensaje = malloc(sizeof(strlen(nombre_semaforo)+1));
-	paquete->tamMsj = strlen(nombre_semaforo)+1;
-	paquete->mensaje = nombre_semaforo;
-	//enviar(strlen(nombre_semaforo)+1, nombre_semaforo); A QUIEN ENVIO?
-	free(nombre_semaforo);
-	log_info(loggerKernel,"Saliendo del signal\n");
-	free(mensaje);
-}
-
-int *pideSemaforo(char *semaforo) {
-	int i;
-	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
-		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
-			return (&sem_Init[i]);
-		}
-	}
-	printf("No encontre SEM id, exit\n");
-	exit(0);
-}
-
-void escribeSemaforo(char *semaforo,int valor){
-	int i;
-
-	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
-		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
-			sem_Init[i]=valor;
-			return;
-		}
-	}
-	printf("No encontre SEM id, exit\n");exit(0);
-}
-
-void liberaSemaforo(char *semaforo) {
-	int i; t_proceso *proceso;
-
-	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
-		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
-
-			if(list_size(colas_semaforos[i]->elements)){
-				proceso = queue_pop(colas_semaforos[i]);
-				pthread_mutex_lock(&mutexColaListos);
-				queue_push(estado->listo, proceso);
-				pthread_mutex_unlock(&mutexColaListos);
-				sem_post(&sem_ready);
-			}else{
-				sem_Init[i]++;
-			}
-
-			return;
-		}
-	}
-	printf("No encontre SEM id, exit\n");exit(0);
-}
-
-
-void  bloqueoSemaforo(t_proceso *proceso, char *semaforo) {
-	int i;
-
-	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
-		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
-			queue_push(colas_semaforos[i], proceso);
-			return;
-		}
-	}
-	printf("No encontre SEM id, exit\n");exit(0);
-}
-
-/////////////////////////////////////////VARIABLES COMPARTIDAS/////////////////////////////////////////////////////////////////////////
 int *inicializarDesdeArrays(char** array1, char** array2){
   int contador;
   int* arrayInicializado;
@@ -248,19 +159,75 @@ int *inicializarDesdeArrays(char** array1, char** array2){
   return arrayInicializado;
 }
 
-int *crearArrayDeIntAPartirDe(char** arrayAConvertir){
-  int i = 0;
-  int* arrayConvertido;
-  arrayConvertido = malloc(tamanioDeArray(arrayAConvertir));
-  for(;arrayAConvertir[i]!=NULL;i++){
-    arrayConvertido[i]=atoi(arrayAConvertir[i]);
-  }
-  return arrayConvertido;
+void signalSemaforo(char *semaforo) {
+	int i; t_proceso *proceso;
+
+	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
+		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
+
+			if(list_size(colas_semaforos[i]->elements)){
+				proceso = queue_pop(colas_semaforos[i]);
+				queue_push(estado->listo, proceso);
+				sem_post(&sem_ready);
+			}else{
+				sem_Init[i]++;
+			}
+		}
+	}
+	perror("No existe el semaforo");
 }
 
-int tamanioDeArray(char** array){
-  int tamanio = ((strlen((char*)array)/sizeof(char*))*sizeof(int)); //Asi se saca el tamanio del array, calculo cuantos char* hay, lo divido por el tamanio de char*, lo que me da la cantidad de elementos, y lo multiplico por el tamanio de un int
-  return tamanio;
+int waitSemaforo(t_proceso *proceso, char *semaforo) {
+	int i;
+
+	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
+		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
+			queue_push(colas_semaforos[i], proceso);
+			return SEMAFORO_BLOQUEADO;
+		}
+		else{
+			return SEMAFORO_NO_BLOQUEADO;
+		}
+	}
+	perror("No existe el semaforo");
+}
+/////////////////////////////////////////VARIABLES COMPARTIDAS/////////////////////////////////////////////////////////////////////////
+void asignarVariableCompartida(char* nombreVariable,int valor){
+	int i = 0;
+	for(;i<=list_size(variablesCompartidas);i++){
+		SharedVars* variable = list_remove(variablesCompartidas,i);
+		if((variable->nombreVariables)==nombreVariable){
+			variable->valorVariables = valor;
+			list_add_in_index(variablesCompartidas, i, variable);
+		}
+		else{
+			perror("No existe la variable compartida");
+			exit(-1);
+		}
+	}
+}
+
+int obtenerVariableCompartida(char* nombreVariable){
+	int i = 0;
+	for(;i<=list_size(variablesCompartidas);i++){
+		SharedVars* variable = list_get(variablesCompartidas,i);
+		if((variable->nombreVariables)==nombreVariable){
+			return variable->valorVariables;
+		}
+		else{
+			perror("No existe la variable compartida");
+			exit(-1);
+		}
+	}
+}
+
+void inicializarVariablesCompartidas(){
+	int i = 0;
+	for(;shared_Vars[i]!=NULL;i++){
+		SharedVars* variables;
+		variables->nombreVariables=shared_Vars[i];
+		list_add(variablesCompartidas,variables);
+	}
 }
 
 ////////////////////////////////////////FUNCIONES COLAS////////////////////////////////////////////////////////////////////////////////
@@ -304,8 +271,67 @@ void enviarASalida(t_queue* cola,int pid){
 	t_proceso *proceso = dameProceso(cola,pid);
 	queue_push(estado->finalizado,proceso);
 }
+
+int obtenerNumeroPagina(int pid,int* offset){
+	int i = 0;
+
+	for(;i<=(list_size(tablaKernel));i++){
+		TablaKernel* tk = list_get(tablaKernel,i);
+		if(tk->pid==pid){
+			t_proceso* proceso = dameProceso(estado->ejecutando,pid);
+			list_add(estado->ejecutando, proceso);
+			(*offset) = proceso->pcb->cod.comienzo;
+			int valor =((TAM_PAGINA*tk->paginas)-(proceso->pcb->cod.comienzo));
+			int cantidad = (valor) % (TAM_PAGINA);
+			if (valor % TAM_PAGINA != 0) {
+				cantidad++;
+			}
+			return valor;
+		}
+	}
+}
+
+void escribirDatos(int socketMemoria,void* buffer, int tamanio,int pid){
+	paquete paquete;
+	paquete.mensaje = malloc((sizeof(int)*4)+tamanio);
+	paquete.tipoMsj = ESCRIBIR_DATOS;
+	paquete.tamMsj = (sizeof(int)*4)+tamanio;
+	int offset;
+	int numPagina = obtenerNumeroPagina(pid,offset);
+	memcpy(paquete.mensaje,pid,sizeof(int));
+	memcpy(paquete.mensaje+sizeof(int),numPagina, sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*2), offset,sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*3), tamanio,sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*4), buffer,tamanio);
+	if(send(socketMemoria,&paquete,paquete.tamMsj,0) == -1){
+		perror("Error al enviar datos a memoria");
+	    log_info(loggerKernel, "Error al enviar datos a memoria");
+	    exit(-1);
+	}
+	free(paquete.mensaje);
+}
+
+void leerDatosSolicitud(int pid,int tamALeer,int socketMemoria){
+	paquete paquete;
+	paquete.mensaje = malloc(sizeof(int)*4);
+	paquete.tipoMsj = LEER_DATOS;
+	paquete.tamMsj = sizeof(int)*4;
+	int offset;
+	int numPagina = obtenerNumeroPagina(pid,offset);
+	memcpy(paquete.mensaje,pid,sizeof(int));
+	memcpy(paquete.mensaje+sizeof(int),numPagina, sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*2), tamALeer,sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*3), offset,sizeof(int));
+	if(send(socketMemoria,&paquete,paquete.tamMsj,0) == -1){
+		perror("Error al enviar datos para leer de memoria");
+		log_info(loggerKernel, "Error al enviar datos para leer de memoria");
+		exit(-1);
+	}
+	free(paquete.mensaje);
+}
+
 //////////////////////////////////////////MANEJADOR DE CPU/////////////////////////////////////////////////////////////////////////
-void *manejadorProceso (void* socketCPU,void* pid){
+void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
   while(1){
 	  paquete paqueteRecibidoDeCPU;
 	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
@@ -324,18 +350,69 @@ void *manejadorProceso (void* socketCPU,void* pid){
 	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
 	          t_proceso* proceso = dameProceso(estado->ejecutando,*(int*)pid);
 	          proceso->pcb = nuevoPCB;
+	          list_add(estado->ejecutando, proceso);
 	          break;
 	        case FINALIZAR_PROGRAMA:
 	        	enviarASalida(estado->ejecutando,pid);
 	        break;
+	        case WAIT_SEMAFORO: ;
+	        	t_proceso* procesoWait = dameProceso(estado->ejecutando,*(int*)pid);
+	        	paquete paqueteWait;
+	        	paqueteWait.mensaje = malloc(sizeof(int));
+	        	int caso = waitSemaforo(procesoWait, paqueteRecibidoDeCPU.mensaje);
+	        	paqueteWait.tamMsj = sizeof(int);
+	        	paqueteWait.tipoMsj = WAIT_SEMAFORO;
+	        	paqueteWait.mensaje = &caso;
+	        	if(send(socketCPU, &paqueteWait, paqueteWait.tamMsj, 0) == -1){
+	        		perror("Error al enviar si el semaforo fue bloqueado");
+	        	    log_info(loggerKernel, "Error al enviar si el semaforo fue bloqueado");
+	        	    exit(-1);
+	        	}
+	        	list_add(estado->ejecutando, procesoWait);
+	        	break;
+	        case SIGNAL_SEMAFORO:
+	        	signalSemaforo(paqueteRecibidoDeCPU.mensaje);
+	        	break;
+	        case ASIGNAR_VARIABLE_COMPARTIDA: ;
+	        	char* nombreVariable;
+	        	int valorVariable;
+	        	int tamanioNombre = paqueteRecibidoDeCPU.tamMsj-sizeof(int);
+				nombreVariable = malloc(tamanioNombre);
+	        	memcpy(nombreVariable, paqueteRecibidoDeCPU.mensaje,tamanioNombre);
+	            memcpy(&valorVariable, paqueteRecibidoDeCPU.mensaje + tamanioNombre,sizeof(int));
+	            asignarVariableCompartida(nombreVariable,valorVariable);
+	        	break;
+	        case OBTENER_VARIABLE_COMPARTIDA: ;
+	        	paquete paqueteVars;
+	        	paqueteVars.mensaje = malloc(sizeof(int));
+	        	paqueteVars.tipoMsj = OBTENER_VARIABLE_COMPARTIDA;
+	        	paqueteVars.tamMsj = sizeof(int);
+	        	paqueteVars.mensaje = obtenerVariableCompartida(paqueteRecibidoDeCPU.mensaje);
+	        	if(send(*(int*)socketCPU, &paqueteVars, paqueteVars.tamMsj, 0) == -1){
+	        		perror("Error al enviar el valor de la variable compartida");
+	        		log_info(loggerKernel, "Error al enviar el valor de la variable compartida");
+	        	    exit(-1);
+	        	}
+	        	free(paqueteVars.mensaje);
+	        	break;
+	        case ESCRIBIR_DATOS: ;
+	        	int tamanio;
+	        	memcpy(&tamanio,paqueteRecibidoDeCPU.mensaje,sizeof(int));
+	        	void* buffer = malloc(tamanio);
+	        	memcpy(buffer,paqueteRecibidoDeCPU.mensaje+sizeof(int),tamanio);
+	        	escribirDatos(*(int*)socketMemoria,buffer,tamanio,*(int*)pid);
+	        	free(buffer);
+	        	break;
+	        case LEER_DATOS:
+	        	leerDatosSolicitud(*(int*)pid,paqueteRecibidoDeCPU.mensaje,*(int*)socketMemoria);
+	        	break;
 	        default:
 	        	perror("No se reconoce el mensaje enviado por CPU");
 	      }
 	  }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void* comenzarAEjecutar(int pid){
+int comenzarAEjecutar(int pid, int socketMemoria){
 	while(estadoPlanificacion){
 		//Semaforos
 		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
@@ -345,45 +422,83 @@ void* comenzarAEjecutar(int pid){
 			queue_pop(cola_CPU_libres);
 
 			pthread_t hilo_manejadorProceso;
-			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->PID));
+			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->PID,socketMemoria));
+			pthread_attr_destroy(hilo_manejadorProceso);
+			return cpuUtilizada;
 		}
 	}
 }
 
 t_proceso* chequearListas(int pid){
 	t_proceso* proceso;
-	if((proceso=dameProceso(estado->nuevo,pid))!=NULL){
+	t_queue* colaAux = queue_create();
+	colaAux = estado->nuevo;
+	if((proceso=dameProceso(colaAux,pid))!=NULL){
+		queue_destroy(colaAux);
 		return proceso;
 	}
-	else if((proceso=dameProceso(estado->listo,pid))!=NULL){
+	else if((proceso=dameProceso(colaAux,pid))!=NULL){
+		queue_destroy(colaAux);
 		return proceso;
 	}
-	else if((proceso=dameProceso(estado->ejecutando,pid))!=NULL){
-			return proceso;
+	else if((proceso=dameProceso(colaAux,pid))!=NULL){
+		queue_destroy(colaAux);
+		return proceso;
 	}
-	else if((proceso=dameProceso(estado->bloqueado,pid))!=NULL){
-			return proceso;
+	else if((proceso=dameProceso(colaAux,pid))!=NULL){
+		queue_destroy(colaAux);
+		return proceso;
 	}
 	else{
+		queue_destroy(colaAux);
 		return NULL;
 	}
 }
 
 t_queue* chequearEstado(int pid){
 	t_proceso* proceso;
-	if((proceso=dameProceso(estado->nuevo,pid))!=NULL){
+	t_queue* colaAux = queue_create();
+	colaAux = estado->nuevo;
+	t_queue* colaAux2 = queue_create();
+	colaAux2 = estado->listo;
+	t_queue* colaAux3 = queue_create();
+	colaAux3 = estado->ejecutando;
+	t_queue* colaAux4 = queue_create();
+	colaAux4 = estado->bloqueado;
+
+	if((proceso=dameProceso(colaAux,pid))!=NULL){
+		queue_destroy(colaAux);
+		queue_destroy(colaAux2);
+		queue_destroy(colaAux3);
+		queue_destroy(colaAux4);
 		return estado->nuevo;
 	}
-	else if((proceso=dameProceso(estado->listo,pid))!=NULL){
+	else if((proceso=dameProceso(colaAux2,pid))!=NULL){
+		queue_destroy(colaAux);
+		queue_destroy(colaAux2);
+		queue_destroy(colaAux3);
+		queue_destroy(colaAux4);
 		return estado->listo;
 	}
-	else if((proceso=dameProceso(estado->ejecutando,pid))!=NULL){
-			return estado->ejecutando;
+	else if((proceso=dameProceso(colaAux3,pid))!=NULL){
+		queue_destroy(colaAux);
+		queue_destroy(colaAux2);
+		queue_destroy(colaAux3);
+		queue_destroy(colaAux4);
+		return estado->ejecutando;
 	}
-	else if((proceso=dameProceso(estado->bloqueado,pid))!=NULL){
-			return estado->bloqueado;
+	else if((proceso=dameProceso(colaAux4,pid))!=NULL){
+		queue_destroy(colaAux);
+		queue_destroy(colaAux2);
+		queue_destroy(colaAux3);
+		queue_destroy(colaAux4);
+		return estado->bloqueado;
 	}
 	else{
+		queue_destroy(colaAux);
+		queue_destroy(colaAux2);
+		queue_destroy(colaAux3);
+		queue_destroy(colaAux4);
 		return NULL;
 	}
 }
@@ -392,10 +507,10 @@ t_queue* chequearEstado(int pid){
 //-----------------------------------------------FUNCIONES DE CONSOLA KERNEL------------------------------------------
 
 t_list* filtrarLista(int socket){
-	t_list* listaFiltrada;
+	t_list* listaFiltrada = list_create();
 	int i = 0;
 
-	t_queue* colaAuxiliar = malloc(sizeof(estado->ejecutando));
+	t_queue* colaAuxiliar = queue_create();
 	colaAuxiliar = estado->ejecutando;
 	for(;i<(queue_size(estado->ejecutando));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
@@ -404,9 +519,9 @@ t_list* filtrarLista(int socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
-	free(colaAuxiliar);
+	queue_destroy(colaAuxiliar);
 
-	colaAuxiliar = malloc(sizeof(estado->bloqueado));
+	colaAuxiliar = queue_create();
 	colaAuxiliar = estado->bloqueado;
 	for(;i<(queue_size(estado->bloqueado));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
@@ -415,9 +530,9 @@ t_list* filtrarLista(int socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
-	free(colaAuxiliar);
+	queue_destroy(colaAuxiliar);
 
-	colaAuxiliar = malloc(sizeof(estado->listo));
+	colaAuxiliar = queue_create();
 	colaAuxiliar = estado->listo;
 	for(;i<(queue_size(estado->listo));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
@@ -426,9 +541,9 @@ t_list* filtrarLista(int socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
-	free(colaAuxiliar);
+	queue_destroy(colaAuxiliar);
 
-	colaAuxiliar = malloc(sizeof(estado->nuevo));
+	colaAuxiliar = queue_create();
 	colaAuxiliar = estado->nuevo;
 	for(;i<(queue_size(estado->nuevo));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
@@ -437,13 +552,15 @@ t_list* filtrarLista(int socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
-	free(colaAuxiliar);
+	queue_destroy(colaAuxiliar);
 
 	return listaFiltrada;
+	list_destroy(listaFiltrada);
 }
 
 void verificarProcesos(socketConsola){
-	t_list* listaFiltrada = filtrarLista(socketConsola);
+	t_list* listaFiltrada = list_create();
+	listaFiltrada = filtrarLista(socketConsola);
 	int i=0;
 	for(;i<(list_size(listaFiltrada));i++){
 		t_proceso* proceso = list_get(listaFiltrada, i);
@@ -451,6 +568,7 @@ void verificarProcesos(socketConsola){
 		t_queue* cola = chequearEstado(proceso->pcb->PID);
 		enviarASalida(cola,proceso->pcb->PID);
 	}
+	list_destroy(listaFiltrada);
 }
 
 void finalizarPrograma(int pid){
@@ -573,7 +691,6 @@ int disminuirPID() {
 	pid_actual = pid_actual - 1;
 	return pid;
 }
-
 
 codeIndex cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
 	codeIndex code[metadata_program->instrucciones_size];
@@ -803,7 +920,7 @@ void *manejadorTeclado(){
 //  }
 
 //-----------------------------------MANEJADOR CONSOLA----------------------------------
-void* manejadorConexionConsola (void* socketConsola,fd_set (*socketsMaster),void* socketParaMemoria){
+void* manejadorConexionConsola (void* socketConsola,void* socketParaMemoria){
   while(1){
 	  paquete paqueteRecibidoDeConsola;
 	      if(recv(*(int*)socketConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
@@ -919,6 +1036,20 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      	  	  t_proceso->socket_CONSOLA = socketConsola;
 	      	  	  queue_push(estado->listo,t_proceso);
 	      	  	  break;
+	      	  case LEER_DATOS: ;
+	      		paquete paqueteARecibir;
+	      		paqueteARecibir.mensaje = malloc(paqueteRecibidoDeMemoria.tamMsj);
+	      		paqueteARecibir.tamMsj = paqueteRecibidoDeMemoria.tamMsj;
+	      		if(recv(*(int*)socketMemoria, paqueteARecibir.mensaje, paqueteARecibir.tamMsj, 0) == -1){
+	      			perror("Error al recibir la peticion de lectura");
+	      			exit(-1);
+	      		}
+	      		if(send(*(int*)socketCPU,&paqueteARecibir,paqueteARecibir.tamMsj,0) == -1){
+	      			perror("Error al enviar datos a CPU");
+	      			log_info(loggerKernel, "Error al enviar datos a CPU");
+	      			exit(-1);
+	      		}
+	      		break;
 	      	  default:
 	      		  perror("No se reconoce el mensaje enviado por Memoria");
 	      	  }
@@ -936,10 +1067,7 @@ int main(int argc, char *argv[]) {
 	//inicializarKernel(path);
 	inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
-	pthread_mutex_init(&mutexColaNuevos, NULL);
-	pthread_mutex_init(&mutexColaFinalizados, NULL);
-	pthread_mutex_init(&mutexColaListos, NULL);
-	pthread_mutex_init(&mutexColaSemaforos, NULL);
+	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
 	int socketParaMemoria, socketCPU, socketConsola, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
@@ -987,7 +1115,7 @@ int main(int argc, char *argv[]) {
 					}else{
 						switch (mensajeAux.tipoMsj) {
 							case CONSOLA:
-								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)(socketAChequear,&socketsMaster,socketParaMemoria));
+								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)(socketAChequear,socketParaMemoria));
 								log_info(loggerKernel,"Se conecto nueva consola...\n");
 								FD_CLR(socketAChequear,&socketsMaster);
 								break;
@@ -998,7 +1126,7 @@ int main(int argc, char *argv[]) {
 							case CPU:
 								queue_push(cola_CPU_libres,socketAChequear);
 								//enviarAEjecutar(int pid);
-								//comenzarAEjecutar(int pid)
+								//socketCPU = comenzarAEjecutar(int pid);
 								log_info(loggerKernel,"Se registro nueva CPU...\n");
 								break;
 //							case CORTO:
