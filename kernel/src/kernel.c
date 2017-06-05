@@ -1044,12 +1044,17 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      			perror("Error al recibir la peticion de lectura");
 	      			exit(-1);
 	      		}
+	      		//Hace falta enviar a CPU
+	      		//
 	      		if(send(*(int*)socketCPU,&paqueteARecibir,paqueteARecibir.tamMsj,0) == -1){
 	      			perror("Error al enviar datos a CPU");
 	      			log_info(loggerKernel, "Error al enviar datos a CPU");
 	      			exit(-1);
 	      		}
 	      		break;
+	      	// Se pudo copiar
+	      		//No_Se_pudo_copiar
+	      		//DAtos_de-pagina, lee un buffer de datos
 	      	  default:
 	      		  perror("No se reconoce el mensaje enviado por Memoria");
 	      	  }
