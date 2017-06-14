@@ -301,24 +301,23 @@ void* manejadorInterfaz(void* socketKernel)
 		comando[tamanioRecibido-1] = '\0';
 		if(string_equals_ignore_case(comando,"Iniciar Programa"))
 		{
-			char* path = malloc(50*sizeof(char));
-			size_t tamanioPathMaximo = 50;
+			comando = realloc(comando,50*sizeof(char));
 			puts("Por favor ingrese la direccion del archivo a continuacion\n");
-			getline(&path,&tamanioPathMaximo,stdin);
-			int tamanioPathRecibido = strlen(path);
-			path[tamanioPathRecibido-1] = '\0';
+			getline(&comando,&tamanioMaximo,stdin);
+			int tamanioPathRecibido = strlen(comando);
+			comando[tamanioPathRecibido-1] = '\0';
 			pthread_t hiloPrograma;
 			programaIniciado = true;
-			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)(socketKernel,path));
+			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)(socketKernel,comando));
 		}else if((string_equals_ignore_case(comando, "Mostrar Programas iniciados"))&&(programaIniciado)){
 			mostrarProgramasIniciados();
 		}else if((string_equals_ignore_case(comando, "Finalizar Programa"))&&(programaIniciado)){
-			char* comandoPID = malloc(sizeof(int));
-			puts("Ingrese el pid a finalizar");
-			getline(&comandoPID,sizeof(int),stdin);
-			int tamanioPidRecibido = strlen(comandoPID);
-			comandoPID[tamanioPidRecibido-1] = '\0';
-			int pid = atoi(comandoPID);
+			comando = realloc(comando,sizeof(int));
+			puts("Ingrese el pid a finalizar\n");
+			getline(&comando,sizeof(int),stdin);
+			int tamanioPidRecibido = strlen(comando);
+			comando[tamanioPidRecibido-1] = '\0';
+			int pid = atoi(comando);
 			finalizarPrograma(pid,socketKernel);
 			programaIniciado = list_is_empty(listaProcesos);
 		}else if((string_equals_ignore_case(comando, "Desconectar Consola"))&&(programaIniciado)){
@@ -326,7 +325,10 @@ void* manejadorInterfaz(void* socketKernel)
 			programaIniciado = false;
 		}else if((string_equals_ignore_case(comando, "Limpiar Mensajes"))){
 			system("clear");
+		} else{
+			puts("Error de comando");
 		}
+		comando = realloc(comando,50*sizeof(char));
 	}
 }
 //------------------------------------------------------------------------------------------------------------------
@@ -335,8 +337,6 @@ int main(int argc, char *argv[])
 {
 	verificarParametrosInicio(argc);
 	Consola nuevaConsola = inicializarPrograma(argv[1]);
-	//char *path = "Debug/consola.config";
-	//Consola nuevaConsola = inicializarPrograma(path);
 	mostrar_consola(nuevaConsola);
 	loggerConsola = log_create("Consola.log", "Consola", 0, 0);
 	pthread_mutex_init(&mutexImpresiones,NULL);
