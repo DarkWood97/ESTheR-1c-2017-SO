@@ -1,3 +1,10 @@
+/*
+ * funcionesSockets.h
+ *
+ *  Created on: 14/6/2017
+ *      Author: utnso
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,5 +39,9 @@ int verificarErrorSetsockopt(int);
 int verificarErrorBind(int, struct sockaddr_in);
 
 int verificarErrorListen(int);
-
+void verificarErrorServer(struct hostent *, char*);
+void verificarErrorSend(int, int );
+void verificarErrorSelect(int );
+void verificarErrorConexion(int, int);
+void verificarErrorAccept(int, struct sockaddr_in);
 #endif /* FUNCIONESGENERICAS_H_ */

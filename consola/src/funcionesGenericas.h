@@ -1,7 +1,7 @@
 /*
  * funcionesGenericas.h
  *
- *  Created on: 6/4/2017
+ *  Created on: 14/6/2017
  *      Author: utnso
  */
 
@@ -30,12 +30,14 @@
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 typedef struct {
 	char *numero;
-}_ip;
+} _ip;
 
 t_config generarT_ConfigParaCargar(char *);
 void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);
-
+void verificarParametrosCrear(t_config*, int);
 #endif /* FUNCIONESGENERICAS_H_ */

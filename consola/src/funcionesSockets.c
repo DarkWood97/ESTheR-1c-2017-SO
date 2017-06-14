@@ -1,7 +1,7 @@
 /*
- * funcionesGenericas.c
+ * funcionesSockets.c
  *
- *  Created on: 7/4/2017
+ *  Created on: 14/6/2017
  *      Author: utnso
  */
 
@@ -61,4 +61,49 @@ int verificarErrorListen(int socket) {
 	} else {
 		return 0;
 	}
+}
+
+//---VERIFICACION DE ERRORES-----------------------------------------
+void verificarErrorAccept(int verificacion, struct sockaddr_in su_addr)
+{
+	if(verificacion==-1)
+	{
+			perror("Error de accept");
+			exit(-1);
+	}
+	else
+	{
+			printf("Se ha conectado a: %s\n", inet_ntoa(su_addr.sin_addr));
+	}
+
+}
+void verificarErrorConexion(int verificador, int socket_server)
+{
+	if (verificador == -1) {
+			perror("Error al conectar con el servidor.");
+			close(socket_server);
+			//exit(-1);		Sacarlo cuando la conexion a memoria este hecha
+		}
+}
+void verificarErrorSelect(int verificadorSelect)
+{
+	if (verificadorSelect == -1) {
+				perror("Error de select");
+				exit(1);
+			}
+}
+void verificarErrorSend(int verificacion, int socket)
+{
+	if (verificacion == -1) {
+				perror("Error de send");
+				close(socket);
+				exit(-1);
+			}
+}
+void verificarErrorServer(struct hostent *infoDelServer, char* ip)
+{
+	if ((infoDelServer = gethostbyname(ip)) == NULL) {
+			perror("Error al obtener datos del server.");
+			exit(-1);
+		}
 }

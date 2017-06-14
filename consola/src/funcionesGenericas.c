@@ -1,7 +1,7 @@
 /*
  * funcionesGenericas.c
  *
- *  Created on: 6/4/2017
+ *  Created on: 14/6/2017
  *      Author: utnso
  */
 
@@ -26,11 +26,11 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+
 t_config generarT_ConfigParaCargar(char *path) {
 	t_config *configuracionDelComponente = (t_config*)malloc(sizeof(t_config));
 	if((configuracionDelComponente = config_create(path)) == NULL){
 		perror("Error de ruta de archivo de configuracion");
-		free(configuracionDelComponente);
 		exit(-1);
 	}
 	return *configuracionDelComponente;
@@ -39,19 +39,25 @@ t_config generarT_ConfigParaCargar(char *path) {
 
 void recibirMensajeDeKernel(int socketKernel){
 	char *buff = malloc(sizeof(char)*16);
-//	int tamanioBuff = strlen(buff)+1;
-	if(recv(socketKernel,buff,16,0) == -1){ //Implementar protocolo donde esta el 16 Tamano de mensaje
+	int tamanioBuff = strlen(buff)+1;
+	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
 		perror("Error de receive");
-		free(buff);
 		exit(-1);
 	}
-	printf("%s\n",buff);
+	printf("%s",buff);
 	free(buff);
 }
 void verificarParametrosInicio(int argc)
 {
 	if(argc!=2){
-			perror("Faltan parametros para inicializar la consola");
+			perror("Faltan parametros");
+			exit(-1);
+		}
+}
+void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
+{
+	if (dictionary_size(configuracion->properties) != sizeStruct) {
+			perror("Faltan parametros para inicializar el fileSystem");
 			exit(-1);
 		}
 }
