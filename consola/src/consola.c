@@ -118,9 +118,43 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 	return codigo;
 }
 
+Programa* recibirPID(int socketKernel,Paquete paquetePath,Programa* programa)
+{
+	if (send(socketKernel, &paquetePath, paquetePath.tamMsj, 0) == -1) {
+		perror("Error al enviar la ruta del archivo al kernel");
+		close(socket);
+		exit(-1);
+	}
+
+	struct timeval inicio;
+	bool PIDNoRecibido = true;
+	Paquete paqueteRecibido;
+	paqueteRecibido.mensaje = malloc(sizeof(int));
+
+	while(PIDNoRecibido){
+		if(recv(*(int*)socketKernel,&paqueteRecibido,sizeof(int),0)==-1){
+			perror("Error de recv en Consola");
+			exit(-1);
+		}
+		else{
+			if(paqueteRecibido.tipoMsj==MENSAJE_PID){
+				programa->pid = paqueteRecibido.mensaje;
+				gettimeofday(&inicio, NULL);
+				programa->inicio = inicio;
+				programa->hilo = pthread_self();
+				programa->impresiones = 0;
+				list_add(listaProcesos,programa);
+				free(paqueteRecibido.mensaje);
+				PIDNoRecibido = false;
+			}
+		}
+	}
+	free(paquetePath.mensaje);
+	return programa;
+}
+
 void* iniciarPrograma(void* socketKernel,void* path)
 {
-	struct timeval inicio;
 	FILE *archivoRecibido = fopen((char*)path, "r");
 	log_info(loggerConsola,"Archivo recibido correctamente...\n");
 	long int tamanio = obtenerTamanioArchivo(archivoRecibido)+1;
@@ -131,67 +165,50 @@ void* iniciarPrograma(void* socketKernel,void* path)
 	paquetePath.mensaje = leerArchivo(archivoRecibido,tamanio);
 	paquetePath.tamMsj = tamanio;
 
-	if (send(*(int*)socketKernel, &paquetePath, paquetePath.tamMsj, 0) == -1) {
-		perror("Error al enviar la ruta del archivo al kernel");
-		close(socket);
-		exit(-1);
-	}
-
-	Paquete paqueteRecibido;
+	pthread_mutex_lock(&mutexImpresiones);
 	Programa* programa;
 	programa = (Programa*) malloc(sizeof(Programa));
-	bool paqueteNoUsado;
+	programa = recibirPID(*(int*)socketKernel,paquetePath,programa);
+	pthread_mutex_unlock(&mutexImpresiones);
+
+	Paquete paqueteRecibido;
+	paqueteRecibido.mensaje = malloc(sizeof(int));
+
+	bool paqueteNoUsado = false;
 
 	fclose(archivoRecibido);
-	free(paquetePath.mensaje);
 	free((char*)path);
 
-	pthread_mutex_lock(&mutexImpresiones);
 	while(1){
-
-		pthread_mutex_lock(&mutexPaquete);
 		if((programa->pid==paqueteHiloCorrecto.tipoMsj)&&(paqueteNoUsado)){
+			pthread_mutex_lock(&mutexPaquete);
 			printf("Mensaje recibido: %p",paqueteHiloCorrecto.mensaje);
 			programa->impresiones++;
 			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
 			paqueteNoUsado = false;
-			pthread_mutex_unlock(&mutexPaquete);
 			free(paqueteHiloCorrecto.mensaje);
+			pthread_mutex_unlock(&mutexPaquete);
 		}
 
 		if(recv(*(int*)socketKernel,&paqueteRecibido,sizeof(int),0)==-1){
 			perror("Error de recv en Consola");
 			exit(-1);
 		}
-		else{
-			if(paqueteRecibido.tipoMsj==MENSAJE_PID){
-					programa->pid = paqueteRecibido.mensaje;
-					gettimeofday(&inicio, NULL);
-					programa->inicio = inicio;
-					programa->hilo = pthread_self();
-					programa->impresiones = 0;
-					list_add(listaProcesos,programa);
-					free(paqueteRecibido.mensaje);
-					pthread_mutex_unlock(&mutexImpresiones);
-			}
-			else {
-					if(programa->pid==paqueteRecibido.tipoMsj){
-						printf("Mensaje recibido: %p",paqueteRecibido.mensaje);
-						programa->impresiones++;
-						pthread_mutex_lock(&mutexImpresiones);
-						list_replace(listaProcesos, obtenerPosicionHilo(), programa);
-						pthread_mutex_unlock(&mutexImpresiones);
-						free(paqueteRecibido.mensaje);
-					}
-					else{
-						pthread_mutex_lock(&mutexPaquete);
-						paqueteHiloCorrecto = paqueteRecibido;
-						paqueteNoUsado = true;
-						pthread_mutex_unlock(&mutexPaquete);
-						free(paqueteRecibido.mensaje);
-					}
-			}
+		else if(programa->pid==paqueteRecibido.tipoMsj){
+			pthread_mutex_lock(&mutexImpresiones);
+			printf("Mensaje recibido: %p",paqueteRecibido.mensaje);
+			programa->impresiones++;
+			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
+			free(paqueteRecibido.mensaje);
+			pthread_mutex_unlock(&mutexImpresiones);
 		}
+		else{
+			pthread_mutex_lock(&mutexPaquete);
+			paqueteHiloCorrecto = paqueteRecibido;
+			paqueteNoUsado = true;
+			free(paqueteRecibido.mensaje);
+			pthread_mutex_unlock(&mutexPaquete);
+			}
 	}
 }
 
