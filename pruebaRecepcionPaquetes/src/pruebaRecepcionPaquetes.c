@@ -13,32 +13,39 @@
 #include "socket.h"
 #include "funcionesGenericas.h"
 
-#define PORT 5000
-#define IP 127.0.0.1
-#define IMPRIMIR 1
+typedef struct __attribute__((__packed__)){
+	int tipoMsj;
+	int tamMsj;
+	void* mensaje;
+}paquete;
 
+int recibirEntero(int socket){
+  int entero;
+  if(recv(socket, entero, sizeof(int),0)==-1){
+    puts("Error al recibir entero");
+    exit(-1);
+  }
+  return entero;
+}
 
-
-void copiarAArchivoDump(char* mensajeACopiar){
-  int tamanioAEscribir = strlen(mensajeACopiar);
-  FILE* dump = fopen("./dump.txt","a");
-  fwrite(mensajeACopiar,tamanioAEscribir,1,dump);
-  fclose(dump);
+paquete recvRemasterizado(int deQuien){
+  paquete paqueteARecibir;
+  paqueteARecibir.tipoMsj = recibirEntero(deQuien);
+  paqueteARecibir.tamMsj = recibirEntero(deQuien);
+  paqueteARecibir.mensaje = malloc(paqueteARecibir.tamMsj);
+  if(recv(deQuien, paqueteARecibir.mensaje, paqueteARecibir.tamMsj,0)==-1){
+    perror("Error al recibir mensaje.");
+    exit(-1);
+  }
+  return paqueteARecibir;
 }
 
 int main(void) {
-//	char* cadenaDeEstructuracionDump = string_new();
-//	  string_append(&cadenaDeEstructuracionDump,"\n             INICIO DUMP MEMORIA             \n");
-//	  puts("\n             INICIO DUMP MEMORIA             \n");
-//	  copiarAArchivoDump(cadenaDeEstructuracionDump);
-//	  free(cadenaDeEstructuracionDump);
-
-//	int a = 7;
-//	int b = 3;
-//	int c = a%b;
-//	printf("%d",c);
-
-	char* bufferDeData = "Hola como estas";
-	int tamMsj = string_length(bufferDeData)+1;
-	printf("%d", tamMsj);
+	paquete unPaquete;
+	int socketConsola = ponerseAEscucharClientes(5000, 0);
+	aceptarConexionDeCliente(socketConsola);
+	while(1){
+		unPaquete = recvRemasterizado(socketConsola);
+		printf("Mensaje recibido: %p",unPaquete.mensaje);
+	}
 }
