@@ -35,8 +35,8 @@ typedef struct {
 }_ip;
 
 typedef struct __attribute__((__packed__)){
-	int tamMsj;
 	int tipoMsj;
+	int tamMsj;
 	void* mensaje;
 }paquete;
 
