@@ -147,6 +147,9 @@ t_queue** colas_semaforos;
 bool estadoPlanificacion =true;
 t_list* variablesCompartidas;
 sem_t sem_ready;
+int socketConsola;
+int socketParaMemoria;
+int socketCPU;
 
 //////////////////////////////FUNCIONES SEMAFOROS/////////////////////////////////////////////////////////////////////////////////////
 int tamanioDeArray(char** array){
@@ -926,14 +929,14 @@ void *manejadorTeclado(){
 //  }
 
 //-----------------------------------MANEJADOR CONSOLA----------------------------------
-void* manejadorConexionConsola (void* socketConsola,void* socketParaMemoria){
+void* manejadorConexionConsola (){
   while(1){
 	  paquete paqueteRecibidoDeConsola;
-	      if(recv(*(int*)socketConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
+	      if(recv(socketConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
 	        perror("Error al recibir el tipo de mensaje de Consola");
 	        exit(-1);
 	      }
-	      if(recv(*(int*)socketConsola, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
+	      if(recv(socketConsola, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
 	        perror("Error al recibir tamanio de mensaje de Consola");
 	        exit(-1);
 	      }
@@ -941,16 +944,16 @@ void* manejadorConexionConsola (void* socketConsola,void* socketParaMemoria){
 	      void* dataRecibida;
 	      switch (paqueteRecibidoDeConsola.tipoMsj) {
 			  case MENSAJE_IMPRIMIR:
-				  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  recv(socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
 				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  recv(socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
 				  printf("Mensaje recibido: %p\n", dataRecibida);
 				  free(dataRecibida);
 				  break;
 			  case MENSAJE_PATH:
-				  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  recv(socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
 				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  recv(socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
 				  cantPag = recibirCantidadPaginas(mensajeAux.tamMsj);
 				  inicializarPCB(dataRecibida,mensajeAux.tamMsj);
@@ -964,28 +967,11 @@ void* manejadorConexionConsola (void* socketConsola,void* socketParaMemoria){
 				  puts("Te la comes igual que ivan el trolazo");
 				  break;
 			  case FINALIZAR_PROGRAMA:
-				  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  recv(socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
 				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  recv(socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
 				  finalizarPrograma((int)dataRecibida);
 				  break;
-//			  case CONEXION_CONSOLA:
-//				  if (YA_HAY_UNA_CONSOLA) {
-//					  perror("Ya hay una consola conectada");
-//					  FD_CLR(*(int*)socketConsola, &(*socketsMaster));
-//					  close(socketConsola);
-//				  }
-//				  else {
-//					  YA_HAY_UNA_CONSOLA = true;
-//					  log_info(loggerKernel,"Se registro conexion de Consola...\n");
-//					  FD_SET(*(int*)socketConsola, &(*socketsMaster));
-//					  recv(*(int*)socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
-//					  dataRecibida = malloc(mensajeAux.tamMsj);
-//					  recv(*(int*)socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
-//					  printf("Handshake con Consola: %p\n",dataRecibida);
-//					  free(dataRecibida);
-//				  }
-//				  break;
 			  default:
 					perror("No se reconoce el mensaje enviado por Consola");
 			  }
@@ -1070,14 +1056,14 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	verificarParametrosInicio(argc);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
-	inicializarKernel(argv[1]);
+	//verificarParametrosInicio(argc);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
+	//inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
-	int socketParaMemoria, socketCPU, socketConsola, socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
+	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
@@ -1121,19 +1107,19 @@ int main(int argc, char *argv[]) {
 					socketMaxMaster = calcularSocketMaximo(socketQueAcepta,socketMaxMaster);
 				}
 				else {
-					paquete mensajeAux;
-					if(recv(socketAChequear,&mensajeAux.tipoMsj,sizeof(int),0)==-1){
+					int tipoMsj;
+					if(recv(socketAChequear,&tipoMsj,sizeof(int),0)==-1){
 						perror("Error de recv en kernel");
 						exit(-1);
 					}else{
-						switch (mensajeAux.tipoMsj) {
+						switch (tipoMsj) {
 							case CONSOLA:
-								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)(socketConsola,socketParaMemoria));
+								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,NULL);
 								log_info(loggerKernel,"Se conecto nueva consola...\n");
 								FD_CLR(socketConsola,&socketsCliente);
 								break;
 							case MEMORIA:
-								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)(socketParaMemoria,socketConsola,socketCPU));
+								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,NULL);
 								FD_CLR(socketParaMemoria,&socketsMaster);
 								break;
 							case CPU:

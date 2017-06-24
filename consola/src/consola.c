@@ -16,8 +16,8 @@
 #define FINALIZAR_PROGRAMA 503
 
 typedef struct {
-	int tamMsj;
 	int tipoMsj;
+	int tamMsj;
 	void* mensaje;
 }Paquete;
 
@@ -39,6 +39,7 @@ t_list* listaProcesos;
 Paquete paqueteHiloCorrecto;
 pthread_mutex_t mutexImpresiones;
 pthread_mutex_t mutexPaquete;
+int socketKernel;
 
 //----FUNCIONES CONSOLA-------------------------------------------------------
 Consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo si no tiene error
@@ -61,17 +62,13 @@ void mostrar_consola(Consola aMostrar) {
 }
 
 //------FUNCIONES MENSAJES--------------------------------------------
-void realizarHandshake(int socket)
+void realizarHandshake()
 {
-	Paquete paquete;
-	paquete.mensaje = malloc(sizeof(int));
-	paquete.tipoMsj = HANDSHAKE_CONSOLA;
-	paquete.tamMsj = sizeof(int);
-
-		if (send(socket, &paquete, paquete.tamMsj, 0) == -1) {
-			perror("Error al realizar handshake con kernel");
-			close(socket);
-			exit(-1);
+	int soyLeyenda = HANDSHAKE_CONSOLA;
+	if (send(socketKernel, &soyLeyenda, sizeof(int), 0) == -1) {
+		perror("Error al realizar handshake con kernel");
+		close(socketKernel);
+		exit(-1);
 	}
 }
 //-------------------FUNCIONES DEL TIEMPO------------------------------
@@ -118,7 +115,7 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 	return codigo;
 }
 
-Programa* recibirPID(int socketKernel,Paquete paquetePath,Programa* programa)
+Programa* recibirPID(Paquete paquetePath,Programa* programa)
 {
 	if (send(socketKernel, &paquetePath, paquetePath.tamMsj, 0) == -1) {
 		perror("Error al enviar la ruta del archivo al kernel");
@@ -132,7 +129,7 @@ Programa* recibirPID(int socketKernel,Paquete paquetePath,Programa* programa)
 	paqueteRecibido.mensaje = malloc(sizeof(int));
 
 	while(PIDNoRecibido){
-		if(recv(*(int*)socketKernel,&paqueteRecibido,sizeof(int),0)==-1){
+		if(recv(socketKernel,&paqueteRecibido,sizeof(int),0)==-1){
 			perror("Error de recv en Consola");
 			exit(-1);
 		}
@@ -153,9 +150,9 @@ Programa* recibirPID(int socketKernel,Paquete paquetePath,Programa* programa)
 	return programa;
 }
 
-void* iniciarPrograma(void* socketKernel,void* path)
+void* iniciarPrograma(void* path)
 {
-	FILE *archivoRecibido = fopen((char*)path, "r");
+	FILE *archivoRecibido = fopen((char*) path, "r");
 	log_info(loggerConsola,"Archivo recibido correctamente...\n");
 	long int tamanio = obtenerTamanioArchivo(archivoRecibido)+1;
 
@@ -168,7 +165,7 @@ void* iniciarPrograma(void* socketKernel,void* path)
 	pthread_mutex_lock(&mutexImpresiones);
 	Programa* programa;
 	programa = (Programa*) malloc(sizeof(Programa));
-	programa = recibirPID(*(int*)socketKernel,paquetePath,programa);
+	programa = recibirPID(paquetePath,programa);
 	pthread_mutex_unlock(&mutexImpresiones);
 
 	Paquete paqueteRecibido;
@@ -237,7 +234,7 @@ void imprimirInformacion(int pid,int impresiones,struct timeval *inicio,struct t
 	timeval_print(&duracion);
 }
 
-void finalizarPrograma(int pid,int socketKernel)
+void finalizarPrograma(int pid)
 {
 	Paquete paquete;
 	paquete.tipoMsj = FINALIZAR_PROGRAMA;
@@ -266,13 +263,13 @@ void finalizarPrograma(int pid,int socketKernel)
 	free(programa);
 }
 
-void desconectarConsola(int socketKernel)
+void desconectarConsola()
 {
 	int i = 0;
 	int tamanio = list_size(listaProcesos);
 	for(;i<=tamanio;i++){
 		Programa* programa  = list_get(listaProcesos, 0);
-		finalizarPrograma(programa->pid,socketKernel);
+		finalizarPrograma(programa->pid);
 		free(programa);
 	}
 	puts("Se desconecto la consola \n");
@@ -301,7 +298,7 @@ void mostrarProgramasIniciados(){
 	}
 }
 
-void* manejadorInterfaz(void* socketKernel)
+void* manejadorInterfaz()
 {
 	char* comando = malloc(50*sizeof(char));
 	size_t tamanioMaximo = 50;
@@ -325,7 +322,7 @@ void* manejadorInterfaz(void* socketKernel)
 			comando[tamanioPathRecibido-1] = '\0';
 			pthread_t hiloPrograma;
 			programaIniciado = true;
-			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)(socketKernel,comando));
+			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)comando);
 		}else if((string_equals_ignore_case(comando, "Mostrar Programas iniciados"))&&(programaIniciado)){
 			mostrarProgramasIniciados();
 		}else if((string_equals_ignore_case(comando, "Finalizar Programa"))&&(programaIniciado)){
@@ -335,10 +332,10 @@ void* manejadorInterfaz(void* socketKernel)
 			int tamanioPidRecibido = strlen(comando);
 			comando[tamanioPidRecibido-1] = '\0';
 			int pid = atoi(comando);
-			finalizarPrograma(pid,socketKernel);
+			finalizarPrograma(pid);
 			programaIniciado = list_is_empty(listaProcesos);
 		}else if((string_equals_ignore_case(comando, "Desconectar Consola"))&&(programaIniciado)){
-			desconectarConsola(socketKernel);
+			desconectarConsola();
 			programaIniciado = false;
 		}else if((string_equals_ignore_case(comando, "Limpiar Mensajes"))){
 			system("clear");
@@ -354,18 +351,19 @@ int main(int argc, char *argv[])
 {
 	verificarParametrosInicio(argc);
 	Consola nuevaConsola = inicializarPrograma(argv[1]);
+	//Consola nuevaConsola = inicializarPrograma("Debug/consola.config");
 	mostrar_consola(nuevaConsola);
 	loggerConsola = log_create("Consola.log", "Consola", 0, 0);
 	pthread_mutex_init(&mutexImpresiones,NULL);
 	pthread_mutex_init(&mutexPaquete,NULL);
 	listaProcesos = list_create();
 
-	int socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
-	realizarHandshake(socketKernel);
+	socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
+	realizarHandshake();
 	log_info(loggerConsola,"Se conecto con el kernel...\n");
 
 	pthread_t interfazUsuario;
-	pthread_create(&interfazUsuario, NULL, manejadorInterfaz,(void*)socketKernel);
+	pthread_create(&interfazUsuario, NULL, manejadorInterfaz,NULL);
 	pthread_join(interfazUsuario,NULL);
 
 	close(socketKernel);
