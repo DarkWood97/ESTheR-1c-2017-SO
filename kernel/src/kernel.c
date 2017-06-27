@@ -75,12 +75,6 @@ typedef struct __attribute__((packed)) {
 } PCB;
 
 typedef struct __attribute__((packed)) {
-	int tipoMsj;
-	int tamMsj;
-	void* mensaje;
-} paquete;
-
-typedef struct __attribute__((packed)) {
 	uint32_t size;
 	bool isFree;
 } HeapMetadata;
@@ -113,7 +107,7 @@ typedef struct __attribute__((packed)) {
 #define ESPACIO_INSUFICIENTE -2
 #define MENSAJE_IMPRIMIR 101
 #define TAMANIO_PAGINA 102
-#define MENSAJE_PATH 103
+#define	MENSAJE_CODIGO 103
 #define MENSAJE_PID   105
 #define MEMORIA 1002
 #define CPU 1003
@@ -737,7 +731,7 @@ t_list* inicializarStack(t_list *contexto) {
 	free(contextocero);
 }
 
-void inicializarPCB(FILE* buffer,int tamanioBuffer) {
+void inicializarPCB(char* buffer,int tamanioBuffer) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
 
 	nuevoPCB->PID = aumentarPID();
@@ -834,19 +828,6 @@ void enviarPCB(int socketCPU){
 	free(paqCPU.mensaje);
 }
 
-void enviarPIDAConsola(int socketConsola,int PID){
-	paquete paquete;
-	void* mensaje = malloc(sizeof(int));
-	paquete.mensaje = PID;
-	paquete.tamMsj = sizeof(int);
-	paquete.tipoMsj = MENSAJE_PID;
-	if ((send(socket, &paquete, sizeof(int), 0)) == -1) {
-		perror("Error al enviar el PID a Consola");
-		exit(-1);
-	}
-	free(mensaje);
-}
-
 //--------------------------------------FUNCIONES DE ARRAY----------------------------------------
 
 void imprimirArrayDeChar(char* arrayDeChar[]) {
@@ -902,63 +883,20 @@ void *manejadorTeclado(){
 
 	free(comando);
 }
-//-----------------------------------MANEJADOR CPU----------------------------------
 
-//void *manejadorConexionCPU (void* socketCPU){
-//  while(1){
-//	  paquete paqueteRecibidoDeCPU;
-//	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
-//	        perror("Error al recibir el tipo de mensaje de CPU");
-//	        exit(-1);
-//	      }
-//	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tamMsj,sizeof(int),0)==-1){
-//	        perror("Error al recibir tamanio de mensaje de CPU");
-//	        exit(-1);
-//	      }
-//	      switch (paqueteRecibidoDeCPU.tipoMsj) {
-//	        case MENSAJE_PCB:
-//	          enviarPCB(*(int*)socketCPU);
-//	          break;
-//	        case RECIBIR_PCB:
-//	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
-//	          break;
-//	        default:
-//	        	perror("No se reconoce el mensaje enviado por CPU");
-//	      }
-//	  }
-//  }
-
-//-----------------------------------MANEJADOR CONSOLA----------------------------------
 void* manejadorConexionConsola (void* socketDeConsola){
   while(1){
-	  paquete paqueteRecibidoDeConsola;
-	      if(recv(*(int*)socketDeConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de Consola");
-	        exit(-1);
-	      }
-	      if(recv(*(int*)socketDeConsola, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de Consola");
-	        exit(-1);
-	      }
-	      paquete mensajeAux;
-	      void* dataRecibida;
-	      switch (paqueteRecibidoDeConsola.tipoMsj) {
-			  case MENSAJE_IMPRIMIR:
-				  recv(*(int*)socketDeConsola, &mensajeAux.tamMsj,sizeof(int), 0);
-				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(*(int*)socketDeConsola, &dataRecibida,mensajeAux.tamMsj, 0);
-				  printf("Mensaje recibido: %p\n", dataRecibida);
-				  free(dataRecibida);
-				  break;
-			  case MENSAJE_PATH:
-				  recv(*(int*)socketDeConsola, &mensajeAux.tamMsj,sizeof(int), 0);
-				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(*(int*)socketDeConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+	  paquete* paqueteRecibidoDeConsola;
+	  paqueteRecibidoDeConsola = recvRemasterizado(*(int*)socketDeConsola);
+	      paquete* mensajeAux;
+	      switch (paqueteRecibidoDeConsola->tipoMsj) {
+			  case MENSAJE_CODIGO:
+				  mensajeAux = recvRemasterizado(*(int*)socketDeConsola);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  cantPag = recibirCantidadPaginas(mensajeAux.tamMsj);
-				  inicializarPCB(dataRecibida,mensajeAux.tamMsj);
+				  cantPag = recibirCantidadPaginas(mensajeAux->mensaje);
+				  inicializarPCB(mensajeAux->mensaje,mensajeAux->tamMsj);
 				  prepararProgramaEnMemoria(*(int*)socketParaMemoria,ASIGNAR_PAGINAS);
-				  free(dataRecibida);
+				  free(mensajeAux);
 				  break;
 			  case CORTO:
 				  printf("El socket %d corto la conexion\n",*(int*)socketDeConsola);
@@ -967,10 +905,8 @@ void* manejadorConexionConsola (void* socketDeConsola){
 				  puts("Te la comes igual que ivan el trolazo");
 				  break;
 			  case FINALIZAR_PROGRAMA:
-				  recv(*(int*)socketDeConsola, &mensajeAux.tamMsj,sizeof(int), 0);
-				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(*(int*)socketDeConsola, &dataRecibida,mensajeAux.tamMsj, 0);
-				  finalizarPrograma((int)dataRecibida);
+				  mensajeAux = recvRemasterizado(*(int*)socketDeConsola);
+				  finalizarPrograma(mensajeAux->mensaje);
 				  break;
 			  default:
 					perror("No se reconoce el mensaje enviado por Consola");
@@ -979,33 +915,22 @@ void* manejadorConexionConsola (void* socketDeConsola){
   }
 
 //-----------------------------------MANEJADOR MEMORIA----------------------------------
-void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* socketCPU){
+void *manejadorConexionMemoria (void* socketMemoria){
   while(1){
-	  paquete paqueteRecibidoDeMemoria;
-	      if(recv(*(int*)socketMemoria, &paqueteRecibidoDeMemoria.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de Memoria");
-	        exit(-1);
-	      }
-	      if(recv(*(int*)socketMemoria, &paqueteRecibidoDeMemoria.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de Memoria");
-	        exit(-1);
-	      }
-	      paquete mensajeAux;
-	      void* dataRecibida;
-	      switch (paqueteRecibidoDeMemoria.tipoMsj) {
+	  paquete* paqueteRecibidoDeMemoria;
+	  paqueteRecibidoDeMemoria = recvRemasterizado(*(int*)socketMemoria);
+	  paquete* mensajeAux;
+	      switch (paqueteRecibidoDeMemoria->tipoMsj) {
 	      	  case TAMANIO_PAGINA:
-	      		  if (recv(*(int*)socketMemoria, &TAM_PAGINA, sizeof(int),0) == -1) {
-	      			perror("Error al recibir el tamanio de pagina");
-	      			exit(-1);
-	      		  }
+	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
+	      		TAM_PAGINA = mensajeAux->mensaje;
 	      		  break;
-	      	  case ESPACIO_INSUFICIENTE:
+	      	  case ESPACIO_INSUFICIENTE: ;
+	      		  char* espacioInsuficiente = malloc(sizeof(char)*60);
+	      		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
+	      		  sendRemasterizado(socketConsola, pid_actual, sizeof(int), &espacioInsuficiente);
 	      		  disminuirPID();
-	      		  int espacioInsuficiente = ESPACIO_INSUFICIENTE;
-	      		  if(send(*(int*)socketConsola, &espacioInsuficiente, sizeof(int),0) == -1) {
-	      			  error("Error de send");
-	      			  exit(-1);
-	      		  }
+	      		  free(espacioInsuficiente);
 	      		  break;
 	      	  case INICIO_EXITOSO: ;
 	      	  	  TablaKernel *proceso;
@@ -1017,33 +942,19 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 	      	  	  list_add(tablaKernel, proceso);
 	      	  	  log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
 	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,INICIAR_PROGRAMA);
-	      	  	  enviarPCB(*(int*)socketCPU);
+	      	  	  enviarPCB(socketCPU);
 	      	  	  t_proceso->abortado=false;
 	      	  	  t_proceso->pcb = nuevoPCB;
 	      	  	  t_proceso->socket_CPU = socketCPU;
 	      	  	  t_proceso->socket_CONSOLA = socketConsola;
 	      	  	  queue_push(estado->listo,t_proceso);
-	      	  	  enviarPIDAConsola(*(int*)socketConsola,t_proceso->pcb->PID);
+	      	  	  sendRemasterizado(socketConsola, MENSAJE_PID, sizeof(int), t_proceso->pcb->PID);
 	      	  	  break;
 	      	  case LEER_DATOS: ;
-	      		paquete paqueteARecibir;
-	      		paqueteARecibir.mensaje = malloc(paqueteRecibidoDeMemoria.tamMsj);
-	      		paqueteARecibir.tamMsj = paqueteRecibidoDeMemoria.tamMsj;
-	      		if(recv(*(int*)socketMemoria, paqueteARecibir.mensaje, paqueteARecibir.tamMsj, 0) == -1){
-	      			perror("Error al recibir la peticion de lectura");
-	      			exit(-1);
-	      		}
-	      		//Hace falta enviar a CPU
-	      		//
-	      		if(send(*(int*)socketCPU,&paqueteARecibir,paqueteARecibir.tamMsj,0) == -1){
-	      			perror("Error al enviar datos a CPU");
-	      			log_info(loggerKernel, "Error al enviar datos a CPU");
-	      			exit(-1);
-	      		}
+	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
+	      		sendRemasterizado(socketCPU, LEER_DATOS, mensajeAux->tamMsj, &(mensajeAux->mensaje));
+	      		free(mensajeAux);
 	      		break;
-	      	// Se pudo copiar
-	      		//No_Se_pudo_copiar
-	      		//DAtos_de-pagina, lee un buffer de datos
 	      	  default:
 	      		  perror("No se reconoce el mensaje enviado por Memoria");
 	      	  }
@@ -1119,7 +1030,7 @@ int main(int argc, char *argv[]) {
 								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketAChequear);
 								break;
 							case MEMORIA:
-								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,NULL);
+								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
 								FD_CLR(socketParaMemoria,&socketsMaster);
 								break;
 							case CPU:

@@ -10,16 +10,10 @@
 #include "socket.h"
 #include <stdio.h>
 
-#define MENSAJE_PATH  103
+#define MENSAJE_CODIGO  103
 #define MENSAJE_PID   105
 #define HANDSHAKE_CONSOLA 1005
 #define FINALIZAR_PROGRAMA 503
-
-typedef struct {
-	int tipoMsj;
-	int tamMsj;
-	void* mensaje;
-}Paquete;
 
 typedef struct {
 	_ip ip_Kernel;
@@ -36,7 +30,7 @@ typedef struct
 
 t_log* loggerConsola;
 t_list* listaProcesos;
-Paquete paqueteHiloCorrecto;
+paquete* paqueteHiloCorrecto;
 pthread_mutex_t mutexImpresiones;
 pthread_mutex_t mutexPaquete;
 int socketKernel;
@@ -65,11 +59,7 @@ void mostrar_consola(Consola aMostrar) {
 void realizarHandshake()
 {
 	int soyLeyenda = HANDSHAKE_CONSOLA;
-	if (send(socketKernel, &soyLeyenda, sizeof(int), 0) == -1) {
-		perror("Error al realizar handshake con kernel");
-		close(socketKernel);
-		exit(-1);
-	}
+	sendRemasterizado(socketKernel, HANDSHAKE_CONSOLA, sizeof(int), &soyLeyenda);
 }
 //-------------------FUNCIONES DEL TIEMPO------------------------------
 int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
@@ -115,61 +105,47 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 	return codigo;
 }
 
-Programa* recibirPID(Paquete paquetePath,Programa* programa)
+Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
 {
-	if (send(socketKernel, &paquetePath, paquetePath.tamMsj, 0) == -1) {
-		perror("Error al enviar la ruta del archivo al kernel");
-		close(socket);
-		exit(-1);
-	}
+	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, &mensaje);
 
 	struct timeval inicio;
 	bool PIDNoRecibido = true;
-	Paquete paqueteRecibido;
-	paqueteRecibido.mensaje = malloc(sizeof(int));
+	paquete* paqueteRecibido;
 
 	while(PIDNoRecibido){
-		if(recv(socketKernel,&paqueteRecibido,sizeof(int),0)==-1){
-			perror("Error de recv en Consola");
-			exit(-1);
-		}
-		else{
-			if(paqueteRecibido.tipoMsj==MENSAJE_PID){
-				programa->pid = paqueteRecibido.mensaje;
-				gettimeofday(&inicio, NULL);
-				programa->inicio = inicio;
-				programa->hilo = pthread_self();
-				programa->impresiones = 0;
-				list_add(listaProcesos,programa);
-				free(paqueteRecibido.mensaje);
-				PIDNoRecibido = false;
-			}
+		paqueteRecibido = recvRemasterizado(socketKernel);
+
+		if(paqueteRecibido->tipoMsj==MENSAJE_PID){
+			programa->pid = paqueteRecibido->mensaje;
+			gettimeofday(&inicio, NULL);
+			programa->inicio = inicio;
+			programa->hilo = pthread_self();
+			programa->impresiones = 0;
+			list_add(listaProcesos,programa);
+			PIDNoRecibido = false;
 		}
 	}
-	free(paquetePath.mensaje);
+	free(paqueteRecibido);
 	return programa;
 }
 
 void* iniciarPrograma(void* path)
 {
+	pthread_mutex_lock(&mutexImpresiones);
 	FILE *archivoRecibido = fopen((char*) path, "r");
 	log_info(loggerConsola,"Archivo recibido correctamente...\n");
+
 	long int tamanio = obtenerTamanioArchivo(archivoRecibido)+1;
+	char* mensaje = malloc(tamanio);
+	mensaje = leerArchivo(archivoRecibido,tamanio);
 
-	Paquete paquetePath;
-	paquetePath.tipoMsj = MENSAJE_PATH;
-	paquetePath.mensaje = malloc(tamanio);
-	paquetePath.mensaje = leerArchivo(archivoRecibido,tamanio);
-	paquetePath.tamMsj = tamanio;
-
-	pthread_mutex_lock(&mutexImpresiones);
 	Programa* programa;
 	programa = (Programa*) malloc(sizeof(Programa));
-	programa = recibirPID(paquetePath,programa);
+	programa = recibirPID(tamanio,programa,mensaje);
 	pthread_mutex_unlock(&mutexImpresiones);
 
-	Paquete paqueteRecibido;
-	paqueteRecibido.mensaje = malloc(sizeof(int));
+	paquete* paqueteRecibido;
 
 	bool paqueteNoUsado = false;
 
@@ -177,33 +153,32 @@ void* iniciarPrograma(void* path)
 	free((char*)path);
 
 	while(1){
-		if((programa->pid==paqueteHiloCorrecto.tipoMsj)&&(paqueteNoUsado)){
+		if((programa->pid==paqueteHiloCorrecto->tipoMsj)&&(paqueteNoUsado)){
 			pthread_mutex_lock(&mutexPaquete);
-			printf("Mensaje recibido: %p",paqueteHiloCorrecto.mensaje);
+			printf("Mensaje recibido: %p",paqueteHiloCorrecto->mensaje);
 			programa->impresiones++;
 			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
 			paqueteNoUsado = false;
-			free(paqueteHiloCorrecto.mensaje);
+			free(paqueteHiloCorrecto);
 			pthread_mutex_unlock(&mutexPaquete);
 		}
 
-		if(recv(*(int*)socketKernel,&paqueteRecibido,sizeof(int),0)==-1){
-			perror("Error de recv en Consola");
-			exit(-1);
-		}
-		else if(programa->pid==paqueteRecibido.tipoMsj){
+		paqueteRecibido = recvRemasterizado(socketKernel);
+
+		if(programa->pid==paqueteRecibido->tipoMsj){
 			pthread_mutex_lock(&mutexImpresiones);
-			printf("Mensaje recibido: %p",paqueteRecibido.mensaje);
+			printf("Mensaje recibido: %p",paqueteRecibido->mensaje);
 			programa->impresiones++;
 			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
-			free(paqueteRecibido.mensaje);
+			free(paqueteRecibido);
 			pthread_mutex_unlock(&mutexImpresiones);
 		}
 		else{
 			pthread_mutex_lock(&mutexPaquete);
+			paqueteHiloCorrecto = malloc(sizeof(paqueteRecibido));
 			paqueteHiloCorrecto = paqueteRecibido;
 			paqueteNoUsado = true;
-			free(paqueteRecibido.mensaje);
+			free(paqueteRecibido);
 			pthread_mutex_unlock(&mutexPaquete);
 			}
 	}
@@ -236,19 +211,7 @@ void imprimirInformacion(int pid,int impresiones,struct timeval *inicio,struct t
 
 void finalizarPrograma(int pid)
 {
-	Paquete paquete;
-	paquete.tipoMsj = FINALIZAR_PROGRAMA;
-	paquete.mensaje = malloc(sizeof(int));
-	paquete.mensaje = pid;
-	paquete.tamMsj = sizeof(int);
-
-	if (send(socketKernel, &paquete, paquete.tamMsj, 0) == -1) {
-		perror("Error al enviar PID al kernel");
-		close(socket);
-		exit(-1);
-	}
-
-	free(paquete.mensaje);
+	sendRemasterizado(socketKernel, FINALIZAR_PROGRAMA, sizeof(int), &pid);
 
 	Programa* programa = buscarPrograma(pid);
 	pthread_join(programa->hilo, NULL);

@@ -9,6 +9,17 @@
 #ifndef SRC_SOCKET_H_
 #define SRC_SOCKET_H_
 
+typedef struct {
+	int tipoMsj;
+	int tamMsj;
+	void* mensaje;
+}paquete;
+
+int calcularTamanioTotalPaquete(int);
+void sendRemasterizado(int, int, int, void*);
+paquete *recvRemasterizado(int);
+void sendDeNotificacion(int, int);
+int recvDeNotificacion(int deQuien);
 int ponerseAEscuchar(int, int);
 int aceptarConexion(int);
 void seleccionarYAceptarSockets(int);
