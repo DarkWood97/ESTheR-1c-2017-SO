@@ -929,14 +929,14 @@ void *manejadorTeclado(){
 //  }
 
 //-----------------------------------MANEJADOR CONSOLA----------------------------------
-void* manejadorConexionConsola (){
+void* manejadorConexionConsola (void* socketDeConsola){
   while(1){
 	  paquete paqueteRecibidoDeConsola;
-	      if(recv(socketConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
+	      if(recv(*(int*)socketDeConsola, &paqueteRecibidoDeConsola.tipoMsj,sizeof(int),0)==-1){
 	        perror("Error al recibir el tipo de mensaje de Consola");
 	        exit(-1);
 	      }
-	      if(recv(socketConsola, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
+	      if(recv(*(int*)socketDeConsola, &paqueteRecibidoDeConsola.tamMsj,sizeof(int),0)==-1){
 	        perror("Error al recibir tamanio de mensaje de Consola");
 	        exit(-1);
 	      }
@@ -944,16 +944,16 @@ void* manejadorConexionConsola (){
 	      void* dataRecibida;
 	      switch (paqueteRecibidoDeConsola.tipoMsj) {
 			  case MENSAJE_IMPRIMIR:
-				  recv(socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  recv(*(int*)socketDeConsola, &mensajeAux.tamMsj,sizeof(int), 0);
 				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  recv(*(int*)socketDeConsola, &dataRecibida,mensajeAux.tamMsj, 0);
 				  printf("Mensaje recibido: %p\n", dataRecibida);
 				  free(dataRecibida);
 				  break;
 			  case MENSAJE_PATH:
-				  recv(socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  recv(*(int*)socketDeConsola, &mensajeAux.tamMsj,sizeof(int), 0);
 				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  recv(*(int*)socketDeConsola, &dataRecibida,mensajeAux.tamMsj, 0);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
 				  cantPag = recibirCantidadPaginas(mensajeAux.tamMsj);
 				  inicializarPCB(dataRecibida,mensajeAux.tamMsj);
@@ -961,15 +961,15 @@ void* manejadorConexionConsola (){
 				  free(dataRecibida);
 				  break;
 			  case CORTO:
-				  printf("El socket %d corto la conexion\n",socketConsola);
-				  verificarProcesos(socketConsola);
-				  close(socketConsola);
+				  printf("El socket %d corto la conexion\n",*(int*)socketDeConsola);
+				  verificarProcesos(*(int*)socketDeConsola);
+				  close(*(int*)socketDeConsola);
 				  puts("Te la comes igual que ivan el trolazo");
 				  break;
 			  case FINALIZAR_PROGRAMA:
-				  recv(socketConsola, &mensajeAux.tamMsj,sizeof(int), 0);
+				  recv(*(int*)socketDeConsola, &mensajeAux.tamMsj,sizeof(int), 0);
 				  dataRecibida = malloc(mensajeAux.tamMsj);
-				  recv(socketConsola, &dataRecibida,mensajeAux.tamMsj, 0);
+				  recv(*(int*)socketDeConsola, &dataRecibida,mensajeAux.tamMsj, 0);
 				  finalizarPrograma((int)dataRecibida);
 				  break;
 			  default:
@@ -1056,10 +1056,10 @@ void *manejadorConexionMemoria (void* socketMemoria,void* socketConsola,void* so
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	//verificarParametrosInicio(argc);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
-	//inicializarKernel(argv[1]);
+	verificarParametrosInicio(argc);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
+	inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
@@ -1114,9 +1114,9 @@ int main(int argc, char *argv[]) {
 					}else{
 						switch (tipoMsj) {
 							case CONSOLA:
-								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,NULL);
 								log_info(loggerKernel,"Se conecto nueva consola...\n");
 								FD_CLR(socketConsola,&socketsCliente);
+								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketAChequear);
 								break;
 							case MEMORIA:
 								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,NULL);
