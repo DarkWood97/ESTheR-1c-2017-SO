@@ -1,16 +1,8 @@
-/*
- ============================================================================
- Name        : FileSystem.c
- Author      : 
- Version     :
- Copyright   : Your copyright notice
- Description : Hello World in C, Ansi-style
- ============================================================================
- */
-
 #include "funcionesGenericas.h"
 #include "socket.h"
 #include <commons/bitarray.h>
+#include <commons/txt.h>
+#include <sys/mman.h>
 
 #define ES_KERNEL 1
 #define CORTO_KERNEL 2
@@ -35,6 +27,7 @@ int tamanio_bloque;
 int cantidad_bloque;
 t_bitarray 	*bitmap;
 int socketKernel;
+char* mmapBitmap;
 
 //Lo que recibo
 char* pathDeArchivo;
@@ -44,6 +37,17 @@ int size;
 char* buffer;
 
 //------CONFIGURACION FILESYSTEM-----------------------------------------------
+void inicializarMmap(){
+	int size;
+	struct stat infoArchivo;
+	int file= open("../Metadata/Bitmap.bin",O_RDWR);
+	int status = fstat (file,&infoArchivo);
+	size=infoArchivo.st_size;
+	mmapBitmap = mmap(0,size,PROT_READ,PROT_WRITE|MAP_SHARED,file,0);
+}
+
+
+
 char* concatenarPath(char* path){
 	char* cadenaAux=strlen(punto_Montaje);
 	cadenaAux= punto_Montaje;
@@ -52,13 +56,11 @@ char* concatenarPath(char* path){
 	return cadenaAux;
 }
 
-char* concatenarBloque(char* bloque){
-	char* cadenaAux=strlen(punto_Montaje);
-	cadenaAux= punto_Montaje;
-	string_append(cadenaAux,"/Archivos/");
-	string_append(bloque,".bin");
-	string_append(cadenaAux,bloque);
-	return cadenaAux;
+char* armarNombreArchivo(int bloque){
+	char* bloqueAux=malloc(strlen(bloque));
+	bloqueAux=string_itoa(bloque);
+	string_append(bloqueAux,".bin");
+	return bloqueAux;
 }
 
 void fileSystemCrear(t_config *configuracion) {
@@ -79,13 +81,13 @@ void mostrarConfiguracionesFileSystem() {
 }
 
 void metadataFileSystem(){
-	char* cadenaAux=strlen(punto_Montaje);
-	cadenaAux=punto_Montaje;
-	string_append(cadenaAux,"/Metadata/Metadata.bin");
+	//char* cadenaAux=malloc(strlen(punto_Montaje));
+	//cadenaAux=punto_Montaje;
+	//string_append(&cadenaAux,"Metadata/Metadata.bin");
 	void* bufferDeInts;
 	bufferDeInts = malloc(sizeof(int)*2);
-	FILE *archivoFileSystem = fopen(cadenaAux, "r+w");
-	fread(bufferDeInts, sizeof(int), 2, archivoFileSystem);
+	FILE *archivoFileSystem = txt_open_for_append("Metadata.txt");
+	fread(&bufferDeInts, sizeof(int), 3, archivoFileSystem);
 	int cantBloques, tamanioBloques;
 	memcpy(&cantBloques, bufferDeInts, sizeof(int));
 	memcpy(&tamanioBloques, bufferDeInts+sizeof(int), sizeof(int));
@@ -100,108 +102,7 @@ long int obtenerTamanioArchivo(FILE* archivo){
 	 return nTamArch;
 }
 
-void cargarBitmap(){
-	//Hacer malloc
-	char* bitmapAux;
-	char* cadenaAux=strlen(punto_Montaje);
-	cadenaAux=punto_Montaje;
-	string_append(cadenaAux,"/Metadata/Bitmap.bin");
-	FILE *archivo = fopen(cadenaAux, "r+w");
-	int tamanio=obtenerTamanioArchivo(archivo)-1;
-	fread(bitmapAux, tamanio, 1, archivo);//Que va?
-	size_t size=strlen(bitmapAux);
-	bitmap = bitarray_create_with_mode(bitmapAux, size , MSB_FIRST);
-}
 //----------------------------FUNCIONES ARCHIVOS------------------------------------------------
-void leerBlqoues(int tamanioArchivo, int* bloques){
-	int bloque=offset/tamanio_bloque;
-	int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
-	//Hacer malloc
-	char* datosDelBloque;
-
-	char* cadenaBloque=malloc(strlen(punto_Montaje)+strlen(bloques[bloque])+strlen("/Archivos/")+strlen);
-	cadenaBloque=concatenarBloque(bloques[bloque]);
-	if((offset+size) < tamanioArchivo){
-		fseek(cadenaBloque,offset,SEEK_SET);
-		if(resto>0){
-			fread(datosDelBloque,sizeof(datosDelBloque),size,cadenaBloque);
-			if(send(socketKernel,&datosDelBloque,sizeof(datosDelBloque),0)==-1){
-				log_info(loggerFS, "", cadenaBloque);
-				exit(-1);
-			}
-		}else{
-			fread(datosDelBloque,sizeof(datosDelBloque),(size-resto),cadenaBloque);
-
-			//resto=resto-tamanio_bloque;
-			//Solucionar el tema del send
-			//if(send(socket,&datosDelBloque,sizeof(datosDelBloque),0)==-1){
-				//log_info(loggerFS, "Error al enviar existencia de archivo.", cadena);
-				//exit(-1);
-			//}
-			int sobrante=(offset+size)-(tamanio_bloque*bloque);
-			while(sobrante>tamanio_bloque){
-				bloque++;
-				cadenaBloque=concatenarBloque(bloques[bloque]);
-				fseek(cadenaBloque,0,SEEK_SET);
-				if(sobrante<tamanio_bloque){
-					fread(datosDelBloque,sizeof(datosDelBloque),sobrante,cadenaBloque);
-				}else{
-					fread(datosDelBloque,sizeof(datosDelBloque),tamanio_bloque,cadenaBloque);
-				}
-				sobrante=sobrante-tamanio_bloque;
-			}
-		}
-	}
-
-//	int i=0;
-//	for(;i<string_length(bloques);i++){
-//
-//
-//		fread(datosDelBloque,sizeof(bloques),1,cadenaBloque);//Que size le pongo
-//		if(send(socket,&datosDelBloque,sizeof(datosDelBloque),0)==-1){
-//			log_info(loggerFS, "", cadenaBloque);
-//			exit(-1);
-//		}
-//	}
-
-}
-
-void guardarBloques(int tamanioArchivo,int*bloques){
-	int bloque=offset/tamanio_bloque;
-	int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
-	char* cadenaBloque=malloc(strlen(punto_Montaje)+strlen(bloques[bloque])+strlen("/Archivos/")+strlen);
-	//Arreglar concatenacion de bloques--usar atoi
-	cadenaBloque=concatenarBloque(bloques[bloque]);
-	if((offset+size) < tamanioArchivo){
-		fseek(cadenaBloque,offset,SEEK_SET);
-		if(resto>0){
-			fwrite(buffer,sizeof(buffer),size,cadenaBloque);
-		}else{
-			fwrite(buffer,sizeof(buffer),(size-resto),cadenaBloque);
-			int sobrante=(offset+size)-(tamanio_bloque*bloque);
-			while(sobrante>tamanio_bloque){
-				bloque++;
-				cadenaBloque=concatenarBloque(bloques[bloque]);
-				fseek(cadenaBloque,0,SEEK_SET);
-				if(sobrante<tamanio_bloque){
-					fwrite(buffer,sizeof(buffer),sobrante,cadenaBloque);
-				}else{
-					fwrite(buffer,sizeof(buffer),tamanio_bloque,cadenaBloque);
-				}
-				sobrante=sobrante-tamanio_bloque;
-			}
-		}
-	}
-//
-//	int i=0;
-//	for(;i<string_length(bloques);i++){
-//		fread(datosDelBloque,sizeof(bloques),1,cadenaBloque);//Que size le pongo
-//		if(send(socket,&datosDelBloque,sizeof(datosDelBloque),0)==-1){
-//			log_info(loggerFS, "", cadenaBloque);
-//			exit(-1);
-//		}
-//	}
-}
 
 //Chequear
 int bloqueVacio(){
@@ -227,7 +128,7 @@ void liberarBloques(int* bloques){
 }
 
 bool crearArchivoDeFS(){
-		int bloque;
+		int* bloque;
 		int tamanio=0;
 		char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 		cadena=concatenarPath(pathDeArchivo);
@@ -246,7 +147,6 @@ int cantidadBloques(int tamanio){
 }
 
 bool seBorroArchivoDeFS(){
-	  bool removidoCorrectamente = false;
 	  char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	  cadena=concatenarPath(pathDeArchivo);
 	  int tamanio;
@@ -256,10 +156,9 @@ bool seBorroArchivoDeFS(){
 	  fread(&bloques,sizeof(int),largo-1,cadena);
 	  liberarBloques(bloques);
 	  if(remove(cadena)==0){
-		removidoCorrectamente = true;
-		return removidoCorrectamente;
+		return true;
 	  }
-	  return removidoCorrectamente;
+	  return false;
 }
 
 
@@ -284,6 +183,44 @@ void verificarArchivo (){
 	}
 }
 
+void leerBlqoues(int tamanioArchivo, int* bloques){
+	int bloque=offset/tamanio_bloque;
+	int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
+	//Hacer malloc
+	char* datosDelBloque=malloc(size);
+	char* cadenaBloque=malloc(strlen(bloques[bloque])+strlen(".bin"));
+	cadenaBloque=armarNombreArchivo(bloques[bloque]);
+	char* path=malloc(strlen(punto_Montaje)+strlen(cadenaBloque));
+	path=concatenarPath(cadenaBloque);
+	if((offset+size) < tamanioArchivo){
+		fseek(path,offset,SEEK_SET);
+		if(resto>0){
+			//Moridificar size
+			fread(&datosDelBloque,sizeof(datosDelBloque),size,path);
+			if(send(socketKernel,&datosDelBloque,sizeof(datosDelBloque),0)==-1){
+				log_info(loggerFS, "", cadenaBloque);
+				exit(-1);
+			}
+		}else{
+			fread(&datosDelBloque,sizeof(datosDelBloque),(size-resto),path);
+			int sobrante=(offset+size)-(tamanio_bloque*bloque);
+			while(sobrante>tamanio_bloque){
+				bloque++;
+				//Abrir archivo
+				cadenaBloque=armarNombreArchivo(bloques[bloque]);
+				path=concatenarPath(cadenaBloque);
+				fseek(path,0,SEEK_SET);
+				if(sobrante<tamanio_bloque){
+					fread(&datosDelBloque,sizeof(datosDelBloque),sobrante,path);
+				}else{
+					fread(&datosDelBloque,sizeof(datosDelBloque),tamanio_bloque,path);
+				}
+				sobrante=sobrante-tamanio_bloque;
+			}
+		}
+	}
+}
+
 void obtenerDatosDelArchivo(){
 	int tamanioArchivo;
 	int* bloques;
@@ -297,6 +234,39 @@ void obtenerDatosDelArchivo(){
 		log_info(loggerFS, "Se obtuvieron los datos del archivo %s exitosamente.",cadena);
 	}else{
 		log_info(loggerFS, "Modo incorrecto del archivo %s .",cadena);
+	}
+}
+
+void guardarBloques(int tamanioArchivo,int*bloques){
+	int bloque=offset/tamanio_bloque;
+	int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
+
+	char* datosDelBloque=malloc(size);
+	char* cadenaBloque=malloc(strlen(bloques[bloque])+strlen(".bin"));
+	cadenaBloque=armarNombreArchivo(bloques[bloque]);
+	char* path=malloc(strlen(punto_Montaje)+strlen(cadenaBloque));
+	path=concatenarPath(cadenaBloque);
+
+	if((offset+size) < tamanioArchivo){
+		fseek(path,offset,SEEK_SET);
+		if(resto>0){
+			fwrite(buffer,sizeof(buffer),size,path);
+		}else{
+			fwrite(buffer,sizeof(buffer),(size-resto),path);
+			int sobrante=(offset+size)-(tamanio_bloque*bloque);
+			while(sobrante>tamanio_bloque){
+				bloque++;
+				cadenaBloque=armarNombreArchivo(bloques[bloque]);
+				path=concatenarPath(cadenaBloque);
+				fseek(path,0,SEEK_SET);
+				if(sobrante<tamanio_bloque){
+					fwrite(buffer,sizeof(buffer),sobrante,path);
+				}else{
+					fwrite(buffer,sizeof(buffer),tamanio_bloque,path);
+				}
+				sobrante=sobrante-tamanio_bloque;
+			}
+		}
 	}
 }
 
@@ -388,15 +358,18 @@ void recibirHandshakeDeKernel(){
 
 //--------------------------------- MAIN -----------------------------------------
 
-int main() {
+int main(int argc, char *argv[]) {
 	loggerFS = log_create("FileSystem.log", "FileSystem", 0, 0);
-	char *path="FileSystem/fileSystem.config";
+	char *path="Debug/fileSystem.config";
 	inicializarFileSystem(path);
+	//verificarParametrosInicio(argc);
+	//inicializarFileSystem(argv[1]);
 	mostrarConfiguracionesFileSystem();
 	int socketEscuchaFS;
 	socketEscuchaFS = ponerseAEscucharClientes(puerto, 0);
 	metadataFileSystem();
-	cargarBitmap();
+	inicializarMmap();
+	bitmap = bitarray_create(mmapBitmap, string_length(mmapBitmap));
 	bool existeArchivo;
 	  while(!hayKernelConectado){
 	    int socketKernel = aceptarConexionDeCliente(socketEscuchaFS);
@@ -447,4 +420,3 @@ int main() {
 
 	    }
 }
-
