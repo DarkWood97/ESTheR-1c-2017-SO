@@ -29,6 +29,7 @@ typedef struct __attribute__((__packed__)){
 #define DATOS_DE_PAGINA 103
 #define TAMANIO_PAGINA_PARA_KERNEL 102
 #define HANG_UP_KERNEL 0
+#define LIBERAR_PAGINA 506
 
 typedef struct __attribute__((packed)){
 	int frame;
@@ -51,6 +52,7 @@ int ENTRADAS_CACHE;
 char* REEMPLAZO_CACHE;
 int CACHE_X_PROC;
 int RETARDO_MEMORIA;
+int cantidadPaginasDeTabla;
 
 //-----FUNCIONES MEMORIA------------------------------------------------
 void crearMemoria(t_config *configuracion) {
@@ -83,23 +85,23 @@ void mostrarConfiguracionesMemoria() {
 
 int calcularTamanioDeTabla(){
 	long int tamanio_tabla = MARCOS*sizeof(entradaTabla);
-	int cantidadDePaginasQueOcupa = tamanio_tabla/MARCOS_SIZE;
+	int cantidadPaginasDeTabla = tamanio_tabla/MARCOS_SIZE;
 	if((tamanio_tabla%MARCOS_SIZE)!=0){
-	    cantidadDePaginasQueOcupa++;
+	    cantidadPaginasDeTabla++;
 	  }
-	return cantidadDePaginasQueOcupa;
+	return cantidadPaginasDeTabla;
 }
 
 void crearEstructuraAdministrativa(){ //Tabla de paginas invertidas
-	int cantidadDePAginasQueOcupa = calcularTamanioDeTabla();
-	punteroAPrincipioDeDatos = memoriaSistema + cantidadDePAginasQueOcupa*MARCOS_SIZE;
+	cantidadPaginasDeTabla = calcularTamanioDeTabla();
+	punteroAPrincipioDeDatos = memoriaSistema + cantidadPaginasDeTabla*MARCOS_SIZE;
 	int paginaChequeada;
-	for(paginaChequeada = 0; paginaChequeada<cantidadDePAginasQueOcupa;paginaChequeada++){
+	for(paginaChequeada = 0; paginaChequeada<cantidadPaginasDeTabla;paginaChequeada++){
 		entradasDeTabla[paginaChequeada].frame = paginaChequeada;
 		entradasDeTabla[paginaChequeada].pid = -1;
 		entradasDeTabla[paginaChequeada].pagina = paginaChequeada;
 	}
-	for(paginaChequeada = cantidadDePAginasQueOcupa; paginaChequeada<MARCOS; paginaChequeada++){
+	for(paginaChequeada = cantidadPaginasDeTabla; paginaChequeada<MARCOS; paginaChequeada++){
 		entradasDeTabla[paginaChequeada].frame = paginaChequeada;
 		entradasDeTabla[paginaChequeada].pid = -1;
 		entradasDeTabla[paginaChequeada].pagina = -1;
@@ -226,6 +228,7 @@ void dumpDeUnProceso(int pid){
   }
     pthread_mutex_unlock(&mutexTablaInvertida);
 }
+
 
 //-----------------------------DUMP ESTRUCTURAS DE MEMORIA
 
@@ -403,6 +406,13 @@ void reservarPaginasParaProceso(int pid, int cantidadDePaginas, int socketConPet
 			sendDeNotificacion(socketConPeticion, INICIO_EXITOSO);
 		}
 }
+
+bool puedeSerLiberada(numeroDeFrame){
+  if(cantidadPaginasDeTabla<numeroDeFrame<MARCOS){
+    return true;
+  }
+  return false;
+}
 //-------------------------------------ASIGNAR PAGINAS PARA PROCESO---------------------------------//
 void asignarPaginasAProceso(paquete* paqueteDeAsignacion, int socketConPeticionDeAsignacion){
 	int pid, cantidadDePaginas;
@@ -475,11 +485,25 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
 //    }
     free(datosLeidos);
 }
+//------------------------------LIBERAR PAGINA---------------------------------------//
 
-
-
+/*
+ * void liberarPagina(paquete *paqueteDeLiberacion, int socketConPeticionDeLiberacion){
+  int pid, numPagina;
+  memcpy(&pid, paqueteDeLiberacion->mensaje, sizeof(int));
+  memcpy(&numPagina, paqueteDeLiberacion->mensaje + sizeof(int), sizeof(int));
+  int numeroDeFrame = funcionHash(int pid, int numPagina);
+  if(puedeSerLiberada(numeroDeFrame)){
+    entradasDeTabla[numeroDeFrame].pid = -1;
+    entradasDeTabla[numeroDeFrame].numPagina = -1;
+    sendDeNotificacion(socketConPeticionDeLiberacion, SE_PUDO_LIBERAR);
+  }else{
+    sendDeNotificacion(socketConPeticionDeLiberacion, NO_SE_PUDO_LIBERAR);
+  }
+}
+ *
+ */
 //------------------------------------------------HILOS MEMORIA-----------------------------------------//
-
 //--------------------------------------------MANEJADOR TECLADO-----------------------------------------//
 
 void *manejadorTeclado(){
@@ -559,11 +583,15 @@ void *manejadorConexionKernel(void* socketKernel){
 			break;
 		case LEER_DATOS:
 			log_info(loggerMemoria, "Se recibio una peticion de lectura por parte del kernel...");
-				leerDatos(paqueteRecibidoDeKernel, *(int*)socketKernel);
+			leerDatos(paqueteRecibidoDeKernel, *(int*)socketKernel);
 		  break;
 		case ESCRIBIR_DATOS:
 			log_info(loggerMemoria, "Se recibio una peticion de escritura por parte del kernel...");
 			escribirDatos(paqueteRecibidoDeKernel, *(int*)socketKernel);
+			break;
+		case LIBERAR_PAGINA:
+			log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina por parte de kernel...");
+			//liberarPagina(paqueteRecibidoDeKernel, *(int*)socketKernel);
 			break;
 		case FINALIZAR_PROGRAMA:
 			finalizarProceso(paqueteRecibidoDeKernel, *(int*)socketKernel);
@@ -608,18 +636,17 @@ void *manejadorConexionCPU (void *socketCPU){
 	      }
 	  }
   }
-
 //------------------------------------------FIN DE FUNCIONES MANEJADORAS DE HILOS------------------------//
 
 //----------------------------------------MAIN--------------------------------------------//
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	//verificarParametrosInicio(argc);
-	char* path = "Debug/memoria.config";
-	//inicializarMemoria(argv[1]);
+	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
+	inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion, paqDePaginas;
-	inicializarMemoria(path);
+	//inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
 	entradasDeTabla= (entradaTabla*) memoriaSistema;
@@ -671,20 +698,10 @@ int main(int argc, char *argv[]) {
 							default:
 								puts("Conexion erronea");
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
-
 								close(socketClienteChequeado);
-
-
-
 					}
-
 				}
-
 			}
-
 		}
-
 	}
-
 }
-
