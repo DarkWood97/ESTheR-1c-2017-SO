@@ -733,7 +733,7 @@ t_list* inicializarStack(t_list *contexto) {
 
 void inicializarPCB(char* buffer,int tamanioBuffer) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
-
+	nuevoPCB = malloc(sizeof(PCB));
 	nuevoPCB->PID = aumentarPID();
 	nuevoPCB->ProgramCounter = 0;
 	nuevoPCB->paginas_Codigo = (int)ceil((double)tamanioBuffer / (double)cantPag);
@@ -890,15 +890,15 @@ void* manejadorConexionConsola (void* socket){
 	  paquete* paqueteRecibidoDeConsola;
 	  int socketDeConsola = *(int*)socket;
 	  paqueteRecibidoDeConsola = recvRemasterizado(socketDeConsola);
-	      paquete* mensajeAux;
+	     paquete* mensajeAux;
 	      switch (paqueteRecibidoDeConsola->tipoMsj) {
 			  case MENSAJE_CODIGO:
-				  mensajeAux = recvRemasterizado(socketDeConsola);
+				  //mensajeAux = recvRemasterizado(socketDeConsola);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  cantPag = recibirCantidadPaginas(mensajeAux->mensaje);
-				  inicializarPCB(mensajeAux->mensaje,mensajeAux->tamMsj);
+				  cantPag = recibirCantidadPaginas(paqueteRecibidoDeConsola->mensaje);
+				  inicializarPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj);
 				  prepararProgramaEnMemoria(socketParaMemoria,ASIGNAR_PAGINAS);
-				  free(mensajeAux);
+				  free(paqueteRecibidoDeConsola);
 				  break;
 			  case CORTO:
 				  printf("El socket %d corto la conexion\n",socketDeConsola);
