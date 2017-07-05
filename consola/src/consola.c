@@ -67,8 +67,7 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
     result->tv_usec = diff % 1000000;
     return (diff<0);
 }
-void timeval_print(struct timeval *tv)
-{
+void timeval_print(struct timeval *tv){
     char buffer[30];
     time_t curtime;
 
@@ -115,7 +114,7 @@ Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
 		paqueteRecibido = recvRemasterizado(socketKernel);
 
 		if(paqueteRecibido->tipoMsj==MENSAJE_PID){
-			programa->pid = paqueteRecibido->mensaje;
+			programa->pid = *(int*)paqueteRecibido->mensaje;
 			gettimeofday(&inicio, NULL);
 			programa->inicio = inicio;
 			programa->hilo = pthread_self();

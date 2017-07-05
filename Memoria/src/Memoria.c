@@ -448,6 +448,12 @@ void sizeProceso(int pid){
 	free(cadenaAImprimir);
 }
 
+//-----------------------------FLUSH CACHE------------------------//
+
+void flushCache(){
+	list_clean_and_destroy_elements(cacheDeMemoria->entradasCache, (void*)eliminarEntrada);
+}
+
 //-------------------------FUNCIONES AUXILIARES PARA LOS MANEJADORES DE HILOS---------------------------//
 
 //------------------------FUNCIONES AUXILIARES PARA HILO DE KERNEL--------------------------------------//
@@ -546,7 +552,6 @@ void asignarPaginasAProceso(paquete* paqueteDeAsignacion, int socketConPeticionD
 	memcpy(&pid, paqueteDeAsignacion->mensaje, sizeof(int));
 	memcpy(&cantidadDePaginas, paqueteDeAsignacion->mensaje + sizeof(int), sizeof(int));
 	reservarPaginasParaProceso(pid,cantidadDePaginas,socketConPeticionDeAsignacion);
-  //Fin del semaforo
 }
 //-----------------------------------INICIAR PROCESO----------------------------------------//
 void inicializarProceso(paquete* paqueteParaIniciar, int socketConPeticionDeInicio){
@@ -638,8 +643,8 @@ void *manejadorTeclado(){
 		if(string_equals_ignore_case(comando,"dump")){
 			dumpDeTodosLosDatos();
 		}else if(string_equals_ignore_case(comando, "size")){
-      sizeMemoria();
-    }else{
+			sizeMemoria();
+		}else{
 			char* posibleRetardo = string_substring_until(comando, 7);
 			char* posibleFlush = string_substring_until(comando, 5);
 			char* posibleDump = string_substring_until(comando, 4);
@@ -654,7 +659,7 @@ void *manejadorTeclado(){
 					log_info(loggerMemoria,"Se ha modificado el RETARDO_MEMORIA a %d",retardoRequerido);
 				}
 			}else if(string_equals_ignore_case(posibleFlush, "flush")){
-    //Limpiar cache, queda para las proximas entregas
+				flushCache();
 			}else if(string_equals_ignore_case(posibleDump, "dump")){
 				char* queDumpear = string_new();
 				queDumpear = string_substring_from(comando, 5);
@@ -670,15 +675,15 @@ void *manejadorTeclado(){
 				}
 				free(queDumpear);
 			}else if(string_equals_ignore_case(posibleSize, "size")){
-        char* procesoASizear = string_new();
-        procesoASizear = string_substring_from(comando, 5);
-        if(!esNumero(procesoASizear)){
-          perror("Error del primer parametro en el size");
-        }else{
-          int pid = atoi(procesoASizear);
-          free(procesoASizear);
-          sizeProceso(pid);
-        }
+				char* procesoASizear = string_new();
+				procesoASizear = string_substring_from(comando, 5);
+				if(!esNumero(procesoASizear)){
+					perror("Error del primer parametro en el size");
+				}else{
+					int pid = atoi(procesoASizear);
+					free(procesoASizear);
+					sizeProceso(pid);
+				}
 			}else{
 				puts("Error de comando");
 			}
@@ -728,35 +733,29 @@ void *manejadorConexionKernel(void* socket){
 	}
 }
 //--------------------------------------------MANEJADOR CPU--------------------------------------//
-void *manejadorConexionCPU (void *socketCPU){
+void *manejadorConexionCPU (void *socket){
   while(1){
-	  paquete paqueteRecibidoDeCPU;
-	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de CPU");
-	        exit(-1);
-	      }
-	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de CPU");
-	        exit(-1);
-	      }
-	      switch (paqueteRecibidoDeCPU.tipoMsj) {
-	        case LEER_DATOS:
-	          log_info(loggerMemoria,"Se recibio una peticion de lectura por parte de una CPU...");
-	          leerDatos(paqueteRecibidoDeCPU.tamMsj, *(int*)socketCPU);
-	          break;
-	        case ESCRIBIR_DATOS:
-	          log_info(loggerMemoria, "Se recibio una peticion de escritura por parte de una CPU...");
-	          escribirDatos(paqueteRecibidoDeCPU.tamMsj, *(int*)socketCPU);
-	          break;
-	        case HANG_UP_CPU:
-	        	log_info(loggerMemoria, "Se ha cortado conexion con el socket CPU %d ya que se cerro la CPU", socketCPU);
-	        	close(*(int*)socketCPU);
-	        	break;
-	        default:
-	        	perror("No se reconoce el mensaje enviado por CPU");
-	      }
+	  paquete *paqueteRecibidoDeCPU;
+	  int socketCPU = *(int*)socket;
+	  paqueteRecibidoDeCPU = recvRemasterizado(socketCPU);
+	  switch (paqueteRecibidoDeCPU->tipoMsj) {
+      case LEER_DATOS:
+    	  log_info(loggerMemoria,"Se recibio una peticion de lectura por parte de una CPU...");
+    	  leerDatos(paqueteRecibidoDeCPU, socketCPU);
+    	  break;
+      case ESCRIBIR_DATOS:
+    	  log_info(loggerMemoria, "Se recibio una peticion de escritura por parte de una CPU...");
+    	  escribirDatos(paqueteRecibidoDeCPU, socketCPU);
+    	  break;
+      case HANG_UP_CPU:
+    	  log_info(loggerMemoria, "Se ha cortado conexion con el socket CPU %d ya que se cerro la CPU", socketCPU);
+    	  close(socketCPU);
+    	  break;
+      default:
+    	  perror("No se reconoce el mensaje enviado por CPU");
 	  }
   }
+}
 //------------------------------------------FIN DE FUNCIONES MANEJADORAS DE HILOS------------------------//
 
 //----------------------------------------MAIN--------------------------------------------//
