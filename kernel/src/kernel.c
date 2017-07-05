@@ -917,52 +917,55 @@ void* manejadorConexionConsola (void* socketDeConsola){
   }
 
 //-----------------------------------MANEJADOR MEMORIA----------------------------------
-void *manejadorConexionMemoria (void* socketMemoria){
-  while(1){
-	  paquete* paqueteRecibidoDeMemoria;
-	  paqueteRecibidoDeMemoria = recvRemasterizado(*(int*)socketMemoria);
-	  paquete* mensajeAux;
-	      switch (paqueteRecibidoDeMemoria->tipoMsj) {
-	      	  case TAMANIO_PAGINA:
-	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
-	      		TAM_PAGINA = mensajeAux->mensaje;
-	      		  break;
-	      	  case ESPACIO_INSUFICIENTE: ;
-	      		  char* espacioInsuficiente = malloc(sizeof(char)*60);
-	      		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
-	      		  sendRemasterizado(socketConsola, pid_actual, sizeof(int), &espacioInsuficiente);
-	      		  disminuirPID();
-	      		  free(espacioInsuficiente);
-	      		  break;
-	      	  case INICIO_EXITOSO: ;
-	      	  	  TablaKernel *proceso;
-	      	  	  t_proceso* t_proceso;
-	      	  	  t_proceso = malloc(sizeof(t_proceso));
-	      	  	  proceso->pid = pid_actual;
-	      	  	  proceso->tamaniosPaginas = TAM_PAGINA;
-	      	  	  proceso->paginas = cantPag;
-	      	  	  list_add(tablaKernel, proceso);
-	      	  	  log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
-	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,INICIAR_PROGRAMA);
-	      	  	  enviarPCB(socketCPU);
-	      	  	  t_proceso->abortado=false;
-	      	  	  t_proceso->pcb = nuevoPCB;
-	      	  	  t_proceso->socket_CPU = socketCPU;
-	      	  	  t_proceso->socket_CONSOLA = socketConsola;
-	      	  	  queue_push(estado->listo,t_proceso);
-	      	  	  sendRemasterizado(socketConsola, MENSAJE_PID, sizeof(int), t_proceso->pcb->PID);
-	      	  	  break;
-	      	  case LEER_DATOS: ;
-	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
-	      		sendRemasterizado(socketCPU, LEER_DATOS, mensajeAux->tamMsj, &(mensajeAux->mensaje));
-	      		free(mensajeAux);
-	      		break;
-	      	  default:
-	      		  perror("No se reconoce el mensaje enviado por Memoria");
-	      	  }
-	  }
-  }
+//void *manejadorConexionMemoria (void* socketMemoria){
+//  while(1){
+//	  paquete* paqueteRecibidoDeMemoria;
+//	  paqueteRecibidoDeMemoria = recvRemasterizado(*(int*)socketMemoria);
+//	  paquete* mensajeAux;
+//	      switch (paqueteRecibidoDeMemoria->tipoMsj) {
+//	      	  case TAMANIO_PAGINA:
+//	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
+//	      		TAM_PAGINA = mensajeAux->mensaje;
+//	      		  break;
+//	      	  case ESPACIO_INSUFICIENTE: ;
+//	      		  char* espacioInsuficiente = malloc(sizeof(char)*60);
+//	      		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
+//	      		  sendRemasterizado(socketConsola, pid_actual, sizeof(int), &espacioInsuficiente);
+//	      		  disminuirPID();
+//	      		  free(espacioInsuficiente);
+//	      		  break;
+//	      	  case INICIO_EXITOSO: ;
+//	      	  	  TablaKernel *proceso;
+//	      	  	  t_proceso* t_proceso;
+//	      	  	  t_proceso = malloc(sizeof(t_proceso));
+//	      	  	  proceso->pid = pid_actual;
+//	      	  	  proceso->tamaniosPaginas = TAM_PAGINA;
+//	      	  	  proceso->paginas = cantPag;
+//	      	  	  list_add(tablaKernel, proceso);
+//	      	  	  log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
+//	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,INICIAR_PROGRAMA);
+//	      	  	  enviarPCB(socketCPU);
+//	      	  	  t_proceso->abortado=false;
+//	      	  	  t_proceso->pcb = nuevoPCB;
+//	      	  	  t_proceso->socket_CPU = socketCPU;
+//	      	  	  t_proceso->socket_CONSOLA = socketConsola;
+//	      	  	  queue_push(estado->listo,t_proceso);
+//	      	  	  sendRemasterizado(socketConsola, MENSAJE_PID, sizeof(int), t_proceso->pcb->PID);
+//	      	  	  break;
+//	      	  case LEER_DATOS: ;
+//	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
+//	      		sendRemasterizado(socketCPU, LEER_DATOS, mensajeAux->tamMsj, &(mensajeAux->mensaje));
+//	      		free(mensajeAux);
+//	      		break;
+//	      	  default:
+//	      		  perror("No se reconoce el mensaje enviado por Memoria");
+//	      	  }
+//	  }
+//  }
 
+void *manejadorConexionCPU(void* socketCPU){
+
+}
 
 //-----------------------------------MAIN-----------------------------------------------
 
@@ -975,8 +978,8 @@ int main(int argc, char *argv[]) {
 //	inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
-	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
-	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketAEnviarMensaje, socketQueAcepta, bytesRecibidos;
+	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
+	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketQueAcepta;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
@@ -1020,40 +1023,36 @@ int main(int argc, char *argv[]) {
 					socketMaxMaster = calcularSocketMaximo(socketQueAcepta,socketMaxMaster);
 				}
 				else {
-					int tipoMsj;
-					if(recv(socketAChequear,&tipoMsj,sizeof(int),0)==-1){
-						perror("Error de recv en kernel");
-						exit(-1);
-					}else{
-						switch (tipoMsj) {
-							case CONSOLA:
-								log_info(loggerKernel,"Se conecto nueva consola...\n");
-								FD_CLR(socketConsola,&socketsCliente);
-								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketAChequear);
-								break;
-//							case MEMORIA:
-//								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
-//								FD_CLR(socketParaMemoria,&socketsMaster);
+					int tipoMsj = recvDeNotificacion(socketAChequear);
+					switch (tipoMsj) {
+						case CONSOLA:
+							log_info(loggerKernel,"Se conecto nueva consola...\n");
+							FD_CLR(socketAChequear,&socketsCliente);
+							pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketAChequear);
+							break;
+//						case MEMORIA:
+//							pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
+//							FD_CLR(socketParaMemoria,&socketsMaster);
 //								break;
-							case CPU:
-								queue_push(cola_CPU_libres,socketCPU);
-								//enviarAEjecutar(int pid);
-								//socketCPU = comenzarAEjecutar(int pid);
-								log_info(loggerKernel,"Se registro nueva CPU...\n");
-								FD_CLR(socketCPU,&socketsCliente);
-								break;
-							case ERROR:
-								perror("Error de recv");
-								close(socketAChequear);
-								FD_CLR(socketAChequear, &socketsMaster);
-								FD_CLR(socketAChequear, &socketsCliente);
-								exit(-1);
-							default:
-								puts("Conexion erronea");
-								FD_CLR(socketAChequear, &socketsMaster);
-								FD_CLR(socketAChequear, &socketsCliente);
-								close(socketAChequear);
-							}
+						case CPU:
+							queue_push(cola_CPU_libres,socketCPU);
+							//enviarAEjecutar(int pid);
+							//socketCPU = comenzarAEjecutar(int pid);
+							pthread_create(&hiloManejadorCPU, NULL,  manejadorConexionCPU, (void*)socketAChequear);
+							log_info(loggerKernel,"Se registro nueva CPU...\n");
+							FD_CLR(socketAChequear,&socketsCliente);
+							break;
+						case ERROR:
+							perror("Error de recv");
+							close(socketAChequear);
+							FD_CLR(socketAChequear, &socketsMaster);
+							FD_CLR(socketAChequear, &socketsCliente);
+							exit(-1);
+						default:
+							puts("Conexion erronea");
+							FD_CLR(socketAChequear, &socketsMaster);
+							FD_CLR(socketAChequear, &socketsCliente);
+							close(socketAChequear);
 						}
 					}
 				}
