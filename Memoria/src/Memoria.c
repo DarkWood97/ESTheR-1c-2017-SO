@@ -687,39 +687,40 @@ void *manejadorTeclado(){
 	}
 }
 //-------------------------------------------MANEJADOR KERNEL------------------------------------//
-void *manejadorConexionKernel(void* socketKernel){
+void *manejadorConexionKernel(void* socket){
 	while(1){
 		paquete *paqueteRecibidoDeKernel;
+		int socketKernel = *(int*)socket;
     //Chequear y recibir datos de kernel
-		paqueteRecibidoDeKernel =  recvRemasterizado(*(int*)socketKernel);
+		paqueteRecibidoDeKernel =  recvRemasterizado(socketKernel);
 		switch (paqueteRecibidoDeKernel->tipoMsj){
 		case INICIALIZAR_PROGRAMA:
 			log_info(loggerMemoria, "Ser recibio una peticion para inicializar un programa de kernel...");
-			inicializarProceso(paqueteRecibidoDeKernel,*(int*)socketKernel);
+			inicializarProceso(paqueteRecibidoDeKernel,socketKernel);
 			break;
 		case ASIGNAR_PAGINAS:
 			log_info(loggerMemoria, "Se recibio una peticion para asignar paginas de kernel...");
-			asignarPaginasAProceso(paqueteRecibidoDeKernel, *(int*)socketKernel);
+			asignarPaginasAProceso(paqueteRecibidoDeKernel, socketKernel);
 			break;
 		case LEER_DATOS:
 			log_info(loggerMemoria, "Se recibio una peticion de lectura por parte del kernel...");
-			leerDatos(paqueteRecibidoDeKernel, *(int*)socketKernel);
+			leerDatos(paqueteRecibidoDeKernel, socketKernel);
 		  break;
 		case ESCRIBIR_DATOS:
 			log_info(loggerMemoria, "Se recibio una peticion de escritura por parte del kernel...");
-			escribirDatos(paqueteRecibidoDeKernel, *(int*)socketKernel);
+			escribirDatos(paqueteRecibidoDeKernel, socketKernel);
 			break;
 		case LIBERAR_PAGINA:
 			log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina por parte de kernel...");
 			//liberarPagina(paqueteRecibidoDeKernel, *(int*)socketKernel);
 			break;
 		case FINALIZAR_PROGRAMA:
-			finalizarProceso(paqueteRecibidoDeKernel, *(int*)socketKernel);
+			finalizarProceso(paqueteRecibidoDeKernel, socketKernel);
 			break;
 		case HANG_UP_KERNEL:
 			log_info(loggerMemoria, "Se ha cortado conexion con kernel.");
 			log_info(loggerMemoria, "Cerrando memoria.");
-			close(*(int*)socketKernel);
+			close(socketKernel);
 			exit(0);
 		default:
 			perror("No se recibio correctamente el mensaje");
@@ -773,6 +774,7 @@ int main(int argc, char *argv[]) {
 	crearEstructuraAdministrativa();
 	log_info(loggerMemoria,"Se han inicializado las estructuras administrativas de memoria...");
 	int socketEscuchaMemoria,socketClienteChequeado,socketAceptaClientes;
+	int* socketCPU;
 	pthread_t hiloManejadorKernel, hiloManejadorTeclado,hiloManejadorCPU; //Declaro hilos para manejar las conexiones
 
 	fd_set aceptarConexiones, fd_setAuxiliar;
@@ -802,7 +804,9 @@ int main(int argc, char *argv[]) {
 						int quienEs = recvDeNotificacion(socketClienteChequeado);
 						switch(quienEs){
 							case ES_CPU:
-								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketClienteChequeado);
+								socketCPU = malloc(sizeof(int));
+								*socketCPU = socketClienteChequeado;
+								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketCPU);
 								log_info(loggerMemoria,"Se registro nueva CPU...\n");
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
 								break;

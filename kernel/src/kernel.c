@@ -886,28 +886,29 @@ void *manejadorTeclado(){
 	free(comando);
 }
 
-void* manejadorConexionConsola (void* socketDeConsola){
+void* manejadorConexionConsola (void* socket){
   while(1){
 	  paquete* paqueteRecibidoDeConsola;
-	  paqueteRecibidoDeConsola = recvRemasterizado(*(int*)socketDeConsola);
+	  int socketDeConsola = *(int*)socket;
+	  paqueteRecibidoDeConsola = recvRemasterizado(socketDeConsola);
 	      paquete* mensajeAux;
 	      switch (paqueteRecibidoDeConsola->tipoMsj) {
 			  case MENSAJE_CODIGO:
-				  mensajeAux = recvRemasterizado(*(int*)socketDeConsola);
+				  mensajeAux = recvRemasterizado(socketDeConsola);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
 				  cantPag = recibirCantidadPaginas(mensajeAux->mensaje);
 				  inicializarPCB(mensajeAux->mensaje,mensajeAux->tamMsj);
-				  prepararProgramaEnMemoria(*(int*)socketParaMemoria,ASIGNAR_PAGINAS);
+				  prepararProgramaEnMemoria(socketParaMemoria,ASIGNAR_PAGINAS);
 				  free(mensajeAux);
 				  break;
 			  case CORTO:
-				  printf("El socket %d corto la conexion\n",*(int*)socketDeConsola);
-				  verificarProcesos(*(int*)socketDeConsola);
-				  close(*(int*)socketDeConsola);
+				  printf("El socket %d corto la conexion\n",socketDeConsola);
+				  verificarProcesos(socketDeConsola);
+				  close(socketDeConsola);
 				  puts("Te la comes igual que ivan el trolazo");
 				  break;
 			  case FINALIZAR_PROGRAMA:
-				  mensajeAux = recvRemasterizado(*(int*)socketDeConsola);
+				  mensajeAux = recvRemasterizado(socketDeConsola);
 				  finalizarPrograma(mensajeAux->mensaje);
 				  break;
 			  default:
@@ -975,11 +976,12 @@ int main(int argc, char *argv[]) {
 	//verificarParametrosInicio(argc);
 	char *path = "Debug/kernel.config";
 	inicializarKernel(path);
-//	inicializarKernel(argv[1]);
+	//inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
 	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketQueAcepta;
+	int *socketDeConsola;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
@@ -1026,9 +1028,11 @@ int main(int argc, char *argv[]) {
 					int tipoMsj = recvDeNotificacion(socketAChequear);
 					switch (tipoMsj) {
 						case CONSOLA:
+							socketDeConsola = malloc(sizeof(int));
+							*socketDeConsola = socketAChequear;
 							log_info(loggerKernel,"Se conecto nueva consola...\n");
+							pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketDeConsola);
 							FD_CLR(socketAChequear,&socketsCliente);
-							pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketAChequear);
 							break;
 //						case MEMORIA:
 //							pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
