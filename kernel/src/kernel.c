@@ -152,7 +152,7 @@ int tamanioDeArray(char** array){
 }
 
 int *inicializarDesdeArrays(char** array1, char** array2){
-  int contador;
+ // int contador;
   int* arrayInicializado;
   arrayInicializado = malloc(tamanioDeArray(array2));
   int i = 0;
@@ -195,7 +195,7 @@ int waitSemaforo(t_proceso *proceso, char *semaforo) {
 	perror("No existe el semaforo");
 }
 /////////////////////////////////////////VARIABLES COMPARTIDAS/////////////////////////////////////////////////////////////////////////
-void asignarVariableCompartida(char* nombreVariable,int valor){
+void asignarVariableCompartida(char nombreVariable,int valor){
 	int i = 0;
 	for(;i<=list_size(variablesCompartidas);i++){
 		SharedVars* variable = list_remove(variablesCompartidas,i);
@@ -210,7 +210,7 @@ void asignarVariableCompartida(char* nombreVariable,int valor){
 	}
 }
 
-int obtenerVariableCompartida(char* nombreVariable){
+int obtenerVariableCompartida(char nombreVariable){
 	int i = 0;
 	for(;i<=list_size(variablesCompartidas);i++){
 		SharedVars* variable = list_get(variablesCompartidas,i);
@@ -277,21 +277,22 @@ void enviarASalida(t_queue* cola,int pid){
 
 int obtenerNumeroPagina(int pid,int* offset){
 	int i = 0;
-
+	int valor;
 	for(;i<=(list_size(tablaKernel));i++){
 		TablaKernel* tk = list_get(tablaKernel,i);
 		if(tk->pid==pid){
 			t_proceso* proceso = dameProceso(estado->ejecutando,pid);
-			list_add(estado->ejecutando, proceso);
+			list_add(estado->ejecutando->elements, proceso);
 			(*offset) = proceso->pcb->cod.comienzo;
-			int valor =((TAM_PAGINA*tk->paginas)-(proceso->pcb->cod.comienzo));
+			valor =((TAM_PAGINA*tk->paginas)-(proceso->pcb->cod.comienzo));
 			int cantidad = (valor) % (TAM_PAGINA);
 			if (valor % TAM_PAGINA != 0) {
 				cantidad++;
 			}
-			return valor;
+			//return valor;
 		}
 	}
+	return valor;
 }
 
 void escribirDatos(int socketMemoria,void* buffer, int tamanio,int pid){
@@ -299,12 +300,12 @@ void escribirDatos(int socketMemoria,void* buffer, int tamanio,int pid){
 	paquete.mensaje = malloc((sizeof(int)*4)+tamanio);
 	paquete.tipoMsj = ESCRIBIR_DATOS;
 	paquete.tamMsj = (sizeof(int)*4)+tamanio;
-	int offset;
+	int *offset;
 	int numPagina = obtenerNumeroPagina(pid,offset);
-	memcpy(paquete.mensaje,pid,sizeof(int));
-	memcpy(paquete.mensaje+sizeof(int),numPagina, sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*2), offset,sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*3), tamanio,sizeof(int));
+	memcpy(paquete.mensaje,&pid,sizeof(int));
+	memcpy(paquete.mensaje+sizeof(int),&numPagina, sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*2), &offset,sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*3), &tamanio,sizeof(int));
 	memcpy(paquete.mensaje+(sizeof(int)*4), buffer,tamanio);
 	if(send(socketMemoria,&paquete,paquete.tamMsj,0) == -1){
 		perror("Error al enviar datos a memoria");
@@ -319,11 +320,11 @@ void leerDatosSolicitud(int pid,int tamALeer,int socketMemoria){
 	paquete.mensaje = malloc(sizeof(int)*4);
 	paquete.tipoMsj = LEER_DATOS;
 	paquete.tamMsj = sizeof(int)*4;
-	int offset;
+	int *offset = malloc(sizeof(int));
 	int numPagina = obtenerNumeroPagina(pid,offset);
-	memcpy(paquete.mensaje,pid,sizeof(int));
-	memcpy(paquete.mensaje+sizeof(int),numPagina, sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*2), tamALeer,sizeof(int));
+	memcpy(paquete.mensaje,&pid,sizeof(int));
+	memcpy(paquete.mensaje+sizeof(int),&numPagina, sizeof(int));
+	memcpy(paquete.mensaje+(sizeof(int)*2), &tamALeer,sizeof(int));
 	memcpy(paquete.mensaje+(sizeof(int)*3), offset,sizeof(int));
 	if(send(socketMemoria,&paquete,paquete.tamMsj,0) == -1){
 		perror("Error al enviar datos para leer de memoria");
@@ -612,11 +613,11 @@ t_queue* chequearQueColaEs(char* estadoRecibido){
 
 void consultarEstado(char* estado){
 	t_queue* cola = chequearQueColaEs(estado);
-	int tamanio = list_size(cola);
+	int tamanio = list_size(cola->elements);
 	int posicion = 0;
 	if(cola!=NULL){
 		for(; posicion<tamanio;posicion++){
-			t_proceso* tp = list_get(cola, posicion);
+			t_proceso* tp = list_get(cola->elements, posicion);
 			printf("%d ", tp->pcb->PID);
 		}
 	}
@@ -769,8 +770,8 @@ int recibirCantidadPaginas(char* codigo) {
 void prepararProgramaEnMemoria(int socket,int FUNCION) {
 	paquete paqMemoria;
 	void* mensaje = malloc(sizeof(int) * 2);
-	memcpy(mensaje, pid_actual, sizeof(int));
-	memcpy(mensaje + sizeof(int), cantPag, sizeof(int));
+	memcpy(mensaje, &pid_actual, sizeof(int));
+	memcpy(mensaje + sizeof(int), &cantPag, sizeof(int));
 	paqMemoria.mensaje = mensaje;
 	paqMemoria.tamMsj = sizeof(int) * 2;
 	paqMemoria.tipoMsj = FUNCION;
@@ -782,19 +783,19 @@ void prepararProgramaEnMemoria(int socket,int FUNCION) {
 }
 
 void recibirPCB(void* mensaje){
-	memcpy(nuevoPCB->PID,mensaje, sizeof(int));
-	memcpy(nuevoPCB->ProgramCounter,mensaje, sizeof(int));
-	memcpy(nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
-	memcpy(nuevoPCB->cod.comienzo,mensaje+(sizeof(int)*3), sizeof(int));
-	memcpy(nuevoPCB->cod.offset,mensaje+(sizeof(int)*4), sizeof(int));
-	memcpy(nuevoPCB->exitCode,mensaje+(sizeof(int)*5), sizeof(int));
-	memcpy(nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*6), sizeof(int));
-	memcpy(nuevoPCB->contextoActual,mensaje+(sizeof(int)*7), nuevoPCB->tamContextoActual);
-	memcpy(nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual, sizeof(int));
+	memcpy(&nuevoPCB->PID,mensaje, sizeof(int));
+	memcpy(&nuevoPCB->ProgramCounter,mensaje, sizeof(int));
+	memcpy(&nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
+	memcpy(&nuevoPCB->cod.comienzo,mensaje+(sizeof(int)*3), sizeof(int));
+	memcpy(&nuevoPCB->cod.offset,mensaje+(sizeof(int)*4), sizeof(int));
+	memcpy(&nuevoPCB->exitCode,mensaje+(sizeof(int)*5), sizeof(int));
+	memcpy(&nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*6), sizeof(int));
+	memcpy(&nuevoPCB->contextoActual,mensaje+(sizeof(int)*7), nuevoPCB->tamContextoActual);
+	memcpy(&nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual, sizeof(int));
 	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas);
-	memcpy(nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*9)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(&nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(&nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*9)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(&nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
 
 	free(mensaje);
 }
@@ -802,19 +803,19 @@ void recibirPCB(void* mensaje){
 void enviarPCB(int socketCPU){
 	paquete paqCPU;
 	void* mensaje = malloc((sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas);
-	memcpy(mensaje, nuevoPCB->PID, sizeof(int));
-	memcpy(mensaje+sizeof(int), nuevoPCB->ProgramCounter, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*2), nuevoPCB->paginas_Codigo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*3), nuevoPCB->cod.comienzo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*4), nuevoPCB->cod.offset, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*5), nuevoPCB->exitCode, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*6), nuevoPCB->tamContextoActual, sizeof(int));
+	memcpy(mensaje, &nuevoPCB->PID, sizeof(int));
+	memcpy(mensaje+sizeof(int), &nuevoPCB->ProgramCounter, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*2), &nuevoPCB->paginas_Codigo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*3), &nuevoPCB->cod.comienzo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*4), &nuevoPCB->cod.offset, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*5), &nuevoPCB->exitCode, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*6), &nuevoPCB->tamContextoActual, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*7), nuevoPCB->contextoActual, nuevoPCB->tamContextoActual);
-	memcpy(mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual, nuevoPCB->etiquetas, nuevoPCB->tamEtiquetas);
-	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, nuevoPCB->tablaKernel.paginas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*9)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, nuevoPCB->tablaKernel.pid, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, nuevoPCB->tablaKernel.tamaniosPaginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual, &nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual, &nuevoPCB->etiquetas, nuevoPCB->tamEtiquetas);
+	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, &nuevoPCB->tablaKernel.paginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*9)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, &nuevoPCB->tablaKernel.pid, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, &nuevoPCB->tablaKernel.tamaniosPaginas, sizeof(int));
 
 	paqCPU.mensaje = mensaje;
 	paqCPU.tamMsj = (sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas;
@@ -861,16 +862,16 @@ void *manejadorTeclado(){
 
 		int tamanioRecibido = strlen(comando);
 		comando[tamanioRecibido-1] = '\0';
-		char* posibleFinalizarPrograma = string_substring_until(comando, strlen(finalizarPrograma));
-		char* posibleConsultarEstado = string_substring_until(comando, strlen(consultarEstado));
+		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
+		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
 
 		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
-			char* valorPid=string_substring_from(comando,strlen(finalizarPrograma)+1);
+			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
 			finalizarPrograma((int)valorPid);
 		}else if(string_equals_ignore_case(comando, "consultarListado")){
 			consultarListado();
 		}else if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
-			char* estado=string_substring_from(comando,strlen(finalizarPrograma)+1);
+			char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
 			consultarEstado(estado);
 		}else if(string_equals_ignore_case(comando, "detenerPlanificacion")){
 			detenerPlanificacion();
