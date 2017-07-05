@@ -183,17 +183,33 @@ void* iniciarPrograma(void* path)
 }
 
 Programa* buscarPrograma(int pid){
-	int i = 0;
-	for(;list_size(listaProcesos);i++){
-		Programa* programa = list_get(listaProcesos, i);
+
+	bool chequearProgramaCorrecto(Programa* programa){
 		if(programa->pid == pid){
-			list_remove(listaProcesos, i);
-			return programa;
+			return true;
 		}
-		else{
-			perror("No existe el programa con el pid indicado");
-		}
+		return false;
 	}
+
+	if(list_any_satisfy(listaProcesos, (void*)chequearProgramaCorrecto)){ //VER SI ES VOID* EL CASTEO CORRECTO
+		Programa* programaEncontrado = list_find(listaProcesos, (void*)chequearProgramaCorrecto);//LO MISMO QUE ARRIBA
+		return programaEncontrado;
+	}else{
+		log_info(loggerConsola, "El proceso %d no se ha encontrado.", pid);
+		return NULL;
+	}
+
+//	int i = 0;
+//	for(;list_size(listaProcesos);i++){
+//		Programa* programa = list_get(listaProcesos, i);
+//		if(programa->pid == pid){
+//			list_remove(listaProcesos, i);
+//			return programa;
+//		}
+//		else{
+//			perror("No existe el programa con el pid indicado");
+//		}
+//	}
 }
 
 void imprimirInformacion(int pid,int impresiones,struct timeval *inicio,struct timeval *fin,struct timeval *duracion){
@@ -212,15 +228,14 @@ void finalizarPrograma(int pid)
 	sendRemasterizado(socketKernel, FINALIZAR_PROGRAMA, sizeof(int), &pid);
 
 	Programa* programa = buscarPrograma(pid);
-	pthread_join(programa->hilo, NULL);
-
-	struct timeval fin;
-	struct timeval duracion;
-	gettimeofday(&fin, NULL);
-	timeval_subtract(&duracion, &fin,&(programa->inicio));
-
-	imprimirInformacion(pid,programa->impresiones,&(programa->inicio),&fin,&duracion);
-
+	if(programa != NULL){
+		pthread_join(programa->hilo, NULL);
+		struct timeval fin;
+		struct timeval duracion;
+		gettimeofday(&fin, NULL);
+		timeval_subtract(&duracion, &fin,&(programa->inicio));
+		imprimirInformacion(pid,programa->impresiones,&(programa->inicio),&fin,&duracion);
+	}
 	free(programa);
 }
 
