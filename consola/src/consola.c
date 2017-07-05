@@ -44,8 +44,7 @@ Consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo 
 }
 
 Consola inicializarPrograma(char* path) {
-	t_config *configuracion = (t_config*)malloc(sizeof(t_config));
-	*configuracion = generarT_ConfigParaCargar(path);
+	t_config *configuracion = generarT_ConfigParaCargar(path);
 	Consola nueva_consola = consola_crear(configuracion);
 	free(configuracion);
 	return nueva_consola;
