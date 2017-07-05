@@ -109,7 +109,7 @@ typedef struct __attribute__((packed)) {
 #define TAMANIO_PAGINA 102
 #define	MENSAJE_CODIGO 103
 #define MENSAJE_PID   105
-#define MEMORIA 1002
+#define SOY_KERNEL_MEMORIA 1002
 #define CPU 1003
 #define CONSOLA 1005
 #define INICIAR_PROGRAMA 501
@@ -748,12 +748,13 @@ void inicializarPCB(char* buffer,int tamanioBuffer) {
 	metadata_destruir(metadata_program);
 }
 
-void realizarHandshake(int socket, int HANDSHAKE) {
-	int longitud = sizeof(HANDSHAKE);
-	int tipoMensaje = HANDSHAKE;
-	if (send(socket, &tipoMensaje, longitud, 0) == -1) {
-		perror("Error de send");
-		close(socket);
+void realizarHandshakeMemoria(int socket) {
+	sendDeNotificacion(socket, SOY_KERNEL_MEMORIA);
+	paquete* paqueteConPaginas = recvRemasterizado(socket);
+	if(paqueteConPaginas->tipoMsj == TAMANIO_PAGINA){
+		TAM_PAGINA = *(int*)paqueteConPaginas->mensaje;
+	}else{
+		log_info(loggerKernel, "Error al recibir el tamanio de pagina de memoria.");
 		exit(-1);
 	}
 }
@@ -968,10 +969,10 @@ void *manejadorConexionMemoria (void* socketMemoria){
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	verificarParametrosInicio(argc);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
-	inicializarKernel(argv[1]);
+	//verificarParametrosInicio(argc);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
+//	inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorMemoria, hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
@@ -991,7 +992,7 @@ int main(int argc, char *argv[]) {
 	FD_SET(socketParaFileSystem, &socketsMaster);
 	socketMaxCliente = calcularSocketMaximo(socketCPU,socketConsola);
 	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
-	realizarHandshake(socketParaMemoria,MEMORIA);
+	realizarHandshakeMemoria(socketParaMemoria);
 	//realizarHandshake(socketParaFileSystem,FILESYSTEM);
 
 	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL);
@@ -1030,10 +1031,10 @@ int main(int argc, char *argv[]) {
 								FD_CLR(socketConsola,&socketsCliente);
 								pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketAChequear);
 								break;
-							case MEMORIA:
-								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
-								FD_CLR(socketParaMemoria,&socketsMaster);
-								break;
+//							case MEMORIA:
+//								pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
+//								FD_CLR(socketParaMemoria,&socketsMaster);
+//								break;
 							case CPU:
 								queue_push(cola_CPU_libres,socketCPU);
 								//enviarAEjecutar(int pid);
