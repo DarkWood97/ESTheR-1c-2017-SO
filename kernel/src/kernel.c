@@ -659,8 +659,7 @@ void crearKernel(t_config *configuracion) {
 }
 
 void inicializarKernel(char *path) {
-	t_config *configuracionKernel = (t_config*) malloc(sizeof(t_config));
-	*configuracionKernel = generarT_ConfigParaCargar(path);
+	t_config *configuracionKernel =  generarT_ConfigParaCargar(path);
 	crearKernel(configuracionKernel);
 	free(configuracionKernel);
 }

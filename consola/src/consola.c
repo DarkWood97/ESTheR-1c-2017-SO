@@ -311,9 +311,9 @@ void* manejadorInterfaz()
 
 int main(int argc, char *argv[])
 {
-	//verificarParametrosInicio(argc);
-	//Consola nuevaConsola = inicializarPrograma(argv[1]);
-	Consola nuevaConsola = inicializarPrograma("Debug/consola.config");
+	verificarParametrosInicio(argc);
+	Consola nuevaConsola = inicializarPrograma(argv[1]);
+	//Consola nuevaConsola = inicializarPrograma("Debug/consola.config");
 	mostrar_consola(nuevaConsola);
 	loggerConsola = log_create("Consola.log", "Consola", 0, 0);
 	pthread_mutex_init(&mutexImpresiones,NULL);
