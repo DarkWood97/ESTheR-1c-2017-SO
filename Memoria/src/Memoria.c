@@ -1,12 +1,12 @@
 #include "funcionesGenericas.h"
 
-#include "../Socket/src/socket.h"
+#include "socket.h"
 
-typedef struct __attribute__((__packed__)){
-	int tipoMsj;
-	int tamMsj;
-	void* mensaje;
-}paquete;
+//typedef struct __attribute__((__packed__)){
+//	int tipoMsj;
+//	int tamMsj;
+//	void* mensaje;
+//}paquete;
 
 //#include "socket.h"
 
@@ -37,6 +37,17 @@ typedef struct __attribute__((packed)){
 	int pagina;
 }entradaTabla;
 
+typedef struct{
+  int pid;
+  int numPagina;
+  void* contenido;
+}entradaDeCache;
+
+typedef struct{
+  t_list* entradasCache;
+}cache;
+
+
 
 t_log * loggerMemoria;
 void* memoriaSistema;
@@ -53,6 +64,7 @@ char* REEMPLAZO_CACHE;
 int CACHE_X_PROC;
 int RETARDO_MEMORIA;
 int cantidadPaginasDeTabla;
+cache *cacheDeMemoria;
 
 //-----FUNCIONES MEMORIA------------------------------------------------
 void crearMemoria(t_config *configuracion) {
@@ -67,9 +79,10 @@ void crearMemoria(t_config *configuracion) {
 }
 
 void inicializarMemoria(char *path) {
-	t_config *configuracionMemoria = (t_config*)malloc(sizeof(t_config));
-	*configuracionMemoria = generarT_ConfigParaCargar(path);
+	t_config *configuracionMemoria = generarT_ConfigParaCargar(path);
 	crearMemoria(configuracionMemoria);
+	cacheDeMemoria = malloc(sizeof(cache));
+	cacheDeMemoria->entradasCache = list_create();
 	free(configuracionMemoria);
 }
 
@@ -106,6 +119,114 @@ void crearEstructuraAdministrativa(){ //Tabla de paginas invertidas
 		entradasDeTabla[paginaChequeada].pid = -1;
 		entradasDeTabla[paginaChequeada].pagina = -1;
 	}
+}
+
+//-------------------------------------CACHE----------------------------------//
+bool estaLlenaLaCache(){
+  return list_size(cacheDeMemoria->entradasCache)>=ENTRADAS_CACHE;
+}
+//
+//bool chequearExistenciaEnCache(entradaDeCache* entradaAChequear, void* pid, void* numPagina){
+//  if(entradaAChequear->pid == *(int*)pid && entradaAChequear->numPagina == *(int*)numPagina){
+//    return true;
+//  }
+//  return false;
+//}
+
+t_list* filtrarEntradas(int pid, int numPagina){
+	bool chequearExistenciaEnCache(entradaDeCache* entradaAChequear){
+	  if(entradaAChequear->pid == pid && entradaAChequear->numPagina == numPagina){
+	    return true;
+	  }
+	  return false;
+	}
+  t_list* entradasFiltradas = list_create();
+  entradasFiltradas = list_remove_by_condition(cacheDeMemoria->entradasCache, (void*)chequearExistenciaEnCache);
+  return entradasFiltradas;
+}
+
+entradaDeCache* obtenerEntrada(int pid, int numPagina){
+  entradaDeCache* entradaObtenida;
+  entradaObtenida = list_get(filtrarEntradas(pid, numPagina),0);
+  return entradaObtenida;
+}
+
+void* leerDeCache(int pid, int numPagina, int tamALeer, int offset){
+  entradaDeCache *entradaALeer;
+  entradaALeer = obtenerEntrada(pid, numPagina);
+  log_info(loggerMemoria, "Se obtuvo las paginas del proceso %d de la cache.", pid);
+  void* lectura = malloc(tamALeer);
+  memcpy(lectura, entradaALeer->contenido+offset, tamALeer);
+  free(entradaALeer);
+  return lectura;
+}
+
+
+
+bool estaCargadoEnCache(int pid, int numPagina){
+	bool chequearExistenciaEnCache(entradaDeCache* entradaAChequear){
+	  if(entradaAChequear->pid == pid && entradaAChequear->numPagina == numPagina){
+	    return true;
+	  }
+	  return false;
+	}
+	return list_any_satisfy(cacheDeMemoria->entradasCache, (void*)chequearExistenciaEnCache);
+}
+
+//bool esDeProceso(entradaDeCache* entrada, int pid){
+//	return entrada->pid == pid;
+//}
+
+void eliminarEntrada(entradaDeCache* entradaAEliminar){
+  free(entradaAEliminar);
+}
+
+void sacarLRU(){
+  list_remove_and_destroy_element(cacheDeMemoria->entradasCache, ENTRADAS_CACHE-1, (void*)eliminarEntrada);
+}
+
+bool noSuperoLaCantidadMaxDeEntradas(int pid){
+	int esProceso(entradaDeCache* entrada){
+		return entrada->pid == pid;
+	}
+  int cantidadDeEntradasDeProceso = list_size(list_filter(cacheDeMemoria->entradasCache, (void*)esProceso));
+  if(cantidadDeEntradasDeProceso>=CACHE_X_PROC){
+    return false;
+  }
+  return true;
+}
+
+void agregarACache(int pid, int numPagina, void* contenido){
+  if(noSuperoLaCantidadMaxDeEntradas(pid)){
+    entradaDeCache* nuevaEntrada = malloc(sizeof(entradaDeCache));
+    nuevaEntrada->pid = pid;
+    nuevaEntrada->numPagina = numPagina;
+    nuevaEntrada->contenido = malloc(MARCOS_SIZE);
+    memcpy(nuevaEntrada->contenido, contenido, MARCOS_SIZE);
+    if(estaLlenaLaCache()){
+      sacarLRU();
+      log_info(loggerMemoria, "Se elimino la entrada LRU");
+    }
+    list_add_in_index(cacheDeMemoria->entradasCache, 0, nuevaEntrada);
+    log_info(loggerMemoria, "Se agrego una entrada para el proceso %d correctamente.", pid);
+  }
+  log_info(loggerMemoria, "El proceso %d ha superado la cantidad maxima de entradas en la cache", pid);
+}
+
+void actualizarDatosDeCache(int pid, int numPagina, void* contenido){
+  /*
+    VER SI TENGO QUE PONERLO
+    ADELANTE DE TODOO O DEBE QUEDAR
+    DONDE ESTABA
+  */
+}
+
+void limpiarProcesoDeCache(int pid){
+	bool esDeProceso(entradaDeCache* entrada){
+		return entrada->pid == pid;
+	}
+	list_remove_and_destroy_by_condition(cacheDeMemoria->entradasCache,(void*)esDeProceso, (void*)eliminarEntrada);
+	log_info(loggerMemoria, "Se ha borrado de cache las paginas del proceso %d.", pid);
 }
 
 //-----------------------------FUNCIONES AUXILIARES DE MEMORIA-----------------------------------------//
@@ -379,10 +500,15 @@ void almacenarBytesEnMemoria(int pid, int numPagina, int offset, int tamanio, vo
 
 void *leer(int pid, int pagina, int tamALeer, int offset){
 	int numeroDeFrame;
-	void* bufferDeLectura = malloc(tamALeer);
-	numeroDeFrame = buscarFrameProceso(pid, pagina);
-	long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
-	memcpy(bufferDeLectura, memoriaSistema + comienzoDeLectura, tamALeer);
+	void* bufferDeLectura;
+	if(estaCargadoEnCache(pid, pagina)){
+		bufferDeLectura = leerDeCache(pid, pagina, tamALeer, offset);
+	}else{
+		numeroDeFrame = buscarFrameProceso(pid, pagina);
+		long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
+		bufferDeLectura = malloc(tamALeer);
+		memcpy(bufferDeLectura, memoriaSistema + comienzoDeLectura, tamALeer);
+	}
   	return bufferDeLectura;
 }
 
@@ -408,11 +534,12 @@ void reservarPaginasParaProceso(int pid, int cantidadDePaginas, int socketConPet
 }
 
 bool puedeSerLiberada(numeroDeFrame){
-  if(cantidadPaginasDeTabla<numeroDeFrame<MARCOS){
+  if(cantidadPaginasDeTabla<numeroDeFrame && numeroDeFrame<MARCOS){
     return true;
   }
   return false;
 }
+
 //-------------------------------------ASIGNAR PAGINAS PARA PROCESO---------------------------------//
 void asignarPaginasAProceso(paquete* paqueteDeAsignacion, int socketConPeticionDeAsignacion){
 	int pid, cantidadDePaginas;
@@ -476,13 +603,6 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
     memcpy(&offset, paqueteDeLectura->mensaje + sizeof(int)*3, sizeof(int));
     void* datosLeidos = leer(pid, pagina, offset, tamALeer);
     sendRemasterizado(socketConPeticionDeLectura, DATOS_DE_PAGINA, tamALeer, datosLeidos);
-    //paquete paqueteAEnviar = leer(pid, pagina, offset, tamALeer); //SI ROMPE ES FACTIBLE QUE SEA ESTO
-//    int tamPaquete = sizeof(int)*2 + tamALeer;
-//    if(send(socketConPeticionDeLectura, &paqueteAEnviar, tamPaquete, 0) == -1){
-//      perror("Error al enviar los datos leidos");
-//      log_info(loggerMemoria, "Error al leer los datos solicitados por kernel");
-//      exit(-1);
-//    }
     free(datosLeidos);
 }
 //------------------------------LIBERAR PAGINA---------------------------------------//
@@ -642,11 +762,11 @@ void *manejadorConexionCPU (void *socketCPU){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	verificarParametrosInicio(argc);
-	//char* path = "Debug/memoria.config";
-	inicializarMemoria(argv[1]);
+	//verificarParametrosInicio(argc);
+	char* path = "Debug/memoria.config";
+	//inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion, paqDePaginas;
-	//inicializarMemoria(path);
+	inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
 	entradasDeTabla= (entradaTabla*) memoriaSistema;

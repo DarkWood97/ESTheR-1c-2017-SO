@@ -19,6 +19,12 @@ typedef struct {
 	void * data;
 } arg_escucharclientes;
 
+//typedef struct __attribute__((__packed__)){
+//	int tipoMsj;
+//	int tamMsj;
+//	void* mensaje;
+//}paquete;
+
 int ponerseAEscucharClientes(int puerto, int protocolo) {
 	struct sockaddr_in mySocket;
 	int socketListener = socket(AF_INET, SOCK_STREAM, protocolo);
@@ -73,7 +79,7 @@ int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEsc
 	return socketMax;
 }
 
-bool enviarMensaje(int socket, char* mensaje) { //Socket que envia mensaje
+bool enviarMensaje(int socket, void* mensaje) { //Socket que envia mensaje
 
 	int longitud =	strlen(mensaje)+1; //sino no lee \0
 	//int i = 0;
@@ -174,4 +180,58 @@ int calcularSocketMaximo(int socketNuevo, int socketMaximoPrevio){
 	else{
 		return socketMaximoPrevio;
 	}
+}
+
+int calcularTamanioTotalPaquete(int tamanioMensaje){
+  int tamanio = sizeof(int)*2 + tamanioMensaje;
+  return tamanio;
+}
+
+void sendRemasterizado(int aQuien, int tipo, int tamanio, void* que){
+  void *bufferAEnviar;
+  int tamanioDeMensaje = calcularTamanioTotalPaquete(tamanio);
+  bufferAEnviar = malloc(tamanioDeMensaje);
+  memcpy(bufferAEnviar, &tipo, sizeof(int));
+  memcpy(bufferAEnviar+sizeof(int), &tamanio, sizeof(int));
+  memcpy(bufferAEnviar+sizeof(int)*2, que, tamanio);
+  if(send(aQuien, bufferAEnviar, tamanioDeMensaje, 0)==-1){
+    perror("Error al enviar mensaje");
+    exit(-1);
+  }
+  free(bufferAEnviar);
+}
+
+paquete *recvRemasterizado(int deQuien){
+  paquete* paqueteConMensaje;
+  paqueteConMensaje = malloc(sizeof(paquete));
+  if(recv(deQuien, &paqueteConMensaje->tipoMsj, sizeof(int), 0)==-1){
+    perror("Error al recibir mensaje");
+    exit(-1);
+  }
+  if(recv(deQuien, &paqueteConMensaje->tamMsj, sizeof(int),0)==-1){
+    perror("Error al recibir mensaje");
+    exit(-1);
+  }
+  paqueteConMensaje->mensaje = malloc(paqueteConMensaje->tamMsj);
+  if(recv(deQuien, paqueteConMensaje->mensaje,paqueteConMensaje->tamMsj, 0)==-1){
+    perror("Error al recibir mensaje");
+    exit(-1);
+  }
+  return paqueteConMensaje;
+}
+
+void sendDeNotificacion(int aQuien, int notificacion){
+	if(send(aQuien, &notificacion, sizeof(int),0)==-1){
+		perror("Error al enviar notificacion.");
+		exit(-1);
+	}
+}
+
+int recvDeNotificacion(int deQuien){
+	int notificacion;
+	if(recv(deQuien, &notificacion, sizeof(int), 0)==-1){
+		perror("Error al recibir la notificacion.");
+		exit(-1);
+	}
+	return notificacion;
 }

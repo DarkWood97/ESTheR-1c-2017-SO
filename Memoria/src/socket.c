@@ -19,11 +19,11 @@ typedef struct {
 	void * data;
 } arg_escucharclientes;
 
-typedef struct __attribute__((__packed__)){
-	int tipoMsj;
-	int tamMsj;
-	void* mensaje;
-}paquete;
+//typedef struct __attribute__((__packed__)){
+//	int tipoMsj;
+//	int tamMsj;
+//	void* mensaje;
+//}paquete;
 
 int ponerseAEscucharClientes(int puerto, int protocolo) {
 	struct sockaddr_in mySocket;

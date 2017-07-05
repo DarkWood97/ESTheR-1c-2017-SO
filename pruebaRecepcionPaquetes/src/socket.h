@@ -18,5 +18,10 @@ void verificarErrorConexion(int, int );
 void verificarErrorSend(int, int );
 void verificarErrorServer(struct hostent *, char*);
 int calcularSocketMaximo(int, int);
+int recvDeNotificacion(int);
+void sendDeNotificacion(int , int );
+paquete *recvRemasterizado(int);
+void sendRemasterizado(int, int, int, void*);
+
 
 #endif /* SRC_SOCKET_H_ */
