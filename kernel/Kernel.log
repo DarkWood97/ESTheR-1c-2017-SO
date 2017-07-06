@@ -52,3 +52,71 @@
 
 [INFO] 17:31:31:301 Kernel/(3041:3041): Se conecto nueva consola...
 
+[INFO] 22:01:25:221 Kernel/(3345:3345): Se conecto nueva consola...
+
+[INFO] 22:02:06:336 Kernel/(3345:3437): Archivo recibido correctamente...
+
+[INFO] 22:04:21:590 Kernel/(3560:3560): Se conecto nueva consola...
+
+[INFO] 22:04:39:114 Kernel/(3560:3645): Archivo recibido correctamente...
+
+[INFO] 22:07:00:147 Kernel/(3737:3737): Se conecto nueva consola...
+
+[INFO] 22:07:19:764 Kernel/(3737:3820): Archivo recibido correctamente...
+
+[INFO] 22:09:52:254 Kernel/(3952:3952): Se conecto nueva consola...
+
+[INFO] 22:10:14:701 Kernel/(3952:4037): Archivo recibido correctamente...
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:91 offset:4 end
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:383 offset:4 end
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:421 offset:4 end
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 22:11:22:41 Kernel/(3952:4037): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 22:11:22:42 Kernel/(3952:4037): Instruccion inicio:510 offset:13     return f
+
+[INFO] 22:11:22:42 Kernel/(3952:4037): Instruccion inicio:523 offset:4 end
+
+[INFO] 22:11:22:42 Kernel/(3952:4037): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 22:11:22:42 Kernel/(3952:4037): Instruccion inicio:559 offset:4 end
+

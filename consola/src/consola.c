@@ -10,6 +10,8 @@
 #include "socket.h"
 #include <stdio.h>
 
+
+
 #define MENSAJE_CODIGO  103
 #define MENSAJE_PID   105
 #define HANDSHAKE_CONSOLA 1005
@@ -104,7 +106,7 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 
 Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
 {
-	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, &mensaje);
+	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, mensaje);
 
 	struct timeval inicio;
 	bool PIDNoRecibido = true;
@@ -313,7 +315,7 @@ void* manejadorInterfaz()
 			desconectarConsola();
 			programaIniciado = false;
 		}else if((string_equals_ignore_case(comando, "Limpiar Mensajes"))){
-			system("clear");
+			system("/usr/bin/clear");
 		} else{
 			puts("Error de comando");
 		}

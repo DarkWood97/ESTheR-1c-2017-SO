@@ -759,26 +759,20 @@ void realizarHandshakeMemoria(int socket) {
 }
 
 int recibirCantidadPaginas(char* codigo) {
-	int tamanio = stack_Size + strlen(codigo) - sizeof(HeapMetadata);
-	int cantidad = (tamanio) % (TAM_PAGINA);
+	int tamanio = string_length(codigo);
+	int cantidad = tamanio/(TAM_PAGINA-sizeof(HeapMetadata)*2) + stack_Size;
 	if (tamanio % TAM_PAGINA != 0) {
 		cantidad++;
 	}
+
 	return cantidad;
 }
 
 void prepararProgramaEnMemoria(int socket,int FUNCION) {
-	paquete paqMemoria;
 	void* mensaje = malloc(sizeof(int) * 2);
 	memcpy(mensaje, &pid_actual, sizeof(int));
 	memcpy(mensaje + sizeof(int), &cantPag, sizeof(int));
-	paqMemoria.mensaje = mensaje;
-	paqMemoria.tamMsj = sizeof(int) * 2;
-	paqMemoria.tipoMsj = FUNCION;
-	if ((send(socket, &paqMemoria, sizeof(int) * 2, 0)) == -1) {
-		perror("Error al enviar el PID y tamanio de pagina");
-		exit(-1);
-	}
+	sendRemasterizado(socket, FUNCION, sizeof(int)*2, mensaje);
 	free(mensaje);
 }
 
@@ -895,7 +889,7 @@ void* manejadorConexionConsola (void* socket){
 			  case MENSAJE_CODIGO:
 				  //mensajeAux = recvRemasterizado(socketDeConsola);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  cantPag = recibirCantidadPaginas(paqueteRecibidoDeConsola->mensaje);
+				  cantPag = recibirCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
 				  inicializarPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj);
 				  prepararProgramaEnMemoria(socketParaMemoria,ASIGNAR_PAGINAS);
 				  free(paqueteRecibidoDeConsola);
@@ -908,7 +902,7 @@ void* manejadorConexionConsola (void* socket){
 				  break;
 			  case FINALIZAR_PROGRAMA:
 				  mensajeAux = recvRemasterizado(socketDeConsola);
-				  finalizarPrograma(mensajeAux->mensaje);
+				  finalizarPrograma(*(int*)mensajeAux->mensaje);
 				  break;
 			  default:
 					perror("No se reconoce el mensaje enviado por Consola");
@@ -972,10 +966,10 @@ void *manejadorConexionCPU(void* socketCPU){
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	verificarParametrosInicio(argc);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
-	inicializarKernel(argv[1]);
+	//verificarParametrosInicio(argc);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
+	//inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
