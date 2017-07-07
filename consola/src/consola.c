@@ -40,15 +40,16 @@ int socketKernel;
 //----FUNCIONES CONSOLA-------------------------------------------------------
 Consola consola_crear(t_config* configuracion) { //Chequear al abrir el archivo si no tiene error
 	Consola consola_auxiliar;
-	consola_auxiliar.ip_Kernel.numero = config_get_string_value(configuracion,"IP_KERNEL");
 	consola_auxiliar.puerto_kernel = config_get_int_value(configuracion,"PUERTO_KERNEL");
+	consola_auxiliar.ip_Kernel.numero = string_new();
+	string_append(&(consola_auxiliar.ip_Kernel.numero),config_get_string_value(configuracion,"IP_KERNEL"));
 	return consola_auxiliar;
 }
 
 Consola inicializarPrograma(char* path) {
 	t_config *configuracion = generarT_ConfigParaCargar(path);
 	Consola nueva_consola = consola_crear(configuracion);
-	free(configuracion);
+	config_destroy(configuracion);
 	return nueva_consola;
 }
 void mostrar_consola(Consola aMostrar) {
@@ -98,7 +99,7 @@ int obtenerPosicionHilo(){
 char* leerArchivo(FILE *archivo, long int tamanio)
 {
 	fseek(archivo, 0, SEEK_SET);
-	char *codigo = malloc(tamanio);
+	char* codigo = malloc(tamanio);
 	fread(codigo, tamanio-1, 1, archivo);
 	codigo[tamanio-1] = '\0';
 	return codigo;
@@ -110,10 +111,9 @@ Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
 
 	struct timeval inicio;
 	bool PIDNoRecibido = true;
-	paquete* paqueteRecibido;
 
 	while(PIDNoRecibido){
-		paqueteRecibido = recvRemasterizado(socketKernel);
+		paquete* paqueteRecibido = recvRemasterizado(socketKernel);
 
 		if(paqueteRecibido->tipoMsj==MENSAJE_PID){
 			programa->pid = *(int*)paqueteRecibido->mensaje;
@@ -124,8 +124,9 @@ Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
 			list_add(listaProcesos,programa);
 			PIDNoRecibido = false;
 		}
+
+		free(paqueteRecibido);
 	}
-	free(paqueteRecibido);
 	return programa;
 }
 
@@ -136,12 +137,12 @@ void* iniciarPrograma(void* path)
 	log_info(loggerConsola,"Archivo recibido correctamente...\n");
 
 	long int tamanio = obtenerTamanioArchivo(archivoRecibido)+1;
-	char* mensaje = malloc(tamanio);
-	mensaje = leerArchivo(archivoRecibido,tamanio);
+	char* mensaje = leerArchivo(archivoRecibido,tamanio);
 
 	Programa* programa;
 	programa = (Programa*) malloc(sizeof(Programa));
 	programa = recibirPID(tamanio,programa,mensaje);
+	free(mensaje);
 	pthread_mutex_unlock(&mutexImpresiones);
 
 	paquete* paqueteRecibido;
@@ -243,11 +244,13 @@ void finalizarPrograma(int pid)
 void desconectarConsola()
 {
 	int i = 0;
-	int tamanio = list_size(listaProcesos);
-	for(;i<=tamanio;i++){
+	if(!(list_size(listaProcesos))){
+		int tamanio = list_size(listaProcesos);
+		for(;i<=tamanio;i++){
 		Programa* programa  = list_get(listaProcesos, 0);
 		finalizarPrograma(programa->pid);
 		free(programa);
+		}
 	}
 	puts("Se desconecto la consola \n");
 	puts("Se abortaron todos los programas");
@@ -268,10 +271,12 @@ void mostrarAyuda(bool programaIniciado)
 
 void mostrarProgramasIniciados(){
 	int i = 0;
-	for(;i<=list_size(listaProcesos);i++){
-		Programa* programa = list_get(listaProcesos,i);
-		printf("Programa: %d \n", programa->pid);
-		free(programa);
+	if(!(list_is_empty(listaProcesos))){
+		for(;i<=list_size(listaProcesos);i++){
+			Programa* programa = list_get(listaProcesos,i);
+			printf("Programa: %d \n", programa->pid);
+			free(programa);
+		}
 	}
 }
 

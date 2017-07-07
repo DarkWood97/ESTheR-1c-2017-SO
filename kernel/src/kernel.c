@@ -966,10 +966,10 @@ void *manejadorConexionCPU(void* socketCPU){
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	//verificarParametrosInicio(argc);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
-	//inicializarKernel(argv[1]);
+	verificarParametrosInicio(argc);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
+	inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
