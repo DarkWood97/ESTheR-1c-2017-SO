@@ -288,15 +288,10 @@ void copiarAArchivoDump(char* mensajeACopiar){
 }
 
 void copiarDatosProceso (int numeroDeFrame){
-	char* cadenaDeCopiadoDeDatos = string_new();
-	string_append(&cadenaDeCopiadoDeDatos,string_from_format("Datos pertenecientes al proceso %d,",entradasDeTabla[numeroDeFrame].pid));
-	string_append(&cadenaDeCopiadoDeDatos,string_from_format(" numero de pagina %d,", entradasDeTabla[numeroDeFrame].pagina));
-	string_append(&cadenaDeCopiadoDeDatos,string_from_format(" se encuentran en el frame %d y ",numeroDeFrame));
-  //Obtengo los datos pertenecientes a la pagina
 	long int comienzoDeDatos = numeroDeFrame*MARCOS_SIZE;
 	void* datosDeProceso = malloc(MARCOS_SIZE);
 	memcpy(datosDeProceso,entradasDeTabla+comienzoDeDatos,MARCOS_SIZE);
-	string_append(&cadenaDeCopiadoDeDatos,string_from_format("posee los datos %p.\n", &datosDeProceso));
+	char* cadenaDeCopiadoDeDatos = string_from_format("Datos pertenecientes al proceso %d, numero de pagina %d, se encuentra en el frame %d y posee los datos %p.\n", entradasDeTabla[numeroDeFrame].pid, entradasDeTabla[numeroDeFrame].pagina, numeroDeFrame, datosDeProceso);
 	printf("%s",cadenaDeCopiadoDeDatos);
 	copiarAArchivoDump(cadenaDeCopiadoDeDatos);
 	free(datosDeProceso);
@@ -389,15 +384,12 @@ void copiarTablaInvertidaADump(){
 	copiarAArchivoDump(cadenaAuxiliarDeCopiado);
 	free(cadenaAuxiliarDeCopiado);
 	int posicion;
-	cadenaAuxiliarDeCopiado = string_new();
 	for(posicion = 0; posicion<MARCOS; posicion++){
-		string_append(&cadenaAuxiliarDeCopiado,string_from_format("|  %d  |  ",posicion));
-		string_append(&cadenaAuxiliarDeCopiado,string_from_format("%d  |  ",entradasDeTabla[posicion].pid));
-		string_append(&cadenaAuxiliarDeCopiado,string_from_format("%d  |\n",entradasDeTabla[posicion].pagina));
+		cadenaAuxiliarDeCopiado = string_from_format("| %d | %d | %d |\n", posicion, entradasDeTabla[posicion].pid, entradasDeTabla[posicion].pagina);
+		copiarAArchivoDump(cadenaAuxiliarDeCopiado);
+		printf("%s", cadenaAuxiliarDeCopiado);
+		free(cadenaAuxiliarDeCopiado);
 	}
-	printf("%s", cadenaAuxiliarDeCopiado);
-	copiarAArchivoDump(cadenaAuxiliarDeCopiado);
-	free(cadenaAuxiliarDeCopiado);
 	cadenaAuxiliarDeCopiado = string_new();
 	string_append(&cadenaAuxiliarDeCopiado,"---------------------------------\n");
 	printf("%s",cadenaAuxiliarDeCopiado);
@@ -430,22 +422,16 @@ int calcularCantFramesOcupados(){
 }
 
 void sizeMemoria(){
-	char* tamanioDeMemoriaEnFrames = string_new();
-	string_append(&tamanioDeMemoriaEnFrames,string_from_format("El tamanio de memoria en frames es %d,",MARCOS));
-	string_append(&tamanioDeMemoriaEnFrames,string_from_format(" de tamanio %d.\n",MARCOS_SIZE));
 	int cantidadDeFramesOcupados = calcularCantFramesOcupados();
 	int cantidadDeFramesLibres = MARCOS - cantidadDeFramesOcupados;
-	string_append(&tamanioDeMemoriaEnFrames,string_from_format("La cantidad de frames libres es %d,",cantidadDeFramesLibres));
-	string_append(&tamanioDeMemoriaEnFrames,string_from_format(" y la cantidad de frames ocupados son %d.\n",cantidadDeFramesOcupados));
+	char* tamanioDeMemoriaEnFrames = string_from_format("El tamanio de memoria en frames es %d, de tamanio %d.\nLa cantidad de frames libres es %d y la cantidad de frames ocupados es %d.\n",MARCOS, MARCOS_SIZE, cantidadDeFramesLibres, cantidadDeFramesOcupados);
 	printf("%s", tamanioDeMemoriaEnFrames);
 	free(tamanioDeMemoriaEnFrames);
 }
 
 void sizeProceso(int pid){
 	int cantidadDeFramesOcupados = obtenerCantidadDePaginasDe(pid);
-	char* cadenaAImprimir = string_new();
-	string_append(&cadenaAImprimir, string_from_format("La cantidad de paginas ocupadas por el proceso %d",pid));
-	string_append(&cadenaAImprimir, string_from_format(" son %d",cantidadDeFramesOcupados));
+	char* cadenaAImprimir = string_from_format("La cantidad de paginas ocupadas por el proceso %d son %d.", pid, cantidadDeFramesOcupados);
 	printf("%s\n", cadenaAImprimir);
 	free(cadenaAImprimir);
 }
@@ -784,11 +770,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	verificarParametrosInicio(argc);
-	//char* path = "Debug/memoria.config";
-	inicializarMemoria(argv[1]);
+	//verificarParametrosInicio(argc);
+	char* path = "Debug/memoria.config";
+	//inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion, paqDePaginas;
-	//inicializarMemoria(path);
+	inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
 	entradasDeTabla= (entradaTabla*) memoriaSistema;
