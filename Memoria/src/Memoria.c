@@ -413,7 +413,7 @@ int calcularCantFramesOcupados(){
 	int frameChequeado;
 	pthread_mutex_lock(&mutexTablaInvertida);
 	for(frameChequeado = 0; frameChequeado<MARCOS; frameChequeado++){
-		if(noHayNingunProceso(frameChequeado)){
+		if(ocupaCeroPaginas(frameChequeado)){
 			cantidadDeFramesOcupados++;
 		}
 	}
@@ -424,7 +424,7 @@ int calcularCantFramesOcupados(){
 void sizeMemoria(){
 	int cantidadDeFramesOcupados = calcularCantFramesOcupados();
 	int cantidadDeFramesLibres = MARCOS - cantidadDeFramesOcupados;
-	char* tamanioDeMemoriaEnFrames = string_from_format("El tamanio de memoria en frames es %d, de tamanio %d.\nLa cantidad de frames libres es %d y la cantidad de frames ocupados es %d.\n",MARCOS, MARCOS_SIZE, cantidadDeFramesLibres, cantidadDeFramesOcupados);
+	char* tamanioDeMemoriaEnFrames = string_from_format("El tamanio de memoria en frames es %d, de tamanio %d.\nLa cantidad de frames libres es %d y la cantidad de frames ocupados es %d.\n",MARCOS, MARCOS_SIZE, cantidadDeFramesOcupados, cantidadDeFramesLibres);
 	printf("%s", tamanioDeMemoriaEnFrames);
 	free(tamanioDeMemoriaEnFrames);
 }
@@ -770,11 +770,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	//verificarParametrosInicio(argc);
-	char* path = "Debug/memoria.config";
-	//inicializarMemoria(argv[1]);
+	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
+	inicializarMemoria(argv[1]);
 	paquete paqueteDeRecepcion, paqDePaginas;
-	inicializarMemoria(path);
+	//inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
 	entradasDeTabla= (entradaTabla*) memoriaSistema;
