@@ -29,7 +29,7 @@
 #include <commons/collections/list.h>
 
 t_config *generarT_ConfigParaCargar(char *path) {
-	t_config *configuracionDelComponente = malloc(sizeof(t_config));
+	t_config *configuracionDelComponente;
 	if((configuracionDelComponente = config_create(path)) == NULL){
 		perror("Error de ruta de archivo de configuracion");
 		exit(-1);

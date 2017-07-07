@@ -74,7 +74,8 @@ void crearMemoria(t_config *configuracion) {
 	MARCOS_SIZE = config_get_int_value(configuracion,"MARCO_SIZE");
 	ENTRADAS_CACHE = config_get_int_value(configuracion,"ENTRADAS_CACHE");
 	CACHE_X_PROC = config_get_int_value(configuracion,"CACHE_X_PROC");
-	REEMPLAZO_CACHE = config_get_string_value(configuracion,"REEMPLAZO_CACHE");
+	REEMPLAZO_CACHE = string_new();
+	string_append(&REEMPLAZO_CACHE, config_get_string_value(configuracion,"REEMPLAZO_CACHE"));
 	RETARDO_MEMORIA = config_get_int_value(configuracion,"RETARDO_MEMORIA");
 	//config_destroy(configuracion);
 }
@@ -84,8 +85,8 @@ void inicializarMemoria(char *path) {
 	crearMemoria(configuracionMemoria);
 	cacheDeMemoria = malloc(sizeof(cache));
 	cacheDeMemoria->entradasCache = list_create();
-//	config_destroy(configuracionMemoria);
-	free(configuracionMemoria);
+	config_destroy(configuracionMemoria);
+//	free(configuracionMemoria);
 }
 
 void mostrarConfiguracionesMemoria() {
