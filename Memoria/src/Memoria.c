@@ -770,11 +770,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	//verificarParametrosInicio(argc);
-	char* path = "Debug/memoria.config";
-	//inicializarMemoria(argv[1]);
-	paquete paqueteDeRecepcion, paqDePaginas;
-	inicializarMemoria(path);
+	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
+	inicializarMemoria(argv[1]);
+	//paquete paqueteDeRecepcion, paqDePaginas;
+	//inicializarMemoria(path);
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
 	entradasDeTabla= (entradaTabla*) memoriaSistema;

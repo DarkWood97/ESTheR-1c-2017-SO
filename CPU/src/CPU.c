@@ -37,6 +37,7 @@ AnSISOP_kernel primitivasDeKernel = {
 
 //----------FUNCIONES BASICAS CPU--------------//
 
+
 void cpuCrear(t_config *configuracionCPU){
 	IP_KERNEL = config_get_string_value(configuracionCPU, "IP_KERNEL");
 	PUERTO_KERNEL = config_get_int_value(configuracionCPU, "PUERTO_KERNEL");
@@ -156,11 +157,11 @@ char* pedirLineaAMemoria(){
 int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
-	verificarParametrosInicio(argc);
-	inicializarCPU(argv[1]);
+	//verificarParametrosInicio(argc);
+	//inicializarCPU(argv[1]);
+	inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	//mostrarConfiguracionCPU(cpuDelSistema);
-	int socketMemoria, socketKernel;
 	//Conecto
 	socketKernel = conectarServer(IP_KERNEL, PUERTO_KERNEL);
 	socketMemoria = conectarServer(IP_MEMORIA, PUERTO_MEMORIA);

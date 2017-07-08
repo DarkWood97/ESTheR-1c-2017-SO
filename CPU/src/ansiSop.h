@@ -25,7 +25,7 @@
 #define FINALIZO_PROCESO 1000
 
 
-direccion *obtenerDireccionVirtual(t_puntero);
+direccion *obtenerDireccionDePuntero(t_puntero);
 void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_variable);
 t_valor_variable recibirLecturaDeMemoria();
 void realizarPeticionDeEscrituraEnMemoria(direccion*, t_valor_variable);
@@ -35,5 +35,16 @@ void enviarModificacionDeValor(char*, t_valor_variable);
 void finalizarProceso(PCB *);
 int obtenerPCAnterior(PCB *);
 void liberarElemento(void*);
+int obtenerPosicionDeStackAnterior();
+void generarContexto(t_contexto *);
+void agregarVariableAArgs(direccion *, t_nombre_variable);
+void agregarVariableAVars(direccion *, t_nombre_variable);
+direccion* generarDireccionParaVariable(int);
+direccion* generarDireccionParaArgumento(int);
+int obtenerCantidadDeArgs(t_contexto *);
+int obtenerCantidadDeVars(t_contexto *);
+direccion *obtenerDireccionDeVariable(variable*);
+t_puntero convertirDeDireccionAPuntero(direccion*);
+t_contexto* obtenerContextoAnterior();
 
 #endif /* ANSISOP_H_ */

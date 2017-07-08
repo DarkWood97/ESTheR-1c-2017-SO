@@ -48,17 +48,17 @@
 #define DATOS_VARIABLE_COMPARTIDA_KERNEL 1011
 #define DATOS_VARIABLE_MEMORIA 1013
 #define FINALIZO_PROCESO 1000
-#define PIDO_SEMAFORO
-#define DOY_SEMAFORO
-#define PIDO_RESERVA
-#define PIDO_LIBERACION
-#define ABRIR_ARCHIVO
-#define NO_SE_PUDO_ABRIR
-#define BORRAR_ARCHIVO
-#define CERRAR_ARCHIVO
-#define MOVEME_CURSOR
-#define ESCRIBIR_ARCHIVO
-#define LEER_DE_ARCHIVO
+#define PIDO_SEMAFORO 13
+#define DOY_SEMAFORO 12
+#define PIDO_RESERVA 11
+#define PIDO_LIBERACION 10
+#define ABRIR_ARCHIVO 9
+#define NO_SE_PUDO_ABRIR 8
+#define BORRAR_ARCHIVO 7
+#define CERRAR_ARCHIVO 6
+#define MOVEME_CURSOR 5
+#define ESCRIBIR_ARCHIVO 4
+#define LEER_DE_ARCHIVO 3
 #define LEER_DATOS 2
 #define DATOS_DE_PAGINA 1
 
@@ -120,6 +120,11 @@ typedef struct{
 	char* algoritmo;
 	int quantum;
 }datosDeKernel;
+
+typedef struct{
+  char nombreVariable;
+  direccion *direccionDeVariable;
+}variable;
 
 //------------------------DEFINE--------------------------------------
 t_log* loggerCPU;
