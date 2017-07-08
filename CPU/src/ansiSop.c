@@ -95,6 +95,27 @@ void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variabl
 	free(buffer);
 }
 
+void* serializarPCB(PCB* unPCB){
+	void* mensaje = malloc((sizeof(int)*10)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas);
+	memcpy(mensaje, &pcbEnProceso->PID, sizeof(int));
+	memcpy(mensaje+sizeof(int), &pcbEnProceso->ProgramCounter, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*2), &pcbEnProceso->paginas_Codigo, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*3), &pcbEnProceso->cod, sizeof(codeIndex));
+	memcpy(mensaje+(sizeof(int)*3)+sizeof(codeIndex), &pcbEnProceso->exitCode, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*4)+sizeof(codeIndex), &pcbEnProceso->tamContextoActual, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*5)+sizeof(codeIndex), pcbEnProceso->contextoActual, pcbEnProceso->tamContextoActual);
+	memcpy(mensaje+(sizeof(int)*5)+pcbEnProceso->tamContextoActual+sizeof(codeIndex), &pcbEnProceso->tamEtiquetas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*6)+pcbEnProceso->tamContextoActual+sizeof(codeIndex), &pcbEnProceso->etiquetas, pcbEnProceso->tamEtiquetas);
+	memcpy(mensaje+(sizeof(int)*6)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex), &pcbEnProceso->tablaKernel.paginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*7)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex), &pcbEnProceso->tablaKernel.pid, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*8)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex), &pcbEnProceso->tablaKernel.tamaniosPaginas, sizeof(int));
+
+	return mensaje;
+}
+
+int sacarTamanioPCB(PCB* unPCB){
+	return ((sizeof(int)*8)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex));
+}
 
 void finalizarProceso(PCB *pcb){
 	programaEnEjecucionFinalizado = 1;

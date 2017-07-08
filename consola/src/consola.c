@@ -10,12 +10,11 @@
 #include "socket.h"
 #include <stdio.h>
 
-
-
 #define MENSAJE_CODIGO  103
 #define MENSAJE_PID   105
 #define HANDSHAKE_CONSOLA 1005
 #define FINALIZAR_PROGRAMA 503
+#define ESPACIO_INSUFICIENTE -2
 
 typedef struct {
 	_ip ip_Kernel;
@@ -90,10 +89,12 @@ long int obtenerTamanioArchivo(FILE* archivo){
 int obtenerPosicionHilo(){
 	int i = 0;
 	for(;i<=list_size(listaProcesos);i++){
-		if(list_get(listaProcesos, i)==(pthread_self())){
+		Programa* unPrograma = list_get(listaProcesos, i);
+		if((unPrograma->hilo)==(pthread_self())){
 			return i;
 		}
 	}
+	return i;
 }
 
 char* leerArchivo(FILE *archivo, long int tamanio)
@@ -105,8 +106,48 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 	return codigo;
 }
 
-Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
+void* iniciarPrograma(void* programa)
 {
+	Programa* unPrograma = (Programa*)programa;
+	bool paqueteNoUsado = false;
+
+	while(1){
+		if((unPrograma->pid==paqueteHiloCorrecto->tipoMsj)&&(paqueteNoUsado)){
+			pthread_mutex_lock(&mutexPaquete);
+			printf("Mensaje recibido: %p",paqueteHiloCorrecto->mensaje);
+			unPrograma->impresiones++;
+			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
+			paqueteNoUsado = false;
+			free(paqueteHiloCorrecto);
+			pthread_mutex_unlock(&mutexPaquete);
+		}
+
+		paquete* paqueteRecibido = recvRemasterizado(socketKernel);
+
+		if(unPrograma->pid==paqueteRecibido->tipoMsj){
+			pthread_mutex_lock(&mutexImpresiones);
+			printf("Mensaje recibido: %p",paqueteRecibido->mensaje);
+			unPrograma->impresiones++;
+			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
+			pthread_mutex_unlock(&mutexImpresiones);
+		}
+		else{
+			pthread_mutex_lock(&mutexPaquete);
+			paqueteHiloCorrecto = malloc(sizeof(paqueteRecibido->tamMsj)+(sizeof(int)*2));
+			paqueteHiloCorrecto = paqueteRecibido;
+			paqueteNoUsado = true;
+			pthread_mutex_unlock(&mutexPaquete);
+			}
+
+		free(paqueteRecibido);
+	}
+}
+
+void recibirPID(long int tamanio,char* mensaje)
+{
+	Programa* programa;
+	programa = (Programa*) malloc(sizeof(Programa));
+
 	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, mensaje);
 
 	struct timeval inicio;
@@ -116,73 +157,41 @@ Programa* recibirPID(long int tamanio,Programa* programa,char* mensaje)
 		paquete* paqueteRecibido = recvRemasterizado(socketKernel);
 
 		if(paqueteRecibido->tipoMsj==MENSAJE_PID){
-			programa->pid = *(int*)paqueteRecibido->mensaje;
+			pthread_mutex_unlock(&mutexImpresiones);
+			pthread_t hiloPrograma;
+			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)programa);
 			gettimeofday(&inicio, NULL);
+			programa->pid = *(int*)paqueteRecibido->mensaje;
 			programa->inicio = inicio;
-			programa->hilo = pthread_self();
+			programa->hilo = hiloPrograma;
 			programa->impresiones = 0;
 			list_add(listaProcesos,programa);
 			PIDNoRecibido = false;
+		} else if(paqueteRecibido->tipoMsj==ESPACIO_INSUFICIENTE){
+			pthread_mutex_unlock(&mutexImpresiones);
+			printf("No hay espacio suficiente para iniciar el programa\n");
 		}
 
 		free(paqueteRecibido);
 	}
-	return programa;
+	free(programa);
 }
 
-void* iniciarPrograma(void* path)
-{
+void prepararPrograma(char* path){
 	pthread_mutex_lock(&mutexImpresiones);
-	FILE *archivoRecibido = fopen((char*) path, "r");
+	FILE *archivoRecibido = fopen(path, "r");
 	log_info(loggerConsola,"Archivo recibido correctamente...\n");
 
 	long int tamanio = obtenerTamanioArchivo(archivoRecibido)+1;
 	char* mensaje = leerArchivo(archivoRecibido,tamanio);
 
-	Programa* programa;
-	programa = (Programa*) malloc(sizeof(Programa));
-	programa = recibirPID(tamanio,programa,mensaje);
-	free(mensaje);
-	pthread_mutex_unlock(&mutexImpresiones);
-
-	paquete* paqueteRecibido;
-
-	bool paqueteNoUsado = false;
-
-	fclose(archivoRecibido);
 	free((char*)path);
+	fclose(archivoRecibido);
 
-	while(1){
-		if((programa->pid==paqueteHiloCorrecto->tipoMsj)&&(paqueteNoUsado)){
-			pthread_mutex_lock(&mutexPaquete);
-			printf("Mensaje recibido: %p",paqueteHiloCorrecto->mensaje);
-			programa->impresiones++;
-			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
-			paqueteNoUsado = false;
-			free(paqueteHiloCorrecto);
-			pthread_mutex_unlock(&mutexPaquete);
-		}
-
-		paqueteRecibido = recvRemasterizado(socketKernel);
-
-		if(programa->pid==paqueteRecibido->tipoMsj){
-			pthread_mutex_lock(&mutexImpresiones);
-			printf("Mensaje recibido: %p",paqueteRecibido->mensaje);
-			programa->impresiones++;
-			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
-			free(paqueteRecibido);
-			pthread_mutex_unlock(&mutexImpresiones);
-		}
-		else{
-			pthread_mutex_lock(&mutexPaquete);
-			paqueteHiloCorrecto = malloc(sizeof(paqueteRecibido));
-			paqueteHiloCorrecto = paqueteRecibido;
-			paqueteNoUsado = true;
-			free(paqueteRecibido);
-			pthread_mutex_unlock(&mutexPaquete);
-			}
-	}
+	recibirPID(tamanio,mensaje);
+	free(mensaje);
 }
+
 
 Programa* buscarPrograma(int pid){
 
@@ -244,7 +253,7 @@ void finalizarPrograma(int pid)
 void desconectarConsola()
 {
 	int i = 0;
-	if(!(list_size(listaProcesos))){
+	if(!(list_is_empty(listaProcesos))){
 		int tamanio = list_size(listaProcesos);
 		for(;i<=tamanio;i++){
 		Programa* programa  = list_get(listaProcesos, 0);
@@ -302,15 +311,17 @@ void* manejadorInterfaz()
 			getline(&comando,&tamanioMaximo,stdin);
 			int tamanioPathRecibido = strlen(comando);
 			comando[tamanioPathRecibido-1] = '\0';
-			pthread_t hiloPrograma;
-			programaIniciado = true;
-			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)comando);
+			prepararPrograma(comando);
+			if(list_is_empty(listaProcesos)){
+				programaIniciado = true;
+			}
 		}else if((string_equals_ignore_case(comando, "Mostrar Programas iniciados"))&&(programaIniciado)){
 			mostrarProgramasIniciados();
 		}else if((string_equals_ignore_case(comando, "Finalizar Programa"))&&(programaIniciado)){
 			comando = realloc(comando,sizeof(int));
 			puts("Ingrese el pid a finalizar\n");
-			getline(&comando,sizeof(int),stdin);
+			size_t tamanioComando = 10;
+			getline(&comando,&tamanioComando,stdin);
 			int tamanioPidRecibido = strlen(comando);
 			comando[tamanioPidRecibido-1] = '\0';
 			int pid = atoi(comando);

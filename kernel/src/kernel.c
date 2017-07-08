@@ -65,7 +65,7 @@ typedef struct __attribute__((packed)) {
 	int PID;
 	int ProgramCounter;
 	int paginas_Codigo;
-	codeIndex cod;
+	codeIndex* cod;
 	char* etiquetas;
 	int exitCode;
 	t_list *contextoActual;
@@ -283,8 +283,8 @@ int obtenerNumeroPagina(int pid,int* offset){
 		if(tk->pid==pid){
 			t_proceso* proceso = dameProceso(estado->ejecutando,pid);
 			list_add(estado->ejecutando->elements, proceso);
-			(*offset) = proceso->pcb->cod.comienzo;
-			valor =((TAM_PAGINA*tk->paginas)-(proceso->pcb->cod.comienzo));
+			(*offset) = proceso->pcb->cod[i].comienzo;
+			valor =((TAM_PAGINA*(tk->paginas))-(proceso->pcb->cod[i].comienzo));
 			int cantidad = (valor) % (TAM_PAGINA);
 			if (valor % TAM_PAGINA != 0) {
 				cantidad++;
@@ -684,19 +684,17 @@ void mostrarConfiguracionesKernel() {
 }
 
 int aumentarPID() {
-	int pid = pid_actual;
 	pid_actual = pid_actual + 1;
-	return pid;
+	return pid_actual;
 }
 
 int disminuirPID() {
-	int pid = pid_actual;
 	pid_actual = pid_actual - 1;
-	return pid;
+	return pid_actual;
 }
 
-codeIndex cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
-	codeIndex code[metadata_program->instrucciones_size];
+codeIndex* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
+	codeIndex* code = malloc((sizeof(int)*2)*metadata_program->instrucciones_size);
 	int i = 0;
 
 	for (; i < metadata_program->instrucciones_size; i++) {
@@ -705,7 +703,7 @@ codeIndex cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
 		code[i].offset = metadata_program->instrucciones_serializado[i].offset;
 	}
 
-	return code[metadata_program->instrucciones_size];
+	return code;
 }
 
 char* cargarEtiquetasIndex(t_metadata_program* metadata_program,int sizeEtiquetasIndex) {
@@ -758,7 +756,7 @@ void realizarHandshakeMemoria(int socket) {
 	}
 }
 
-int recibirCantidadPaginas(char* codigo) {
+int obtenerCantidadPaginas(char* codigo) {
 	int tamanio = string_length(codigo);
 	int cantidad = tamanio/(TAM_PAGINA-sizeof(HeapMetadata)*2) + stack_Size;
 	if (tamanio % TAM_PAGINA != 0) {
@@ -780,47 +778,36 @@ void recibirPCB(void* mensaje){
 	memcpy(&nuevoPCB->PID,mensaje, sizeof(int));
 	memcpy(&nuevoPCB->ProgramCounter,mensaje, sizeof(int));
 	memcpy(&nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
-	memcpy(&nuevoPCB->cod.comienzo,mensaje+(sizeof(int)*3), sizeof(int));
-	memcpy(&nuevoPCB->cod.offset,mensaje+(sizeof(int)*4), sizeof(int));
-	memcpy(&nuevoPCB->exitCode,mensaje+(sizeof(int)*5), sizeof(int));
-	memcpy(&nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*6), sizeof(int));
-	memcpy(&nuevoPCB->contextoActual,mensaje+(sizeof(int)*7), nuevoPCB->tamContextoActual);
-	memcpy(&nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual, sizeof(int));
-	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas);
-	memcpy(&nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(&nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*9)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(&nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(&nuevoPCB->cod,(codeIndex*)(mensaje+(sizeof(int)*3)), sizeof(codeIndex));
+	memcpy(&nuevoPCB->exitCode,mensaje+(sizeof(int)*3)+sizeof(codeIndex), sizeof(int));
+	memcpy(&nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*4)+sizeof(codeIndex), sizeof(int));
+	memcpy(&nuevoPCB->contextoActual,mensaje+(sizeof(int)*5)+sizeof(codeIndex), nuevoPCB->tamContextoActual);
+	memcpy(&nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*5)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, sizeof(int));
+	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas);
+	memcpy(&nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(&nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*7)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(&nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*8)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
 
 	free(mensaje);
 }
 
 void enviarPCB(int socketCPU){
-	paquete paqCPU;
 	void* mensaje = malloc((sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas);
 	memcpy(mensaje, &nuevoPCB->PID, sizeof(int));
 	memcpy(mensaje+sizeof(int), &nuevoPCB->ProgramCounter, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*2), &nuevoPCB->paginas_Codigo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*3), &nuevoPCB->cod.comienzo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*4), &nuevoPCB->cod.offset, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*5), &nuevoPCB->exitCode, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*6), &nuevoPCB->tamContextoActual, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*7), nuevoPCB->contextoActual, nuevoPCB->tamContextoActual);
-	memcpy(mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual, &nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual, &nuevoPCB->etiquetas, nuevoPCB->tamEtiquetas);
-	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, &nuevoPCB->tablaKernel.paginas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*9)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, &nuevoPCB->tablaKernel.pid, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, &nuevoPCB->tablaKernel.tamaniosPaginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*3), &nuevoPCB->cod, sizeof(codeIndex));
+	memcpy(mensaje+(sizeof(int)*3)+sizeof(codeIndex), &nuevoPCB->exitCode, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*4)+sizeof(codeIndex), &nuevoPCB->tamContextoActual, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*5)+sizeof(codeIndex), nuevoPCB->contextoActual, nuevoPCB->tamContextoActual);
+	memcpy(mensaje+(sizeof(int)*5)+nuevoPCB->tamContextoActual+sizeof(codeIndex), &nuevoPCB->tamEtiquetas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*6)+nuevoPCB->tamContextoActual+sizeof(codeIndex), &nuevoPCB->etiquetas, nuevoPCB->tamEtiquetas);
+	memcpy(mensaje+(sizeof(int)*6)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex), &nuevoPCB->tablaKernel.paginas, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex), &nuevoPCB->tablaKernel.pid, sizeof(int));
+	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex), &nuevoPCB->tablaKernel.tamaniosPaginas, sizeof(int));
 
-	paqCPU.mensaje = mensaje;
-	paqCPU.tamMsj = (sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas;
-	paqCPU.tipoMsj = MENSAJE_PCB;
-
-	if ((send(socketCPU, &paqCPU, sizeof(nuevoPCB), 0)) == -1) {
-		perror("Error al enviar PCB al CPU");
-		exit(-1);
-	}
-
-	free(paqCPU.mensaje);
+	int tamanioMensaje = (sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex);
+	sendRemasterizado(socketCPU,MENSAJE_PCB,tamanioMensaje,mensaje);
 }
 
 //--------------------------------------FUNCIONES DE ARRAY----------------------------------------
@@ -879,6 +866,35 @@ void *manejadorTeclado(){
 	free(comando);
 }
 
+void analizarEstadoProceso(){
+	paquete* unPaquete = recvRemasterizado(socketParaMemoria);
+	if(unPaquete->tipoMsj==INICIO_EXITOSO){
+		TablaKernel *proceso;
+		t_proceso* t_proceso;
+		t_proceso = malloc(sizeof(t_proceso));
+		proceso->pid = pid_actual;
+		proceso->tamaniosPaginas = TAM_PAGINA;
+		proceso->paginas = cantPag;
+		list_add(tablaKernel, proceso);
+		log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
+		prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
+		enviarPCB(socketCPU);
+		t_proceso->abortado=false;
+		t_proceso->pcb = nuevoPCB;
+		t_proceso->socket_CPU = socketCPU;
+		t_proceso->socket_CONSOLA = socketConsola;
+		queue_push(estado->listo,t_proceso);
+		sendRemasterizado(socketConsola, MENSAJE_PID, sizeof(int), t_proceso->pcb->PID);
+	}
+	else{
+		  char* espacioInsuficiente = malloc(sizeof(char)*60);
+		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
+		  sendRemasterizado(socketConsola,ESPACIO_INSUFICIENTE, sizeof(int), &espacioInsuficiente);
+		  disminuirPID();
+	}
+	free(unPaquete);
+}
+
 void* manejadorConexionConsola (void* socket){
   while(1){
 	  paquete* paqueteRecibidoDeConsola;
@@ -889,9 +905,10 @@ void* manejadorConexionConsola (void* socket){
 			  case MENSAJE_CODIGO:
 				  //mensajeAux = recvRemasterizado(socketDeConsola);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  cantPag = recibirCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
+				  cantPag = obtenerCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
 				  inicializarPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj);
 				  prepararProgramaEnMemoria(socketParaMemoria,ASIGNAR_PAGINAS);
+				  analizarEstadoProceso();
 				  free(paqueteRecibidoDeConsola);
 				  break;
 			  case CORTO:
@@ -917,10 +934,6 @@ void* manejadorConexionConsola (void* socket){
 //	  paqueteRecibidoDeMemoria = recvRemasterizado(*(int*)socketMemoria);
 //	  paquete* mensajeAux;
 //	      switch (paqueteRecibidoDeMemoria->tipoMsj) {
-//	      	  case TAMANIO_PAGINA:
-//	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
-//	      		TAM_PAGINA = mensajeAux->mensaje;
-//	      		  break;
 //	      	  case ESPACIO_INSUFICIENTE: ;
 //	      		  char* espacioInsuficiente = malloc(sizeof(char)*60);
 //	      		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
@@ -956,10 +969,6 @@ void* manejadorConexionConsola (void* socket){
 //	      	  }
 //	  }
 //  }
-
-void *manejadorConexionCPU(void* socketCPU){
-
-}
 
 //-----------------------------------MAIN-----------------------------------------------
 
@@ -1035,7 +1044,7 @@ int main(int argc, char *argv[]) {
 							queue_push(cola_CPU_libres,socketCPU);
 							//enviarAEjecutar(int pid);
 							//socketCPU = comenzarAEjecutar(int pid);
-							pthread_create(&hiloManejadorCPU, NULL,  manejadorConexionCPU, (void*)socketAChequear);
+							//pthread_create(&hiloManejadorCPU, NULL,  manejadorConexionCPU, (void*)socketAChequear);
 							log_info(loggerKernel,"Se registro nueva CPU...\n");
 							FD_CLR(socketAChequear,&socketsCliente);
 							break;
