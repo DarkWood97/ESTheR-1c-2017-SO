@@ -58,7 +58,7 @@ typedef struct __attribute__((packed)) {
 
 int main(void){
 	int socketServidor = conectarAServer(IP,PORT);
-	codeIndex *codigo = malloc(sizeof(codeIndex));
+	codeIndex *codigo = malloc(sizeof(codeIndex)*2);
 	paquete *paqueteConCodigo = recvRemasterizado(socketServidor);
 	codigo = paqueteConCodigo->mensaje;
 	printf("%d %d", codigo[1].comienzo, codigo[2].comienzo);

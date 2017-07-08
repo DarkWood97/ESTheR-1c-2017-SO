@@ -68,8 +68,9 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 	datosParaEjecucion = malloc(sizeof(datosDeKernel));
 	int tamanioDeNombreAlgori = paqueteDeArmado->tamMsj - sizeof(int);
 	datosParaEjecucion->algoritmo = string_new();
-	memcpy(datosParaEjecucion->algoritmo, paqueteDeArmado->mensaje, tamanioDeNombreAlgori);
-	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje, sizeof(int));
+	char *nombreAlgoritmo = string_substring_until((char*)paqueteDeArmado->mensaje, tamanioDeNombreAlgori);
+	string_append(&datosParaEjecucion->algoritmo, nombreAlgoritmo);
+	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje+ string_length(nombreAlgoritmo), sizeof(int));
 }
 
 void realizarHandshakeConKernel(){
@@ -163,9 +164,9 @@ char* pedirLineaAMemoria(){
 int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
-	//verificarParametrosInicio(argc);
-	//inicializarCPU(argv[1]);
-	inicializarCPU("Debug/CPU.config");
+	verificarParametrosInicio(argc);
+	inicializarCPU(argv[1]);
+	//inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);

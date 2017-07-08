@@ -2,3 +2,13 @@
 [INFO] 11:23:28:421 CPU/(3822:3822): CPU inicializada correctamente.
 [INFO] 11:23:54:757 CPU/(3868:3868): CPU inicializada correctamente.
 [INFO] 11:25:19:761 CPU/(4004:4004): CPU inicializada correctamente.
+[INFO] 15:38:01:117 CPU/(4425:4425): CPU inicializada correctamente.
+[INFO] 15:40:24:872 CPU/(4723:4723): CPU inicializada correctamente.
+[INFO] 15:41:16:155 CPU/(4847:4847): CPU inicializada correctamente.
+[INFO] 15:43:57:378 CPU/(4992:4992): CPU inicializada correctamente.
+[INFO] 16:00:04:660 CPU/(6846:6846): CPU inicializada correctamente.
+[INFO] 16:01:32:303 CPU/(7032:7032): CPU inicializada correctamente.
+[INFO] 16:02:11:71 CPU/(7096:7096): CPU inicializada correctamente.
+[INFO] 16:02:11:670 CPU/(7096:7096): Handshake con memoria realizado.
+[INFO] 16:02:33:65 CPU/(7195:7195): CPU inicializada correctamente.
+[INFO] 16:02:33:670 CPU/(7195:7195): Handshake con memoria realizado.

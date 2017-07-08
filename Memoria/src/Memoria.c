@@ -28,6 +28,7 @@
 #define NO_SE_PUEDE_COPIAR -2001
 #define DATOS_DE_PAGINA 103
 #define TAMANIO_PAGINA_PARA_KERNEL 102
+#define TAMANIO_PAGINA_PARA_CPU 105
 #define HANG_UP_KERNEL 0
 #define LIBERAR_PAGINA 506
 
@@ -814,6 +815,7 @@ int main(int argc, char *argv[]) {
 								socketCPU = malloc(sizeof(int));
 								*socketCPU = socketClienteChequeado;
 								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketCPU);
+								sendRemasterizado(socketClienteChequeado, TAMANIO_PAGINA_PARA_CPU, sizeof(int), &MARCOS_SIZE);
 								log_info(loggerMemoria,"Se registro nueva CPU...\n");
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
 								break;

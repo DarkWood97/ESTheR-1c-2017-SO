@@ -126,6 +126,7 @@ typedef struct __attribute__((packed)) {
 #define OBTENER_VARIABLE_COMPARTIDA 667
 #define ESCRIBIR_DATOS 505
 #define LEER_DATOS 504
+#define HANDSHAKE_CPU 1003
 
 //VARIABLES GLOBALES
 t_log * loggerKernel;
@@ -756,6 +757,18 @@ void realizarHandshakeMemoria(int socket) {
 	}
 }
 
+void handshakeCPU(int socket){
+	void *buffer = malloc(string_length(algoritmo)+sizeof(int));
+	memcpy(buffer, algoritmo, string_length(algoritmo));
+	if(string_equals_ignore_case(algoritmo, "RR")){
+		memcpy(buffer+string_length(algoritmo), &quantum, sizeof(int));
+	}else{
+		int quantumDeMentira = -1;
+		memcpy(buffer+string_length(algoritmo), &quantumDeMentira, sizeof(int));
+	}
+	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(algoritmo)+sizeof(int), buffer);
+}
+
 int obtenerCantidadPaginas(char* codigo) {
 	int tamanio = string_length(codigo);
 	int cantidad = tamanio/(TAM_PAGINA-sizeof(HeapMetadata)*2) + stack_Size;
@@ -1041,7 +1054,8 @@ int main(int argc, char *argv[]) {
 //							FD_CLR(socketParaMemoria,&socketsMaster);
 //								break;
 						case CPU:
-							queue_push(cola_CPU_libres,socketCPU);
+							queue_push(cola_CPU_libres,socketAChequear);
+							handshakeCPU(socketAChequear);
 							//enviarAEjecutar(int pid);
 							//socketCPU = comenzarAEjecutar(int pid);
 							//pthread_create(&hiloManejadorCPU, NULL,  manejadorConexionCPU, (void*)socketAChequear);

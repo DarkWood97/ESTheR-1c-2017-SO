@@ -47,12 +47,12 @@ typedef struct __attribute__((packed)) {
 
 int main(void) {
 	paquete *unPaquete;
-	codeIndex *codigo = malloc(sizeof(codeIndex));
+	codeIndex *codigo = malloc(sizeof(codeIndex)*2);
 	codigo[1].comienzo = 1;
 	codigo[2].comienzo = 2;
 	int socketConsola = ponerseAEscucharClientes(5000, 0);
 	aceptarConexionDeCliente(socketConsola);
-	sendRemasterizado(socketConsola, 1, sizeof(codeIndex), codigo);
+	sendRemasterizado(socketConsola, 1, sizeof(codeIndex)*2, codigo);
 	while(1){
 		/*unPaquete = recvRemasterizado(socketConsola);
 		printf("Mensaje recibido: %p"*//*,unPaquete->mensaje);*/
