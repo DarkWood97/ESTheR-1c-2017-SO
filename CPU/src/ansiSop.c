@@ -1,300 +1,118 @@
 
 #include "funcionesCpu.h"
+#include "ansiSop.h"
 
 
-#define HANDSHAKE_MEMORIA 1001
-#define HANDSHAKE_KERNEL 1002
-#define MENSAJE_IMPRIMIR 101
-#define MENSAJE_PATH  103
-#define PETICION_LECTURA 104
-#define MENSAJE_DIRECCION 110
-#define ERROR -1
-#define CORTO 0
-#define MENSAJE_VARIABLE_COMPARTIDA 111
+
 
 
 
 //-----------------ESTRUCTURAS---------------------------------------
-typedef struct __attribute__((packed))t_direccion{
-	int pagina;
-	int offset;
-	int tam;
-}t_direccion;
+typedef struct{
+  int numPagina;
+  int offset;
+  int tamanioPuntero;
+}direccion;
+
 typedef struct __attribute__((packed))t_variable
 {
 	char etiqueta;
-	t_direccion *direccion;
+	direccion *direccion;
 } t_variable;
-typedef struct __attribute__((packed))t_contexto
-{
-	int posicion;
-	t_list *args;
-	t_list *vars;
-	int retPos;
-	t_direccion retVar;
-	int tamArgs;
-	int tamVars;
-}t_contexto;
+
+//typedef struct __attribute__((packed))t_contexto
+//{
+//	int posicion;
+//	t_list *args;
+//	t_list *vars;
+//	int retPos;
+//	direccion retVar;
+//	int tamArgs;
+//	int tamVars;
+//}contexto;
 
 //-----------------------VARIABLES GLOBALES------------------------------
-int sizeT_direccion= sizeof(t_direccion);
+//int sizeT_direccion= sizeof(t_direccion);
 //----------------------------FUNCIONES AUXILIARES----------------------
 
-//****************VOID*********************************************
-void proximaDireccion(retVar* direccionOriginal,int posicionStack, int ultimaPosicion)
-{
-	t_direccion *auxiliar;
-	auxiliar=malloc(sizeT_direccion);
-	int offsetAux=((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->offset + 4;
-	if(offsetAux>=tamPagina)
-	{
-				auxiliar->pagina = ((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->pagina + 1;
-				auxiliar->offset = 0;
-				auxiliar->tam=4;
-				memcpy(direccionOriginal, auxiliar , sizeof(retVar));
-				free(auxiliar);
+direccion *obtenerDireccionVirtual(t_puntero puntero){
+	direccion* direccionDelDato = malloc(sizeof(direccion));
+	direccionDelDato->numPagina = puntero/tamPaginasMemoria;
+	direccionDelDato->offset = puntero % tamPaginasMemoria;
+	direccionDelDato->tamanioPuntero = 4;
+	return direccionDelDato;
+}
+
+void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_variable sirveParaTamanio){
+	sendRemasterizado(socketMemoria, PETICION_LECTURA_MEMORIA, sizeof(direccion), direccionVirtual);
+}
+
+t_valor_variable recibirLecturaDeMemoria(){
+	t_valor_variable valorDeVariable;
+	paquete *paqueteConDatosDeLectura = recvRemasterizado(socketMemoria);
+	if(paqueteConDatosDeLectura->tipoMsj == DATOS_VARIABLE_MEMORIA){
+		valorDeVariable = *(int*)paqueteConDatosDeLectura->mensaje;
+	}else{
+		log_info(loggerCPU, "No se recibio correctamente el valor de la variable de memoria.");
+		exit(-1);
 	}
-	else
-	{			auxiliar->pagina = ((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, ultimaPosicion)))->direccion->pagina;
-				auxiliar->offset = offsetAux;
-				auxiliar->tam=4;
-				memcpy(direccionOriginal, auxiliar , sizeof(retVar));
-				free(auxiliar);
+	free(paqueteConDatosDeLectura);
+	return valorDeVariable;
+}
+
+void realizarPeticionDeEscrituraEnMemoria(direccion* direcVirtual, t_valor_variable valorAAsignar){
+	void *buffer = malloc(sizeof(direccion)+sizeof(t_valor_variable));
+	memcpy(buffer,direcVirtual,sizeof(direccion));
+	memcpy(buffer + sizeof(direccion), &valorAAsignar, sizeof(t_valor_variable));
+	sendRemasterizado(socketMemoria, PETICION_ESCRITURA_MEMORIA , sizeof(direccion)+sizeof(t_valor_variable), buffer);
+	free(buffer);
+}
+
+t_valor_variable recibirValorCompartida(){
+	t_valor_variable valorVariableCompartida;
+	paquete *paqueteDeVariableCompartida = recvRemasterizado(socketKernel);
+	if(paqueteDeVariableCompartida->tipoMsj == DATOS_VARIABLE_COMPARTIDA_KERNEL){
+		valorVariableCompartida = *(t_valor_variable*)paqueteDeVariableCompartida->mensaje;
+	}else{
+		log_info(loggerCPU, "No se recibio correctamente el valor de la variable compartida de kernel.");
+		exit(-1);
 	}
-}
-void armarDireccionPagina(retVar * direccionOriginal)
-{
-	retVar *auxiliar;
-	auxiliar=malloc(sizeT_direccion);
-	auxiliar->tam=4;
-	auxiliar->offset=0;
-	auxiliar->pagina = pcb->paginas_Codigo;
-	memcpy(direccionOriginal,auxiliar,sizeT_direccion);
-	free(auxiliar);
-}
-void armarDireccionDeArgumento(retVar * direccionOriginal)
-{
-	if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamArgs == 0){
-		log_info(log,"No hay argumentos\n");
-		int posicionAnterior = pcb->tamContextoActual-2;
-		int UltimaPocisionVariable = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-2)))->tamVars-1;
-		proximaDireccion(direccionOriginal,posicionAnterior, UltimaPocisionVariable);
-		}
-		else {
-		log_info(log,"Busco ultimo argumento\n");
-		int posicionStackActual = pcb->tamContextoActual-1;
-		int posicionUltimoArgumento = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1)))->tamArgs-1;
-		proximaDireccion(direccionOriginal,posicionStackActual, posicionUltimoArgumento);
-		}
-}
-void armarProximaDireccion(retVar* direccionOriginal){
-	int ultimaPosicionStack;
-	ultimaPosicionStack= pcb->tamContextoActual-1;
-	int posicionUltimaVariable;
-	posicionUltimaVariable= ((t_contexto*)(list_get(pcb->contextoActual, ultimaPosicionStack)))->tamVars-1;
-	proximaDireccion(direccionOriginal,ultimaPosicionStack, posicionUltimaVariable);
-}
-void proximaDireccionArgumento(retVar* direccionOriginal, int posicionStack, int posicionUltimaVariable ){
-	retVar *direccion;
-	int offset;
-	direccion= malloc(sizeT_direccion);
-	offset= ((retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->offset + 4;
-	log_info(log,"Entre a proxima direccion Argumento\n");
-	log_info(log,"Offset siguiente es %d\n", offset);
-		if(offset>=tamPagina){
-			direccion->pagina = ((retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->pagina + 1;
-			direccion->offset = 0;
-			direccion->tam=4;
-			memcpy(direccionOriginal, direccion ,sizeT_direccion);
-			free(direccion);
-		}
-		else
-			{
-				direccion->pagina = ((retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, posicionUltimaVariable)))->pagina;
-				direccion->offset = offset;
-				direccion->tam=4;
-				memcpy(direccionOriginal, direccion , sizeT_direccion);
-				free(direccion);
-		}
-
-		return;
+	free(paqueteDeVariableCompartida);
+	return valorVariableCompartida;
 }
 
-void armarDireccionDeFuncion(retVar* direccionOriginal)
-{
-	if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamArgs == 0 && ((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamVars == 0)
-		{
-			log_info(log,"Entrando a definir variable en contexto sin argumentos y sin vars\n");
-			int posicionStackAnterior = pcb->tamContextoActual-2;
-			int posicionUltimaVariable = ((t_contexto*)(list_get(pcb->contextoActual,pcb->tamContextoActual-2)))->tamVars-1;
-			proximaDireccion(direccionOriginal,posicionStackAnterior, posicionUltimaVariable);
-		}
-	else
-		{
-			if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamArgs != 0 && ((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamVars == 0)
-				{
+t_valor_variable consultarVariableCompartida(char* nombreDeLaVariable){
+	sendRemasterizado(socketKernel, PETICION_VARIABLE_COMPARTIDA_KERNEL, string_length(nombreDeLaVariable), nombreDeLaVariable);
+	return recibirValorCompartida();
+}
 
-			log_info(log,"Entrando a definir variable a partir del ultimo argumento\n");
-			int posicionStackActual = pcb->tamContextoActual-1;
-			int posicionUltimoArgumento = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1)))->tamArgs-1;
-			proximaDireccionArgumento(direccionOriginal,posicionStackActual, posicionUltimoArgumento);
-			}
-			else
-			{
-				if(((t_contexto*)list_get(pcb->contextoActual, pcb->tamContextoActual-1))->tamVars != 0){
+void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variable valor){
+	int tamanioDelMensaje = string_length(nombreDeVariableAModificar)+sizeof(t_valor_variable);
+	void *buffer = malloc(tamanioDelMensaje);
+	memcpy(buffer, nombreDeVariableAModificar, string_length(nombreDeVariableAModificar));
+	memcpy(buffer+string_length(nombreDeVariableAModificar), &valor, sizeof(t_valor_variable));
+	sendRemasterizado(socketKernel, PETICION_CAMBIO_VALOR_KERNEL, tamanioDelMensaje, buffer);
+	free(buffer);
+}
 
-				log_info(log,"Entrando a definir variable a partir de la ultima variable\n");
-				int posicionStackActual = pcb->tamContextoActual-1;
-				int posicionUltimaVariable = ((t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1)))->tamVars-1;
-				proximaDireccion(direccionOriginal,posicionStackActual, posicionUltimaVariable);
-			}
-			}
+
+void finalizarProceso(PCB *pcb){
+	programaEnEjecucionFinalizado = 1;
+	void* pcbSerializada;
+	pcbSerializada = serializarPCB(pcb);
+	sendRemasterizado(socketKernel, FINALIZO_PROCESO, sacarTamanioPCB(pcb), pcbSerializada);
+	if(sigusr1EstaActivo){
+		yaMePuedoDesconectar = true;
 	}
+	free(pcbSerializada);
 }
 
-void enviarDirAMemoria(retVar* direccion, long valor)
-{
-		char* escritura= malloc(sizeof(char)*16);
-		paquete paqueteAEnviar,auxiliar;
-		memcpy(escritura, &direccion , 4);
-		memcpy(escritura+4, &valor , 4);
-		auxiliar=serializar(escritura,MENSAJE_DIRECCION);
-		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar)); /*no se si es sizeof(paquete)*/
-		enviar(socketMemoria,paqueteAEnviar);
-		realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
-		destruirPaquete(&paqueteAEnviar);
-		destruirPaquete(&auxiliar);
-		free(escritura);
+int obtenerPCAnterior(PCB *pcb){
+	t_contexto* contextoAEvaluar;
+	contextoAEvaluar = list_get(pcb->contextoActual, list_size(pcb->contextoActual)-1);
+	return contextoAEvaluar->retPos;
 }
 
-void enviarDirALeerMemoria(char* datosMemoria, retVar* dir)
-{
-	memcpy(datosMemoria, &dir->pagina , 4);
-	memcpy(datosMemoria+4, &dir->offset , 4);
-	memcpy(datosMemoria+8, &dir->tam , 4);
-	paquete paqueteAEnviar,auxiliar;
-	auxiliar=serializar(datosMemoria,PETICION_LECTURA);
-	memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
-	enviar(socketMemoria,paqueteAEnviar);
-	realizarHandshake(socketMemoria,HANDSHAKE_MEMORIA);
-	destruirPaquete(&paqueteAEnviar);
-	destruirPaquete(&auxiliar);
-	free(datosMemoria);
-}
-void enviarDireccionALeerKernel(retVar* direccion, int valor)
-{
-		char* leer= malloc(sizeof(char)*16);
-		paquete paqueteAEnviar,auxiliar;
-		memcpy(leer, &direccion,4);
-		memcpy(leer+4, &valor , 4);
-		auxiliar=serializar(leer,MENSAJE_DIRECCION);
-		memcpy(&paqueteAEnviar, &auxiliar, sizeof(auxiliar));
-		enviar(socketKernel,paqueteAEnviar);
-		realizarHandshake(socketKernel,HANDSHAKE_MEMORIA);
-		destruirPaquete(&paqueteAEnviar);
-		destruirPaquete(&auxiliar);
-		free(leer);
-}
-void punteroADir(int puntero, retVar* dir)
-{
-	dir=malloc(sizeof(retVar));
-	if(tamPagina>puntero)
-	{
-		dir->pagina=0;
-		dir->offset=puntero;
-		dir->tam=4;
-	}
-	else
-	{
-		dir->pagina = (puntero/tamPagina);
-		dir->offset = puntero%tamPagina;
-		dir->tam=4;
-	}
-}
-void inicializarVariable(t_variable *variable, t_nombre_variable identificador_variable,t_direccion *direccion_variable)
-{
-	variable->direccion=direccion_variable;
-	variable->etiqueta=identificador_variable;
-}
-void deserealizarConRetorno(int socket, paquete* aRetornar)
-{
-	paquete * auxiliar=malloc(sizeof(paquete));
-			if(recv(socket,auxiliar,16,0)==-1)
-				{
-					perror("Error de receive");
-				}
-	auxiliar=aRetornar;
-	destruirPaquete(auxiliar);
-}
-
-char* loQueTengoQueLeer (int pagina,int desplazamiento, int tam)
-{
-	if((tam+desplazamiento)<=tamPagina){
-
-					char *datos= malloc(sizeof(char*)*16);
-					retVar *datosMemoria=malloc(sizeof(retVar));
-					datosMemoria->offset=desplazamiento;
-					datosMemoria->pagina=pagina;
-					datosMemoria->tam=tam;
-					enviarDirALeerMemoria(datos,datosMemoria);
-
-					paquete* instruccion;
-
-					instruccion =(paquete *) deserealizarMensaje(socketMemoria);
-
-					char* sentencia=malloc(datosMemoria->tam);
-					memcpy(sentencia, instruccion->mensaje, datosMemoria->tam);
-					free(datos);
-					free(datosMemoria);
-					destruirPaquete(instruccion);
-					return sentencia;}
-	else{
-		char* datos ;
-		//datos=leer(pagina,desplazamiento,(tamPagina-desplazamiento));
-		if(datos==NULL) return NULL;
-		char* datos2;
-		//datos2= leer(pagina+1,0,tam-(tamPagina-desplazamiento));
-		if(datos2==NULL) return NULL;
-
-		char* nuevo =malloc((tamPagina-desplazamiento)+tam-(tamPagina-desplazamiento));
-		memcpy(nuevo,datos,(tamPagina-desplazamiento));
-		memcpy(nuevo+(tamPagina-desplazamiento),datos2,tam-(tamPagina-desplazamiento));
-		free(datos);
-		free(datos2);
-		return nuevo;
-	}
-}
-int obtenerPosicionStack()
-{
-	int auxiliar = pcb->tamContextoActual;
-	auxiliar--;
-	return auxiliar;
-}
-t_contexto * crearContexto()
-{
-	int tam= sizeof(t_contexto);
-	t_contexto * auxiliar =malloc(tam);
-	auxiliar->posicion= obtenerPosicionStack();
-	auxiliar->args=list_create();
-	auxiliar->vars=list_create();
-	auxiliar->tamArgs=0;
-	auxiliar->tamVars=0;
-	auxiliar->retPos=pcb->ProgramCounter;
-	return auxiliar;
-}
-void destruirContextoActual( int size_pagina){
-	pcb->cod.offset--;
-	t_contexto* contextoActual = &(pcb->contextoActual);
-	pcb->ProgramCounter = contextoActual->retPos;
-	if(contextoActual->vars!=NULL)
-	{
-		free(contextoActual->vars);
-	}
-	if(contextoActual->args!=NULL)
-	{
-		free(contextoActual->args);
-	}
-	pcb->cod.offset -= (contextoActual->tamVars*sizeof(uint32_t));
-	pcb->cod.offset -= (contextoActual->tamArgs*sizeof(uint32_t));
-	/*Falta realocar stack*/
-}
+ void liberarElemento(void* elemento){
+   free(elemento);
+ }

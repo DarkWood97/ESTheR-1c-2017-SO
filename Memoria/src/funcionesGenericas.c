@@ -28,6 +28,12 @@
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
 
+typedef struct __attribute__((__packed__)){
+	int tipoMsj;
+	int tamMsj;
+	void* mensaje;
+}paquete;
+
 t_config *generarT_ConfigParaCargar(char *path) {
 	t_config *configuracionDelComponente;
 	if((configuracionDelComponente = config_create(path)) == NULL){

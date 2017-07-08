@@ -9,6 +9,7 @@
  */
 
 #include "funcionesSockets.h"
+#include "socket.h"
 
 typedef struct {
 	int puerto;
@@ -79,19 +80,19 @@ int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEsc
 	return socketMax;
 }
 
-bool enviarMensaje(int socket, void* mensaje) { //Socket que envia mensaje
-
-	int longitud =	strlen(mensaje)+1; //sino no lee \0
-	//int i = 0;
-	//for (; i < longitud; i++) {
-		if (send(socket, mensaje, longitud, 0) == -1) {
-			perror("Error de send");
-			close(socket);
-			exit(-1);
+//bool enviarMensaje(int socket, void* mensaje) { //Socket que envia mensaje
+//
+//	int longitud =	strlen(mensaje)+1; //sino no lee \0
+//	//int i = 0;
+//	//for (; i < longitud; i++) {
+//		if (send(socket, mensaje, longitud, 0) == -1) {
+//			perror("Error de send");
+//			close(socket);
+//			exit(-1);
 		//}
-	}
-	return true;
-}
+//	}
+//	return true;
+//}
 
 void chequearErrorDeSend (int socketAEnviarMensaje, int bytesAEnviar, char* cadenaAEnviar){
 	if(send(socketAEnviarMensaje,cadenaAEnviar,bytesAEnviar,0) == -1){

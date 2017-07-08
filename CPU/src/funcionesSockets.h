@@ -1,3 +1,10 @@
+/*
+ * funcionesGenericas.h
+ *
+ *  Created on: 6/4/2017
+ *      Author: utnso
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,14 +30,21 @@
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 
-#define backlog 10 //cantidad de conexiones en la cola
+typedef struct {
+	char *numero;
+}_ip;
+
+typedef struct __attribute__((__packed__)){
+	int tipoMsj;
+	int tamMsj;
+	void* mensaje;
+}paquete;
+
+
 
 int verificarErrorSocket(int);
-
 int verificarErrorSetsockopt(int);
-
 int verificarErrorBind(int, struct sockaddr_in);
-
 int verificarErrorListen(int);
 
 #endif /* FUNCIONESGENERICAS_H_ */

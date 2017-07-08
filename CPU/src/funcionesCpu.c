@@ -19,42 +19,57 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+#include "funcionesCpu.h"
 
-typedef struct __attribute__((packed)) {
-	int pid;
-	int tamaniosPaginas;
-	int paginas;
-} TablaKernel;
-typedef struct __attribute__((packed)) {
-	int comienzo;
-	int offset;
-} codeIndex;
-typedef struct __attribute__((packed)) {
-	int PID;
-	int ProgramCounter;
-	int paginas_Codigo;
-	codeIndex cod;
-	char* etiquetas;
-	int exitCode;
-	t_list *contextoActual;
-	int tamContextoActual;
-	int tamEtiquetas;
-	TablaKernel tablaKernel;
-} PCB;
-typedef struct __attribute__((__packed__)){
-	int tamMsj;
-	int tipoMsj;
-	void* mensaje;
-}paquete;
+//typedef struct __attribute__((packed)) {
+//	int pid;
+//	int tamaniosPaginas;
+//	int paginas;
+//} TablaKernel;
+//typedef struct __attribute__((packed)) {
+//	int comienzo;
+//	int offset;
+//} codeIndex;
+//typedef struct __attribute__((packed)) {
+//	int PID;
+//	int ProgramCounter;
+//	int paginas_Codigo;
+//	codeIndex cod;
+//	char* etiquetas;
+//	int exitCode;
+//	t_list *contextoActual;
+//	int tamContextoActual;
+//	int tamEtiquetas;
+//	TablaKernel tablaKernel;
+//} PCB;
+//typedef struct __attribute__((__packed__)){
+//	int tamMsj;
+//	int tipoMsj;
+//	void* mensaje;
+//}paquete;
 
-t_config generarT_ConfigParaCargar(char *path) {
-	t_config *configuracionDelComponente = (t_config*)malloc(sizeof(t_config));
+t_config *generarT_ConfigParaCargar(char *path) {
+	t_config* configuracionDelComponente;
 	if((configuracionDelComponente = config_create(path)) == NULL){
 		perror("Error de ruta de archivo de configuracion");
 		exit(-1);
 	}
-	return *configuracionDelComponente;
-	free(configuracionDelComponente);
+	return configuracionDelComponente;
+}
+
+void crearCPU(t_config *configuracionCPU){
+	IP_KERNEL = string_new();
+	IP_MEMORIA = string_new();
+	PUERTO_KERNEL = config_get_int_value(configuracionCPU, "PUERTO_KERNEL");
+	PUERTO_MEMORIA = config_get_int_value(configuracionCPU, "PUERTO_MEMORIA");
+	string_append(&IP_KERNEL, config_get_string_value(configuracionCPU, "IP_KERNEL"));
+	string_append(&IP_MEMORIA, config_get_string_value(configuracionCPU, "IP_MEMORIA"));
+}
+
+void inicializarCPU(char* path){
+	t_config *configuracionCPU = generarT_ConfigParaCargar(path);
+	crearCPU(configuracionCPU);
+	config_destroy(configuracionCPU);
 }
 
 /*void recibirMensajeDeKernel(int socketKernel){
@@ -67,7 +82,7 @@ t_config generarT_ConfigParaCargar(char *path) {
 	printf("%s\n",buff);
 	free(buff);
 }*/
-PCB pcb;
+//PCB pcb;
 void verificarParametrosInicio(int argc)
 {
 	if(argc!=2){
@@ -146,7 +161,6 @@ void* serializarPCB(PCB  pcb){
 	memcpy(mensaje+(sizeof(int)*9)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.pid, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*10)+(sizeof(char)*16)+(sizeof(t_list*)*16), &pcb.tablaKernel.tamaniosPaginas, sizeof(int));
 	return mensaje;
-	free(mensaje);
 }
 int _obtenerSizeActual_(int b)
 	{

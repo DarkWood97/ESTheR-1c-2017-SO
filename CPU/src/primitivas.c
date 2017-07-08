@@ -1,221 +1,351 @@
-/*
- * primitivas.c
- *
- *  Created on: 6/5/2017
- *      Author: utnso
- */
+#include "primitivas.h"
 #include "ansiSop.h"
-#define VARIABLE 1534
-//--------------------------------Algo---------------------------------------
-int convertirDireccionAPuntero(retVar * dire)
-{
-	int direccionOriginal,pag,desplazamiento,auxiliar;
-	auxiliar=(dire->pagina);
-	pag=auxiliar*tamPagina;
-	desplazamiento=dire->offset;
-	direccionOriginal=pag+desplazamiento;
-	return direccionOriginal;
+#include "funcionesCpu.h"
+#include <parser/metadata_program.h>
+#include <parser/parser.h>
+#include <parser/sintax.h>
+
+
+
+typedef struct{
+  char nombreVariable;
+  direccion *direccionDeVariable;
+}variable;
+
+struct{
+
+}contexto;
+
+//---------------------DEREFERENCIAR----------------//
+t_valor_variable dereferenciar(t_puntero direccion_variable){
+  t_valor_variable valorDeRetorno;
+  direccion direccionVirtual = obtenerDireccionDePuntero(direccion_variable);
+  realizarPeticionDeLecturaAMemoria(direccionVirtual, valorDeRetorno);
+  valorDeRetorno = recibirLecturaDeMemoria();
+  return valorDeRetorno;
 }
-t_valor_variable obtenerValor(int socketKernel, t_nombre_compartida valor)
-{
-	char *nombre= malloc(string_length(valor)+1);
-	//char* barra_cero="\0";
-	int loQueVale;
-	memcpy(nombre, valor, string_length(valor));
-	memcpy(nombre+(string_length(valor)), "\0", 1);
-	paquete paquete_nuevo;
-	paquete_nuevo = serializar(valor, VARIABLE);
-	enviar(socketKernel, paquete_nuevo);
-	intMultiproposito=loQueVale;
-	deserealizarMensaje(socketKernel);
-	free(nombre);
-	destruirPaquete(&paquete_nuevo);
-	return loQueVale;
-}
-//--------------------------------------------------------------------------
-void asignar (t_puntero direccion_variable, t_valor_variable valor)
-{
-	retVar *dir= malloc(size_retVar);
-	punteroADir(direccion_variable, dir);
-	log_info(log, "%ld\n", valor);
-	enviarDirAMemoria(dir, valor);
-	free(dir);
-}
-t_puntero definirVariable(t_nombre_variable identificador_variable)
-{
-		log_info(log,"Definir una variable %c\n", identificador_variable);
-		retVar *direccion_variable= malloc(size_retVar);
-		t_variable *variable= malloc(sizeof(t_variable));
-		t_contexto *contexto = malloc(sizeof(t_contexto));
-		contexto= (t_contexto*)(list_get(pcb->contextoActual, pcb->tamContextoActual-1));
-		if(pcb->tamContextoActual==1 &&  contexto->tamVars==0 )
-		{
-				armarDireccionPagina(direccion_variable); /* falta funcion*/
-				variable->direccion=direccion_variable;
-				variable->etiqueta=identificador_variable;
-				list_add(contexto->vars, variable);
-				contexto->retPos=0;
-				contexto->tamVars++;
-		}
-		else
-		{
-			if(identificador_variable>='0' && identificador_variable<='9'){
-					log_info(log,"Creando el argumento %c\n", identificador_variable);
-					armarDireccionDeArgumento(direccion_variable);
-					list_add(contexto->args, direccion_variable);
-					log_info(log,"La direccion de argumento %c es %d %d %d\n", identificador_variable, direccion_variable->pagina, direccion_variable->offset, direccion_variable->tam);
-					contexto->tamArgs++;
-				}
-			else
-			{
-				if(contexto->tamVars == 0 && (pcb->tamContextoActual)>1)
-				{
-					log_info(log,"Declarando variable %c de funcion\n", identificador_variable);
-					armarDireccionDeFuncion(direccion_variable);
-					inicializarVariable(variable,identificador_variable,direccion_variable);
-					variable->direccion=direccion_variable;
-					list_add(contexto->vars, variable);
-					contexto->tamVars++;
-				}
-				else {
-						armarProximaDireccion(direccion_variable);
-						inicializarVariable(variable,identificador_variable,direccion_variable);
-						list_add(contexto->vars, variable);
-						contexto->tamVars++;
-					}
-			}
-			long valor=0;
-			int dirReturn = convertirDireccionAPuntero(direccion_variable);
-				if(dirReturn+3>variableMaxima){
-					log_info(log,"No hay espacio para definir variable %c. Abortando programa\n", identificador_variable);
-					return 1;
-				}else{
-					enviarDirAMemoria(direccion_variable, valor);
-					log_info(log,"Devuelvo direccion: %d\n", dirReturn);
-					return (dirReturn);
-			}
-		}
-return 1;
+
+//---------------ASIGNAR----------------//
+
+void asignar(t_puntero direccion_variable, t_valor_variable valor){
+  direccion direccionVirtual = obtenerDireccionDePuntero(direccion_variable);
+  realizarPeticionDeEscrituraEnMemoria(direccionVirtual, valor);
 }
 
 
-t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable)
-{
-	log_info(log,"Quiero obtener la variable %s", identificador_variable);
-	int posicionStack, direccionDeRetorno;
-	posicionStack=pcb->tamContextoActual;
-	retVar * auxiliar;
-	bool _comparacionDeIdentificadorVariable_()
-	{
-		return identificador_variable>='0' && identificador_variable<='9';
+//----------------OBTENER VALOR COMPARTIDA------------//
+
+t_valor_variable obtenerValorCompartida(t_nombre_compartida variable){
+  char* nombreDeLaVariable = malloc(string_length(variable)+1);
+  string_append(&nombreDeLaVariable,"\0");
+  free(nombreDeLaVariable);
+  return consultarVariableCompartida(nombreDeLaVariable);
+}
+
+//-------------------------ASIGNAR VALOR COMPARTIDA----------------//
+
+t_valor_variable asignarValorCompartida(t_nombre_compartida variable, t_valor_variable valor){
+  char* nombreDeVariableAModificar = string_new();
+  string_append(&nombreDeVariableAModificar, variable);
+  string_append(&nombreDeVariableAModificar,"\0");
+  enviarModificacionDeValor(nombreDeVariableAModificar, valor);
+  free(nombreDeVariableAModificar);
+  return recibirValorCompartida();
+}
+
+
+//----------------------DEFINIR VARIABLE----------------//-------------------SE PUEDE MEJORAR (MUCHO)
+t_puntero definirVariable(t_nombre_variable identificador_variable){
+  int cantidadDeContextos = list_size(pcbEnProceso->contextoActual);
+  direccion *direccionDeVariable;
+  direccionDeVariable = malloc(sizeof(direccion));
+  if((identificador_variable>="0")&&(identificador_variable<="9")){
+    direccionDeVariable = generarDireccionParaArgumento(cantidadDeContextos);
+    agregarVariableAArgs(direccionDeVariable, identificador_variable);
+  }else{
+    direccionDeVariable = generarDireccionParaVariable(cantidadDeContextos);
+    agregarVariableAVars(direccionDeVariable, identificador_variable);
+  }
+  return convertirDeDireccionAPuntero(direccionDeVariable);
+}
+
+direccion* generarDireccionParaArgumento(int cantidadDeContextos){
+  direccion *direccionAnterior;
+  direccionAnterior = malloc(sizeof(direccion));
+  t_contexto *contextoActual = list_get(pcbEnProceso->contextoActual, cantidadDeContextos-1);
+  int cantidadDeArgumentos = list_size(contextoActual->args);
+  if(cantidadDeContextos == 1 && cantidadDeArgumentos == 0){
+    generarDireccionDePrimeraPagina(direccionAnterior);
+  }else if(obtenerCantidadDeArgs(contextoActual) == 0){
+    t_contexto *contextoAnterior = obtenerContextoAnterior();
+    direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->args, list_size(contextoAnterior->args)-1));
+    direccionAnterior.offset +=4;
+  }else{
+    direccionAnterior = obtenerDireccionDeVariable(list_get(contextoActual->args, list_size(contextoActual->args)-1));
+    direccionAnterior.offset +=4;
+  }
+  return direccionAnterior; //SE PODRIA MEJORAR RECIBIENDO UN T_LIST PARA EVITAR HACER DOS FUNCIONES IGUALES
+}
+
+int obtenerCantidadDeVars(t_contexto *contextoACalcular){
+  return list_size(contextoACalcular->vars);
+}
+
+int obtenerCantidadDeArgs(t_contexto *contextoACalcular){
+  return list_size(contextoACalcular->args);
+}
+
+direccion* generarDireccionParaVariable(int cantidadDeContextos){
+  direccion *direccionAnterior;
+  direccionAnterior = malloc(sizeof(direccion));
+  t_contexto *contextoActual = list_get(pcbEnProceso->contextoActual, cantidadDeContextos-1);
+  int cantidadDeVars = list_size(contextoActual->vars);
+  if(cantidadDeContextos == 1 && cantidadDeVars == 0){
+    generarDireccionDePrimeraPagina(direccionAnterior);
+  }else if(obtenerCantidadDeVars(contextoActual) == 0){
+    t_contexto *contextoAnterior = obtenerContextoAnterior();
+    direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->vars, list_size(contextoAnterior->vars)-1));
+    direccionAnterior.offset += 4;
+  }else{
+    direccionAnterior = obtenerDireccionDeVariable(list_get(contextoActual->vars, list_size(contextoActual->vars)-1));
+    direccionAnterior.offset += 4;
+  }
+  return direccionAnterior;
+}
+contexto* obtenerContextoAnterior(){
+  return list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-2);
+}
+
+
+void agregarVariableAVars(direccion *direccionDeVariable, t_nombre_variable identificador_variable){
+  variable* variable;
+  variable = malloc(sizeof(variable));
+  variable->direccionDeVariable = direccionDeVariable;
+  variable->nombreVariable = identificador_variable;
+  t_contexto *contextoParaAgregar = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+  list_add(contextoParaAgregar->vars, variable);
+  /*
+   * La otra opcion seria:
+   * t_contexto *contextoParaAgregar = list_remove(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+   * list_add(contextoParaAgregar->vars, variable)
+   * list_add(pcbEnProceso->contextoActual, contextoParaAgregar);
+   */
+}
+
+void agregarVariableAArgs(direccion *direccionDeVariable, t_nombre_variable identificador_variable){
+	variable* variable;
+	variable = malloc(sizeof(variable));
+	variable->direccionDeVariable = direccionDeVariable;
+	variable->nombreVariable = identificador_variable;
+	t_contexto* contextoParaAgregar = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+	list_add(contextoParaAgregar->args, variable);
+
+	//list_add((list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1))->args, variable);
+}
+
+//---------------------OBTENER POSICION DE VARIABLE--------------------//
+t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
+  int posicionDeRetorno;
+  direccion *direccionAConvertir;
+  t_contexto *ultimoContexto;
+  ultimoContexto = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1); //La lista empieza de 0?
+  if(identificador_variable>="0" && identificador_variable<="9"){ //ME PUEDE LLEGAR UNA VARIABLE QUE NO EXISTE
+    direccionAConvertir = obtenerDireccionDeVariable(list_get(ultimoContexto->args, atoi(identificador_variable)-1));
+    posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
+    return posicionDeRetorno;
+  }else{
+    int cantMaximaDeVars = obtenerCantidadDeArgs(ultimoContexto);
+    for(; cantMaximaDeVars>=0; cantMaximaDeVars--){
+      if(identificador_variable == obtenerIDVariable()){
+        direccionAConvertir = obtenerDireccionDeVariable(list_get(ultimoContexto->vars, list_size(ultimoContexto->vars)-1));
+        posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
+        return posicionDeRetorno;
+      }
+    }
+  }
+  programaEnEjecucionAbortado = true;
+  return -1;
+}
+
+t_puntero convertirDeDireccionAPuntero(direccion direccionAConvertir){
+  t_puntero punteroDeVariable;
+  punteroDeVariable = direccionAConvertir.numPagina*tamPaginasMemoria +direccionAConvertir.offset;
+  return punteroDeVariable;
+}
+
+direccion obtenerDireccionDeVariable(variable* variableAObtenerDirec){
+  direccion* direccionDeVariable;
+  direccionDeVariable = variableAObtenerDirec->direccionDeVariable;
+  return direccionDeVariable;
+}
+
+//---------------------IR A LABEL-------------------//
+void irAlLabel(t_nombre_etiqueta nombreDeLaEtiqueta){
+  t_puntero_instruccion instruccionParaPCB;
+  log_info(loggerCPU, "Se pasa a modificar instruccion de proceso %d", pcbEnProceso->PID);
+  instruccionParaPCB = metadata_buscar_etiqueta(t_nombre_etiqueta, pcbEnProceso->etiquetas, pcbEnProceso->tamEtiquetas); //La funcion devuelve la instruccion perteneciente a la etiqueta
+  pcbEnProceso->ProgramCounter = instruccionParaPCB; //Puede que lleve un -1
+  log_info(loggerCPU,"Instruccion de program counter modificada.");
+}
+
+//---------------------LLAMAR SIN RETORNO----------//
+void llamarSinRetorno(t_nombre_etiqueta etiqueta){
+  t_contexto *contextoAAgregar;
+  contextoAAgregar = malloc(sizeof(contexto));
+  generarContexto(contextoAAgregar);
+  list_add(pcbEnProceso->contextoActual, contextoAAgregar);
+  irAlLabel(etiqueta);
+}
+
+//--------------------LLAMAR CON RETORNO-------------//
+void llamarConRetorno(t_nombre_etiqueta etiqueta, t_puntero donde_retornar){
+  t_contexto *contextoAAgregar;
+  direccion direccionParaNuevoContexto;
+  contextoAAgregar = malloc(sizeof(contexto));
+  generarContexto(contextoAAgregar);
+  direccionParaNuevoContexto = obtenerDireccionDePuntero(donde_retornar);
+  contextoAAgregar->retVar = direccionParaNuevoContexto;
+  list_add(pcbEnProceso->contextoActual, contextoAAgregar);
+  irAlLabel(etiqueta);
+}
+
+void generarContexto(t_contexto *contextoAGenerar){
+  contextoAGenerar->args = list_create();
+  contextoAGenerar->vars = list_create();
+  contextoAGenerar->retPos = pcbEnProceso->ProgramCounter;
+  contextoAGenerar->pos = obtenerPosicionDeStackAnterior()+1;
+}
+
+int obtenerPosicionDeStackAnterior(){
+	t_contexto *contextoQueNecesito;
+	contextoQueNecesito = malloc(sizeof(contexto));
+	contextoQueNecesito = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+	int posicionARetornar = contextoQueNecesito->pos;
+	free(contextoQueNecesito);
+	return posicionARetornar;
+}
+
+//--------------------FINALIZAR-------------//
+void finalizar(){
+	t_contexto *contextoAFinalizar;
+	contextoAFinalizar = malloc(contexto); //Es necesario hacer el malloc aca
+	contextoAFinalizar = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+	if(list_size(pcbEnProceso->contextoActual)-1 == 0){
+		finalizarProceso(pcbEnProceso);
+	}else{
+		list_clean_and_destroy_elements(contextoAFinalizar->args, liberarElemento);
+		list_clean_and_destroy_elements(contextoAFinalizar->vars, liberarElemento);
+		pcbEnProceso->ProgramCounter = contextoAFinalizar->retPos;
 	}
-	if(_comparacionDeIdentificadorVariable_())
-	{
-		auxiliar = (retVar*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->args, (int)identificador_variable-48));
-		direccionDeRetorno=convertirDireccionAPuntero(auxiliar);
-		log_info(log,"Obtuve el valor de %c: %d %d %d\n", identificador_variable, auxiliar->pagina, auxiliar->offset, auxiliar->tam);
-		return(direccionDeRetorno);
+	free(contextoAFinalizar);
+}
+
+//---------------------RETORNAR------------------//
+void retornar(t_valor_variable retorno){
+	t_contexto *contextoAFinalizar;
+	contextoAFinalizar = malloc(contexto);
+	contextoAFinalizar = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+	pcbEnProceso->ProgramCounter = contextoAFinalizar->retPos;
+	int punteroARetVar = convertirDeDireccionAPuntero(contextoAFinalizar->retVar);
+	asignar(punteroARetVar, retorno);
+	list_clean_and_destroy_elements(contextoAFinalizar->vars, liberarElemento);
+	list_clean_and_destroy_elements(contextoAFinalizar->args, liberarElemento);
+	free(contextoAFinalizar);
+}
+
+//----------------------PRIMITIVAS DE KERNEL-----------------------//
+
+//--------------------WAIT------------//
+void pedirWait(t_nombre_semaforo identificador_semaforo){
+	int tamanio = string_length(identificador_semaforo); // Tengo que agregar el barra cero?
+	sendRemasterizado(socketKernel, PIDO_SEMAFORO, tamanio, identificador_semaforo);
+	paquete *paqueteParaVerSiMeBloqueo;
+	paqueteParaVerSiMeBloqueo = recvRemasterizado(socketKernel);
+	if(paqueteParaVerSiMeBloqueo->tipoMsj == 1){
+		programaEnEjecucionBloqueado = true;
 	}
-	else
-	{
-		t_variable * nueva;
-		int posicionMaxima;
-		posicionMaxima=(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->tamVars)-1;
-		for(;posicionMaxima>=0;posicionMaxima--)
-			{
-				nueva=((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, posicionMaxima)));
-				log_info(log,"Etiqueta de variable: %c\n", nueva->etiqueta);
-				if(nueva->etiqueta==identificador_variable)
-				{
-					retVar* auxiliar;
-					auxiliar= ((t_variable*)(list_get(((t_contexto*)(list_get(pcb->contextoActual, posicionStack)))->vars, posicionMaxima)))->direccion;
-					direccionDeRetorno= convertirDireccionAPuntero(auxiliar);
-					log_info(log,"Obtuve el valor de %c: %d %d %d\n", nueva->etiqueta, nueva->direccion->pagina, nueva->direccion->offset, nueva->direccion->tam);
-					return (direccionDeRetorno);
-			}
-		}
+}
+//---------------SIGNAL------------//
+
+void pedirSignal(t_nombre_semaforo identificador_semaforo){
+	int tamanio = string_length(identificador_semaforo); // Tengo que agregar el barra cero?
+	sendRemasterizado(socketKernel, DOY_SEMAFORO, tamanio, identificador_semaforo);
+}
+
+//---------------RESERVAR--------------//
+
+t_puntero reservarMemoria(t_valor_variable espacio){
+	sendRemasterizado(socketKernel, PIDO_RESERVA, sizeof(int), espacio);
+	paquete *paqueteConT_Puntero;
+	paqueteConT_Puntero = recvRemasterizado(socketKernel);
+	return (t_puntero)paqueteConT_Puntero->mensaje;
+}
+
+//----------------LIBERAR------------//
+void liberarMemoria(t_puntero puntero){ // ARREGLAR
+	sendRemasterizado(socketKernel, PIDO_LIBERACION, sizeof(t_puntero), puntero);
+}
+
+//----------------ABRIR------------//
+
+t_descriptor_archivo abrimeArchivo(t_direccion_archivo direccion, t_banderas flags){
+	int tamanioMensaje = string_length(direccion) + sizeof(t_banderas);
+	void* mensajeAEnviar = malloc(tamanioMensaje);
+	memcpy(mensajeAEnviar,direccion,string_length(direccion));
+	memcpy(mensajeAEnviar + string_length(direccion), flags, sizeof(t_banderas));
+	sendRemasterizado(socketKernel, ABRIR_ARCHIVO, tamanioMensaje, mensajeAEnviar);
+	free(mensajeAEnviar);
+	paquete *paqueteConDescriptorDeArchivo;
+	paqueteConDescriptorDeArchivo = recvRemasterizado(socketKernel); // No se si es necesario chequear lo que se recibe
+	if(paqueteConDescriptorDeArchivo->tipoMsj == NO_SE_PUDO_ABRIR){
+		programaEnEjecucionAbortado = true;
 	}
-	programaAbortado=1;
-	return -1;
-}
-t_puntero dereferenciar (t_puntero direccion_variable)
-{
-	retVar * direccion =malloc(size_retVar);
-	paquete * paquete, *auxiliar;
-	paquete=malloc(sizeof(paquete));
-	auxiliar=malloc(sizeof(paquete));
-	int valor;
-	punteroADir(direccion_variable,direccion);
-	enviarDireccionALeerKernel(direccion,direccion_variable);
-	free(direccion);
-	deserealizarConRetorno(socketKernel,auxiliar);
-	memcpy(&valor, paquete->mensaje, 4);
-	destruirPaquete(paquete);
-	log_info(log,"El valor dereferenciado es: %d", valor);
-	destruirPaquete(auxiliar);
-	return valor;
+	return (t_descriptor_archivo)paqueteConDescriptorDeArchivo->mensaje;
 }
 
-t_valor_variable obtenerValorCompartida (t_nombre_compartida variable)
-{
-	t_valor_variable valor = obtenerValor(socketKernel,variable);
-	return valor;
+//-------------BORRAR-----------//
+
+void borrameArchivo(t_descriptor_archivo descriptor_archivo){
+	sendRemasterizado(socketKernel, BORRAR_ARCHIVO, string_length(descriptor_archivo), descriptor_archivo);
 }
 
-t_valor_variable asignarValorCompartida (t_nombre_compartida variable, t_valor_variable valor)
-{
-	paquete  paqueteAEnviar;
-	int tamVariable=sizeof(variable);
-	char* variable_compartida=malloc(tamVariable);
-	memcpy(variable_compartida, &valor, tamVariable);
-	log_info(log,"Variable %s le asigno %d\n", variable, variable_compartida[0]);
-	paqueteAEnviar=serializar(variable_compartida, MENSAJE_VARIABLE_COMPARTIDA);
-	enviar(socketKernel,paqueteAEnviar);
-	realizarHandshake(socketKernel,1002);
-	destruirPaquete(&paqueteAEnviar);
-	free(variable_compartida);
-	return valor;
+//------------CERRAR---------//
 
-}
-void irAlLabel (t_nombre_etiqueta t_nombre_etiqueta)
-{
-	log_info(log,"Se encuentra ejecutando ir a label: %s", t_nombre_etiqueta);
-	t_puntero_instruccion instruccion;
-	instruccion = metadata_buscar_etiqueta(t_nombre_etiqueta, pcb->etiquetas, pcb->tamEtiquetas);
-	pcb->ProgramCounter=instruccion-1;
-}
-void llamarSinRetorno (t_nombre_etiqueta etiqueta)
-{
-	log_info(log, "Se encuentra ejecutando Llamar sin retorno en la funcion: %s \n",etiqueta);
-
-}
-void llamarConRetorno (t_nombre_etiqueta etiqueta, t_puntero donde_retornar)
-{
-	log_info(log, "Se encuentra ejecutando Llamar con retorno a funcion: %s, Retorno: %d\n",etiqueta,donde_retornar);
-	t_puntero_instruccion posicion= pcb->tamContextoActual;
-	log_info(log, "El indice de la funcion es: %d",posicion);
-	t_contexto * nuevoContexto= crearContexto();
-	log_info(log,"Se ha creado el contexto con la posicion: %d que debe volver en la sentencia %d y retorno en la variable de pos %d %d\n", nuevoContexto->posicion, nuevoContexto->retPos, nuevoContexto->retVar.pagina, nuevoContexto->retVar.offset);
-	nuevoContexto->retPos = pcb->ProgramCounter;
-	pcb->ProgramCounter = posicion;
-	retVar * direccionDeRetorno;
-	punteroADir(donde_retornar, direccionDeRetorno);
-	nuevoContexto->retVar.pagina = direccionDeRetorno->pagina;
-	nuevoContexto->retVar.offset = direccionDeRetorno->offset;
-	nuevoContexto->retVar.tam = direccionDeRetorno->tam;
-	free(direccionDeRetorno);
-}
-void finalizar ()
-{
-	log_info(log,"Se encuentra ejecutando finalizar");
-	programaFinalizado = 1;
-}
-void retornar(t_valor_variable retorno)
-{
-		log_info(log,"Se encuentra ejecutando retornar\n");
-		retVar * direccion= pcb->cod.offset-1;
-		log_info(log,"Escribir en variable (%d,%d,%d) el valor de retorno: %d",direccion->pagina,direccion->offset,direccion->tam,retorno);
-		destruirContextoActual(tamPagina);
-		//escribirMemoria(retorno,direccion)
+void cerrameArchivo(t_descriptor_archivo descriptor_archivo){
+	sendRemasterizado(socketKernel, CERRAR_ARCHIVO, string_length(descriptor_archivo), descriptor_archivo);
 }
 
+//------------MOVER CURSOR---------//
+
+void movemeElCursor(t_descriptor_archivo descriptor_archivo, t_valor_variable posicion){
+	int tamanioMensaje = string_length(descriptor_archivo) + sizeof(t_valor_variable);
+	void* mensajeDeCursor = malloc(tamanioMensaje);
+	memcpy(mensajeDeCursor, descriptor_archivo, string_length(descriptor_archivo));
+	memcpy(mensajeDeCursor+string_length(descriptor_archivo), posicion, sizeof(t_valor_variable));
+	sendRemasterizado(socketKernel, MOVEME_CURSOR, tamanioMensaje, mensajeDeCursor);
+	free(mensajeDeCursor);
+}
+
+//---------------ESCRBIR---------//
+
+void escribimeArchivo(t_descriptor_archivo descriptor_archivo, void* informacion, t_valor_variable tamanio){
+	int tamanioMensaje = string_length(descriptor_archivo)+tamanio+sizeof(t_valor_variable);
+	void* mensajeDeEscritura = malloc(tamanioMensaje);
+	memcpy(mensajeDeEscritura, descriptor_archivo, string_length(t_descriptor_archivo));
+	memcpy(mensajeDeEscritura+string_length(t_descriptor_archivo), informacion, tamanio);
+	memcpy(mensajeDeEscritura+string_length(t_descriptor_archivo)+tamanio, &tamanio, sizeof(t_valor_variable));
+	sendRemasterizado(socketKernel, ESCRIBIR_ARCHIVO, tamanioMensaje, mensajeDeEscritura);
+	free(mensajeDeEscritura);
+}
+
+//-----------LEER----------//
+
+void leemeDeArchivo(t_descriptor_archivo descriptor_archivo, t_puntero informacion, t_valor_variable tamanio){
+	int tamanioMensaje = string_length(descriptor_archivo)+sizeof(t_puntero)+sizeof(t_valor_variable); //Chequear si es necesario sumar el barra cero
+	void *mensajeDeLectura = malloc(tamanioMensaje);
+	memcpy(mensajeDeLectura, descriptor_archivo, string_length(descriptor_archivo));
+	memcpy(mensajeDeLectura+string_length(descriptor_archivo), informacion, tamanio);
+	memcpy(mensajeDeLectura+string_length(descriptor_archivo)+tamanio, tamanio, sizeof(t_valor_variable));
+	sendRemasterizado(socketKernel, LEER_DE_ARCHIVO, tamanioMensaje, mensajeDeLectura);
+	free(mensajeDeLectura);
+}

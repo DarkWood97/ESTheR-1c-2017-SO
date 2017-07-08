@@ -5,41 +5,35 @@
  *      Author: utnso
  */
 #include "funcionesCpu.h"
+
 #ifndef ANSISOP_H_
 #define ANSISOP_H_
 
-#define MENSAJE_VARIABLE_COMPARTIDA 111
-
-typedef struct __attribute__((packed))t_variable
-{
-	char etiqueta;
-	retVar *direccion;
-} t_variable;
-typedef struct __attribute__((packed))t_contexto
-{
-	int posicion;
-	t_list *args;
-	t_list *vars;
-	int retPos;
-	retVar retVar;
-	int tamArgs;
-	int tamVars;
-}t_contexto;
-int size_retVar;
+#define HANDSHAKE_MEMORIA 1001
+#define HANDSHAKE_KERNEL 1002
+#define MENSAJE_IMPRIMIR 101
+#define MENSAJE_PATH  103
+#define PETICION_LECTURA_MEMORIA 104
+#define PETICION_ESCRITURA_MEMORIA 105
+#define MENSAJE_DIRECCION 110
+#define ERROR -1
+#define CORTO 0
+#define PETICION_VARIABLE_COMPARTIDA_KERNEL 111
+#define PETICION_CAMBIO_VALOR_KERNEL 112
+#define DATOS_VARIABLE_COMPARTIDA_KERNEL 1011
+#define DATOS_VARIABLE_MEMORIA 1013
+#define FINALIZO_PROCESO 1000
 
 
-void proximaDireccion(retVar* ,int, int);
-void armarDireccionPagina(retVar *);
-void armarDireccionDeArgumento(retVar *);
-void armarProximaDireccion(retVar*);
-void proximaDireccionArgumento(retVar*, int, int);
-void armarDireccionDeFuncion(retVar* );
-void destruirPaquete(paquete *);
-void enviarDirAMemoria(retVar*, long );
-void punteroADir(int, retVar*);
-void inicializarVariable(t_variable *, t_nombre_variable ,retVar *);
-void enviarDireccionALeerKernel(retVar*, int);
-void deserealizarConRetorno(int, paquete*);
-t_contexto * crearContexto();
-void destruirContextoActual(int);
+direccion *obtenerDireccionVirtual(t_puntero);
+void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_variable);
+t_valor_variable recibirLecturaDeMemoria();
+void realizarPeticionDeEscrituraEnMemoria(direccion*, t_valor_variable);
+t_valor_variable recibirValorCompartida();
+t_valor_variable consultarVariableCompartida(char*);
+void enviarModificacionDeValor(char*, t_valor_variable);
+void finalizarProceso(PCB *);
+int obtenerPCAnterior(PCB *);
+void liberarElemento(void*);
+
 #endif /* ANSISOP_H_ */
