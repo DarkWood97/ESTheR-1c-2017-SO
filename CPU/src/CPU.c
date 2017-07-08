@@ -1,6 +1,7 @@
 // AQUI VAN TODOS LOS INCLUDES
 #include "funcionesCpu.h"
 #include "primitivas.h"
+#include "socket.h"
 
 AnSISOP_funciones primitivas = {
 	.AnSISOP_definirVariable		= definirVariable,
@@ -163,8 +164,8 @@ int main(int argc, char *argv[]) {
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	//mostrarConfiguracionCPU(cpuDelSistema);
 	//Conecto
-	socketKernel = conectarServer(IP_KERNEL, PUERTO_KERNEL);
-	socketMemoria = conectarServer(IP_MEMORIA, PUERTO_MEMORIA);
+	socketKernel = conectarAServer(IP_KERNEL, PUERTO_KERNEL);
+	socketMemoria = conectarAServer(IP_MEMORIA, PUERTO_MEMORIA);
 	// pthread_t hiloParaEscucharKernel;
 	// pthread_create(&hiloParaEscucharKernel, NULL, escuchaDeKernel, (void*)&socketKernel); //Puede que el error este aca
 	//Handshakes
@@ -183,9 +184,9 @@ int main(int argc, char *argv[]) {
 			modificarQuantum();
 			avanzarEnEjecucion();
 		}
-		chequearEstaAbortado();
-		chequearEstaBloqueado();
-		chequearFinalizoQuantum();
+//		chequearEstaAbortado();
+//		chequearEstaBloqueado();
+//		chequearFinalizoQuantum();
 	}
 
   return EXIT_SUCCESS;

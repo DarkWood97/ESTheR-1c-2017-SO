@@ -9,6 +9,7 @@
  */
 
 #include "funcionesSockets.h"
+#include "socket.h"
 
 typedef struct {
 	int puerto;
@@ -79,19 +80,19 @@ int seleccionarYAceptarConexiones(fd_set (*master), int socketMax, int socketEsc
 	return socketMax;
 }
 
-bool enviarMensaje(int socket, void* mensaje) { //Socket que envia mensaje
-
-	int longitud =	strlen(mensaje)+1; //sino no lee \0
-	//int i = 0;
-	//for (; i < longitud; i++) {
-		if (send(socket, mensaje, longitud, 0) == -1) {
-			perror("Error de send");
-			close(socket);
-			exit(-1);
-		//}
-	}
-	return true;
-}
+//bool enviarMensaje(int socket, void* mensaje) { //Socket que envia mensaje
+//
+//	int longitud =	strlen(mensaje)+1; //sino no lee \0
+//	//int i = 0;
+//	//for (; i < longitud; i++) {
+//		if (send(socket, mensaje, longitud, 0) == -1) {
+//			perror("Error de send");
+//			close(socket);
+//			exit(-1);
+//		//}
+//	}
+//	return true;
+//}
 
 void chequearErrorDeSend (int socketAEnviarMensaje, int bytesAEnviar, char* cadenaAEnviar){
 	if(send(socketAEnviarMensaje,cadenaAEnviar,bytesAEnviar,0) == -1){
@@ -141,25 +142,20 @@ fd_set recibirYReenviarMensaje(int socketMax,fd_set master, int socketEscucha){
 }
 
 int conectarAServer(char *ip, int puerto) { //Recibe ip y puerto, devuelve socket que se conecto
-
 	int socket_server = socket(AF_INET, SOCK_STREAM, 0);
 	struct hostent *infoDelServer;
 	struct sockaddr_in direccion_server; // información del server
-
 	//Obtengo info del server
 	if ((infoDelServer = gethostbyname(ip)) == NULL) {
 		perror("Error al obtener datos del server.");
 		exit(-1);
 	}
-
 	verificarErrorSetsockopt(socket_server);
-
 	//Guardo datos del server
 	direccion_server.sin_family = AF_INET;
 	direccion_server.sin_port = htons(puerto);
 	direccion_server.sin_addr = *(struct in_addr *) infoDelServer->h_addr; //h_addr apunta al primer elemento h_addr_lista
 	memset(&(direccion_server.sin_zero), 0, 8);
-
 	//Conecto con servidor, si hay error finalizo
 	if (connect(socket_server, (struct sockaddr *) &direccion_server,
 			sizeof(struct sockaddr)) == -1) {

@@ -162,7 +162,7 @@ int obtenerPCAnterior(PCB *pcb){
    t_contexto *contextoActual = list_get(pcbEnProceso->contextoActual, cantidadDeContextos-1);
    int cantidadDeArgumentos = list_size(contextoActual->args);
    if(cantidadDeContextos == 1 && cantidadDeArgumentos == 0){
-     generarDireccionDePrimeraPagina(direccionAnterior);
+     //generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeArgs(contextoActual) == 0){
      t_contexto *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->args, list_size(contextoAnterior->args)-1));
@@ -180,7 +180,7 @@ int obtenerPCAnterior(PCB *pcb){
    t_contexto *contextoActual = list_get(pcbEnProceso->contextoActual, cantidadDeContextos-1);
    int cantidadDeVars = list_size(contextoActual->vars);
    if(cantidadDeContextos == 1 && cantidadDeVars == 0){
-     generarDireccionDePrimeraPagina(direccionAnterior);
+     //generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeVars(contextoActual) == 0){
      t_contexto *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->vars, list_size(contextoAnterior->vars)-1));

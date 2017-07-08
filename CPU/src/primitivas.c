@@ -76,7 +76,7 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
   }else{
     int cantMaximaDeVars = obtenerCantidadDeArgs(ultimoContexto);
     for(; cantMaximaDeVars>=0; cantMaximaDeVars--){
-      if(identificador_variable == obtenerIDVariable()){
+      if(true){ //identificador_variable == obtenerIDVariable()
         direccionAConvertir = obtenerDireccionDeVariable(list_get(ultimoContexto->vars, list_size(ultimoContexto->vars)-1));
         posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
         return posicionDeRetorno;

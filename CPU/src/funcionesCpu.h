@@ -137,11 +137,11 @@ int tamPaginasMemoria;
 int variableMaxima;
 int socketMemoria;
 int socketKernel;
-bool programaEnEjecucionAbortado = false;
-bool programaEnEjecucionFinalizado = false;
-bool programaEnEjecucionBloqueado =false;
-bool sigusr1EstaActivo = false;
-bool yaMePuedoDesconectar = false;
+bool programaEnEjecucionAbortado;
+bool programaEnEjecucionFinalizado;
+bool programaEnEjecucionBloqueado;
+bool sigusr1EstaActivo;
+bool yaMePuedoDesconectar;
 datosDeKernel *datosParaEjecucion;
 
 //-----------------------------FUNCIONES------------------------------
