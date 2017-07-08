@@ -46,6 +46,10 @@ void cpuCrear(t_config *configuracionCPU){
 	PUERTO_MEMORIA = config_get_int_value(configuracionCPU, "PUERTO_MEMORIA");
 }
 
+void mostrarConfiguracionCPU(){
+	printf("IP_KERNEL = %s\nPUERTO_KERNEL = %d\nIP_MEMORIA = %s\nPUERTO_MEMORIA = %d\n", IP_KERNEL, PUERTO_KERNEL, IP_MEMORIA, PUERTO_MEMORIA);
+}
+
 
 
 //----------------MANEJADOR DE SENIAL---------------------//
@@ -61,6 +65,7 @@ void chequeameLaSignal(int senial){
 }
 //--------HANDSHAKES--------//
 void armarDatosDeKernel(paquete *paqueteDeArmado){
+	datosParaEjecucion = malloc(sizeof(datosDeKernel));
 	int tamanioDeNombreAlgori = paqueteDeArmado->tamMsj - sizeof(int);
 	datosParaEjecucion->algoritmo = string_new();
 	memcpy(datosParaEjecucion->algoritmo, paqueteDeArmado->mensaje, tamanioDeNombreAlgori);
@@ -68,7 +73,7 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 }
 
 void realizarHandshakeConKernel(){
-	sendRemasterizado(socketKernel, HANDSHAKE_KERNEL, 0, 0);
+	sendDeNotificacion(socketKernel, HANDSHAKE_KERNEL);
 	paquete *paqueteConConfigsDeKernel = recvRemasterizado(socketKernel);
 	armarDatosDeKernel(paqueteConConfigsDeKernel);
 }
@@ -76,7 +81,7 @@ void realizarHandshakeConKernel(){
 
 
 void realizarHandshakeConMemoria(){
-	sendRemasterizado(socketMemoria, HANDSHAKE_MEMORIA, 0, 0);
+	sendDeNotificacion(socketMemoria, HANDSHAKE_MEMORIA);
 	paquete *paqueteConTamPagina;
 	paqueteConTamPagina = recvRemasterizado(socketMemoria);
 	tamPaginasMemoria = *(int*)paqueteConTamPagina->mensaje;
@@ -158,10 +163,11 @@ char* pedirLineaAMemoria(){
 int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
-	verificarParametrosInicio(argc);
-	inicializarCPU(argv[1]);
-	//inicializarCPU("Debug/CPU.config");
+	//verificarParametrosInicio(argc);
+	//inicializarCPU(argv[1]);
+	inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
+	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);
 	//Conecto
 	socketKernel = conectarAServer(IP_KERNEL, PUERTO_KERNEL);

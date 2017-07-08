@@ -96,7 +96,7 @@ void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variabl
 }
 
 void* serializarPCB(PCB* unPCB){
-	void* mensaje = malloc((sizeof(int)*10)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas);
+	void* mensaje = malloc((sizeof(int)*8)+sizeof(codeIndex)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas);
 	memcpy(mensaje, &pcbEnProceso->PID, sizeof(int));
 	memcpy(mensaje+sizeof(int), &pcbEnProceso->ProgramCounter, sizeof(int));
 	memcpy(mensaje+(sizeof(int)*2), &pcbEnProceso->paginas_Codigo, sizeof(int));

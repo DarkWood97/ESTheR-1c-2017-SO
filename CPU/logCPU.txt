@@ -1,0 +1,4 @@
+[INFO] 11:21:36:596 CPU/(3674:3674): CPU inicializada correctamente.
+[INFO] 11:23:28:421 CPU/(3822:3822): CPU inicializada correctamente.
+[INFO] 11:23:54:757 CPU/(3868:3868): CPU inicializada correctamente.
+[INFO] 11:25:19:761 CPU/(4004:4004): CPU inicializada correctamente.

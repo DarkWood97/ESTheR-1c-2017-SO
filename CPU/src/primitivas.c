@@ -65,6 +65,9 @@ t_puntero definirVariable(t_nombre_variable identificador_variable){
 
 //---------------------OBTENER POSICION DE VARIABLE--------------------//
 t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
+	bool esVariableBuscada(t_nombre_variable identificadorDevariableChequeado){
+		return identificador_variable == identificadorDevariableChequeado;
+	}
   int posicionDeRetorno;
   direccion *direccionAConvertir;
   t_contexto *ultimoContexto;
@@ -74,13 +77,17 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
     posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
     return posicionDeRetorno;
   }else{
-    int cantMaximaDeVars = obtenerCantidadDeArgs(ultimoContexto);
+	  if(list_any_satisfy(ultimoContexto->vars, (void*)esVariableBuscada)){
+		  direccionAConvertir = obtenerDireccionDeVariable((list_find(ultimoContexto->vars, (void*)esVariableBuscada)));
+		  posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
+		  return posicionDeRetorno;
+    /*int cantMaximaDeVars = obtenerCantidadDeArgs(ultimoContexto);
     for(; cantMaximaDeVars>=0; cantMaximaDeVars--){
       if(true){ //identificador_variable == obtenerIDVariable()
         direccionAConvertir = obtenerDireccionDeVariable(list_get(ultimoContexto->vars, list_size(ultimoContexto->vars)-1));
         posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
         return posicionDeRetorno;
-      }
+      }*/
     }
   }
   programaEnEjecucionAbortado = true;

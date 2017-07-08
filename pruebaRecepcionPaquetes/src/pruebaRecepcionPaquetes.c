@@ -13,7 +13,7 @@
 #include "socket.h"
 #include "funcionesGenericas.h"
 
-typedef struct __attribute__((__packed__)){
+/*typedef struct __attribute__((__packed__)){
 	int tipoMsj;
 	int tamMsj;
 	void* mensaje;
@@ -38,14 +38,23 @@ paquete recvRemasterizado(int deQuien){
     exit(-1);
   }
   return paqueteARecibir;
-}
+}*/
+
+typedef struct __attribute__((packed)) {
+	int comienzo;
+	int offset;
+} codeIndex;
 
 int main(void) {
-	paquete unPaquete;
+	paquete *unPaquete;
+	codeIndex *codigo = malloc(sizeof(codeIndex));
+	codigo[1].comienzo = 1;
+	codigo[2].comienzo = 2;
 	int socketConsola = ponerseAEscucharClientes(5000, 0);
 	aceptarConexionDeCliente(socketConsola);
+	sendRemasterizado(socketConsola, 1, sizeof(codeIndex), codigo);
 	while(1){
-		unPaquete = recvRemasterizado(socketConsola);
-		printf("Mensaje recibido: %p",unPaquete.mensaje);
+		/*unPaquete = recvRemasterizado(socketConsola);
+		printf("Mensaje recibido: %p"*//*,unPaquete->mensaje);*/
 	}
 }

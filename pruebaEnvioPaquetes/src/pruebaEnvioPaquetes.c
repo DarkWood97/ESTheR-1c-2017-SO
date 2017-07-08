@@ -32,7 +32,7 @@ typedef struct __attribute__((__packed__)){
 
 
 //-----------------------HILO KERNEL-----------------------------------------------------//
-int calcularTamanioTotalPaquete(paquete paqueteACalcular){
+/*int calcularTamanioTotalPaquete(paquete paqueteACalcular){
   int tamanio = sizeof(int)*2 + paqueteACalcular.tamMsj;
   return tamanio;
 }
@@ -49,10 +49,17 @@ void sendRemasterizado(int aQuien, int tipo, int tamanio, void* que){
     exit(-1);
   }
   free(paqueteAEnviar.mensaje);
-}
+}*/
+
+typedef struct __attribute__((packed)) {
+	int comienzo;
+	int offset;
+} codeIndex;
 
 int main(void){
 	int socketServidor = conectarAServer(IP,PORT);
-	char* prueba = "Hola esto es una prueba pablo sznjadleder";
-	sendRemasterizado(socketServidor,PRUEBA,sizeof(int),((void*) prueba));
+	codeIndex *codigo = malloc(sizeof(codeIndex));
+	paquete *paqueteConCodigo = recvRemasterizado(socketServidor);
+	codigo = paqueteConCodigo->mensaje;
+	printf("%d %d", codigo[1].comienzo, codigo[2].comienzo);
 }
