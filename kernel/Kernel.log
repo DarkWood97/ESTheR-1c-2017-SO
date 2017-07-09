@@ -128,3 +128,839 @@
 
 [INFO] 15:58:46:194 Kernel/(6624:6624): Se registro nueva CPU...
 
+[INFO] 23:33:19:697 Kernel/(3476:3476): Se conecto nueva consola...
+
+[INFO] 23:33:22:57 Kernel/(3476:3476): Se registro nueva CPU...
+
+[INFO] 23:33:27:819 Kernel/(3476:3734): Archivo recibido correctamente...
+
+[INFO] 23:33:28:626 Kernel/(3476:3734): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 23:33:28:626 Kernel/(3476:3734): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 23:33:28:626 Kernel/(3476:3734): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 23:33:28:626 Kernel/(3476:3734): Instruccion inicio:91 offset:4 end
+
+[INFO] 23:33:28:626 Kernel/(3476:3734): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 23:33:28:626 Kernel/(3476:3734): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:383 offset:4 end
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:421 offset:4 end
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:510 offset:13     return f
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:523 offset:4 end
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 23:33:28:627 Kernel/(3476:3734): Instruccion inicio:559 offset:4 end
+
+[INFO] 23:41:22:960 Kernel/(4061:4061): Se conecto nueva consola...
+
+[INFO] 23:41:25:183 Kernel/(4061:4061): Se registro nueva CPU...
+
+[INFO] 23:41:26:295 Kernel/(4061:4231): Archivo recibido correctamente...
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:91 offset:4 end
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:383 offset:4 end
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:421 offset:4 end
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:510 offset:13     return f
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:523 offset:4 end
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 23:41:27:121 Kernel/(4061:4231): Instruccion inicio:559 offset:4 end
+
+[INFO] 23:41:33:743 Kernel/(4061:4231): Paginas disponibles para el proceso...
+
+[INFO] 23:43:26:659 Kernel/(4336:4336): Se conecto nueva consola...
+
+[INFO] 23:43:28:73 Kernel/(4336:4336): Se registro nueva CPU...
+
+[INFO] 23:43:29:122 Kernel/(4336:4480): Archivo recibido correctamente...
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:91 offset:4 end
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:383 offset:4 end
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:421 offset:4 end
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 23:43:29:907 Kernel/(4336:4480): Instruccion inicio:510 offset:13     return f
+
+[INFO] 23:43:29:908 Kernel/(4336:4480): Instruccion inicio:523 offset:4 end
+
+[INFO] 23:43:29:908 Kernel/(4336:4480): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 23:43:29:908 Kernel/(4336:4480): Instruccion inicio:559 offset:4 end
+
+[INFO] 23:43:34:523 Kernel/(4336:4480): Paginas disponibles para el proceso...
+
+[INFO] 23:54:32:449 Kernel/(4701:4701): Se conecto nueva consola...
+
+[INFO] 23:54:34:7 Kernel/(4701:4701): Se registro nueva CPU...
+
+[INFO] 23:54:35:488 Kernel/(4701:4872): Archivo recibido correctamente...
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:91 offset:4 end
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 23:54:36:936 Kernel/(4701:4872): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:383 offset:4 end
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:421 offset:4 end
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:510 offset:13     return f
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:523 offset:4 end
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 23:54:36:937 Kernel/(4701:4872): Instruccion inicio:559 offset:4 end
+
+[INFO] 23:54:41:681 Kernel/(4701:4872): Paginas disponibles para el proceso...
+
+[INFO] 23:56:10:853 Kernel/(4982:4982): Se conecto nueva consola...
+
+[INFO] 23:56:12:396 Kernel/(4982:4982): Se registro nueva CPU...
+
+[INFO] 23:56:13:517 Kernel/(4982:5146): Archivo recibido correctamente...
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:91 offset:4 end
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:383 offset:4 end
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:421 offset:4 end
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:510 offset:13     return f
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:523 offset:4 end
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 23:56:14:407 Kernel/(4982:5146): Instruccion inicio:559 offset:4 end
+
+[INFO] 23:56:17:949 Kernel/(4982:5146): Paginas disponibles para el proceso...
+
+[INFO] 00:27:11:536 Kernel/(6305:6305): Se registro nueva CPU...
+
+[INFO] 00:27:22:792 Kernel/(6305:6305): Se conecto nueva consola...
+
+[INFO] 00:27:35:806 Kernel/(6305:6504): Archivo recibido correctamente...
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:91 offset:4 end
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:383 offset:4 end
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:421 offset:4 end
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:510 offset:13     return f
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:523 offset:4 end
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 00:27:36:904 Kernel/(6305:6504): Instruccion inicio:559 offset:4 end
+
+[INFO] 00:27:42:855 Kernel/(6305:6504): Paginas disponibles para el proceso...
+
+[INFO] 01:04:37:901 Kernel/(7647:7647): Se registro nueva CPU...
+
+[INFO] 01:04:46:837 Kernel/(7647:7647): Se conecto nueva consola...
+
+[INFO] 01:04:48:677 Kernel/(7647:7847): Archivo recibido correctamente...
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:04:49:470 Kernel/(7647:7847): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:04:49:471 Kernel/(7647:7847): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:04:52:150 Kernel/(7647:7847): Paginas disponibles para el proceso...
+
+[INFO] 01:06:16:524 Kernel/(7934:7934): Se registro nueva CPU...
+
+[INFO] 01:06:29:657 Kernel/(7934:7934): Se conecto nueva consola...
+
+[INFO] 01:06:29:955 Kernel/(7934:8151): Archivo recibido correctamente...
+
+[INFO] 01:06:29:955 Kernel/(7934:8151): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:06:29:955 Kernel/(7934:8151): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:06:29:955 Kernel/(7934:8151): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:06:29:463 Kernel/(7934:8151): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:06:30:463 Kernel/(7934:8151): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:06:30:463 Kernel/(7934:8151): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:06:30:464 Kernel/(7934:8151): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:06:30:464 Kernel/(7934:8151): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:06:30:465 Kernel/(7934:8151): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:06:30:465 Kernel/(7934:8151): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:06:30:465 Kernel/(7934:8151): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:06:30:465 Kernel/(7934:8151): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:06:30:465 Kernel/(7934:8151): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:06:30:466 Kernel/(7934:8151): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:06:30:466 Kernel/(7934:8151): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:06:30:466 Kernel/(7934:8151): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:06:30:466 Kernel/(7934:8151): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:06:30:467 Kernel/(7934:8151): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:06:30:467 Kernel/(7934:8151): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:06:30:467 Kernel/(7934:8151): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:06:30:467 Kernel/(7934:8151): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:06:30:468 Kernel/(7934:8151): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:06:30:468 Kernel/(7934:8151): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:06:30:468 Kernel/(7934:8151): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:06:30:468 Kernel/(7934:8151): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:06:30:468 Kernel/(7934:8151): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:06:31:391 Kernel/(7934:8151): Paginas disponibles para el proceso...
+
+[INFO] 01:07:51:599 Kernel/(8192:8192): Se registro nueva CPU...
+
+[INFO] 01:08:00:31 Kernel/(8192:8192): Se conecto nueva consola...
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Archivo recibido correctamente...
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:08:01:91 Kernel/(8192:8375): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:08:01:581 Kernel/(8192:8375): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:08:01:582 Kernel/(8192:8375): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:08:01:582 Kernel/(8192:8375): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:08:01:582 Kernel/(8192:8375): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:08:01:582 Kernel/(8192:8375): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:08:01:582 Kernel/(8192:8375): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:08:01:583 Kernel/(8192:8375): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:08:01:584 Kernel/(8192:8375): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:08:01:584 Kernel/(8192:8375): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:08:01:584 Kernel/(8192:8375): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:08:01:585 Kernel/(8192:8375): Paginas disponibles para el proceso...
+
+[INFO] 01:09:33:941 Kernel/(8418:8418): Se registro nueva CPU...
+
+[INFO] 01:09:45:155 Kernel/(8418:8418): Se conecto nueva consola...
+
+[INFO] 01:09:47:469 Kernel/(8418:8637): Archivo recibido correctamente...
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:09:47:949 Kernel/(8418:8637): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:09:51:544 Kernel/(8418:8637): Paginas disponibles para el proceso...
+
+[INFO] 01:14:25:427 Kernel/(8830:8830): Se registro nueva CPU...
+
+[INFO] 01:14:32:907 Kernel/(8830:8830): Se conecto nueva consola...
+
+[INFO] 01:14:34:611 Kernel/(8830:8989): Archivo recibido correctamente...
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:14:35:271 Kernel/(8830:8989): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:14:35:272 Kernel/(8830:8989): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:14:35:272 Kernel/(8830:8989): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:14:35:272 Kernel/(8830:8989): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:14:35:272 Kernel/(8830:8989): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:14:35:272 Kernel/(8830:8989): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:14:35:272 Kernel/(8830:8989): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:14:38:323 Kernel/(8830:8989): Paginas disponibles para el proceso...
+
+[INFO] 01:17:05:552 Kernel/(9111:9111): Se registro nueva CPU...
+
+[INFO] 01:17:19:279 Kernel/(9111:9111): Se conecto nueva consola...
+
+[INFO] 01:17:21:71 Kernel/(9111:9327): Archivo recibido correctamente...
+
+[INFO] 01:17:22:191 Kernel/(9111:9327): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:17:22:191 Kernel/(9111:9327): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:17:22:191 Kernel/(9111:9327): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:17:22:191 Kernel/(9111:9327): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:17:22:191 Kernel/(9111:9327): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:17:22:192 Kernel/(9111:9327): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:17:26:278 Kernel/(9111:9327): Paginas disponibles para el proceso...
+
+[INFO] 01:20:47:912 Kernel/(9488:9488): Se registro nueva CPU...
+
+[INFO] 01:20:56:689 Kernel/(9488:9488): Se conecto nueva consola...
+
+[INFO] 01:20:58:216 Kernel/(9488:9676): Archivo recibido correctamente...
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:20:58:761 Kernel/(9488:9676): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:21:01:417 Kernel/(9488:9676): Paginas disponibles para el proceso...
+
+[INFO] 01:27:22:456 Kernel/(9915:9915): Se conecto nueva consola...
+
+[INFO] 01:27:24:7 Kernel/(9915:10056): Archivo recibido correctamente...
+
+[INFO] 01:27:24:383 Kernel/(9915:10056): Instruccion inicio:38 offset:16     wait mutexA
+
+[INFO] 01:27:24:383 Kernel/(9915:10056): Instruccion inicio:54 offset:19         print $0+1
+
+[INFO] 01:27:24:383 Kernel/(9915:10056): Instruccion inicio:73 offset:18     signal mutexB
+
+[INFO] 01:27:24:383 Kernel/(9915:10056): Instruccion inicio:91 offset:4 end
+
+[INFO] 01:27:24:383 Kernel/(9915:10056): Instruccion inicio:102 offset:20 variables f,  A,  g
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:122 offset:11     A = 	0
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:133 offset:18     !Global = 1+A
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:151 offset:18     print !Global
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:169 offset:27     jnz !Global Siguiente 
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:207 offset:13     f = 8	  
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:220 offset:24     g <- doble !Global	
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:244 offset:20     io impresora 20
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:277 offset:15     imprimir A
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:292 offset:29     textPrint    Hola Mundo!
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:326 offset:16     sumar1 &g		
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:342 offset:18     print 		g    
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:365 offset:13     sinParam
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:383 offset:4 end
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:406 offset:15 	textPrint Bye
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:421 offset:4 end
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:482 offset:12 variables f
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:494 offset:16     f = $0 + $0
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:510 offset:13     return f
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:523 offset:4 end
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:544 offset:15 	*$0 = 1 + *$0
+
+[INFO] 01:27:24:384 Kernel/(9915:10056): Instruccion inicio:559 offset:4 end
+
+[INFO] 01:27:26:677 Kernel/(9915:10056): Paginas disponibles para el proceso...
+

@@ -131,9 +131,9 @@ typedef struct __attribute__((packed)) {
 //VARIABLES GLOBALES
 t_log * loggerKernel;
 bool YA_HAY_UNA_CONSOLA = false;
-int pid_actual = 1;
+int pid_actual;
 int TAM_PAGINA;
-int cantPag=0;
+int cantPag;
 PCB* nuevoPCB;
 t_list* tablaKernel;
 Estados* estado;
@@ -645,13 +645,16 @@ void crearKernel(t_config *configuracion) {
 	verificarParametrosCrear(configuracion, 14);
 	puerto_Prog = config_get_int_value(configuracion, "PUERTO_PROG");
 	puerto_Cpu = config_get_int_value(configuracion, "PUERTO_CPU");
-	ip_FS.numero = config_get_string_value(configuracion, "IP_FS");
+	ip_FS.numero = string_new();
+	string_append(&ip_FS.numero, config_get_string_value(configuracion,"IP_FS"));
 	puerto_Memoria = config_get_int_value(configuracion, "PUERTO_MEMORIA");
-	ip_Memoria.numero = config_get_string_value(configuracion,"IP_MEMORIA");
+	ip_Memoria.numero = string_new();
+	string_append(&ip_Memoria.numero, config_get_string_value(configuracion,"IP_MEMORIA"));
 	puerto_FS = config_get_int_value(configuracion, "PUERTO_FS");
 	quantum = config_get_int_value(configuracion, "QUANTUM");
 	quantum_Sleep = config_get_int_value(configuracion, "QUANTUM_SLEEP");
-	algoritmo = config_get_string_value(configuracion, "ALGORITMO");
+	algoritmo = string_new();
+	string_append(&algoritmo, config_get_string_value(configuracion,"ALGORITMO"));
 	grado_Multiprog = config_get_int_value(configuracion,"GRADO_MULTIPROG");
 	sem_Ids = config_get_array_value(configuracion, "SEM_IDS");
 	sem_Init = config_get_array_value(configuracion, "SEM_INIT");
@@ -662,7 +665,7 @@ void crearKernel(t_config *configuracion) {
 void inicializarKernel(char *path) {
 	t_config *configuracionKernel =  generarT_ConfigParaCargar(path);
 	crearKernel(configuracionKernel);
-	free(configuracionKernel);
+	config_destroy(configuracionKernel);
 }
 void mostrarConfiguracionesKernel() {
 	printf("PUERTO_PROG=%d\n", puerto_Prog);
@@ -714,9 +717,9 @@ char* cargarEtiquetasIndex(t_metadata_program* metadata_program,int sizeEtiqueta
 }
 
 t_list* inicializarStack(t_list *contexto) {
-	Stack* stack;
+	Stack* stack = malloc(sizeof(Stack));
 	t_list *contextocero;
-	contextocero = malloc(sizeof(t_list));
+	contextocero = list_create();
 
 	stack->args = list_create();
 	stack->vars = list_create();
@@ -727,7 +730,6 @@ t_list* inicializarStack(t_list *contexto) {
 	list_add(contextocero, stack);
 
 	return contextocero;
-	free(contextocero);
 }
 
 void inicializarPCB(char* buffer,int tamanioBuffer) {
@@ -755,6 +757,7 @@ void realizarHandshakeMemoria(int socket) {
 		log_info(loggerKernel, "Error al recibir el tamanio de pagina de memoria.");
 		exit(-1);
 	}
+	free(paqueteConPaginas);
 }
 
 void handshakeCPU(int socket){
@@ -767,6 +770,7 @@ void handshakeCPU(int socket){
 		memcpy(buffer+string_length(algoritmo), &quantumDeMentira, sizeof(int));
 	}
 	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(algoritmo)+sizeof(int), buffer);
+	free(buffer);
 }
 
 int obtenerCantidadPaginas(char* codigo) {
@@ -879,25 +883,26 @@ void *manejadorTeclado(){
 	free(comando);
 }
 
-void analizarEstadoProceso(){
-	paquete* unPaquete = recvRemasterizado(socketParaMemoria);
-	if(unPaquete->tipoMsj==INICIO_EXITOSO){
+void analizarEstadoProceso(int socketDeConsola){
+	int inicio = recvDeNotificacion(socketParaMemoria);
+	if(inicio==INICIO_EXITOSO){
 		TablaKernel *proceso;
-		t_proceso* t_proceso;
-		t_proceso = malloc(sizeof(t_proceso));
+		t_proceso* procesoCola;
+		proceso = malloc(sizeof(TablaKernel));
+		procesoCola = malloc(sizeof(t_proceso));
 		proceso->pid = pid_actual;
 		proceso->tamaniosPaginas = TAM_PAGINA;
 		proceso->paginas = cantPag;
 		list_add(tablaKernel, proceso);
 		log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
 		prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
-		enviarPCB(socketCPU);
-		t_proceso->abortado=false;
-		t_proceso->pcb = nuevoPCB;
-		t_proceso->socket_CPU = socketCPU;
-		t_proceso->socket_CONSOLA = socketConsola;
-		queue_push(estado->listo,t_proceso);
-		sendRemasterizado(socketConsola, MENSAJE_PID, sizeof(int), t_proceso->pcb->PID);
+		//enviarPCB(socketCPU);
+		procesoCola->abortado=false;
+		procesoCola->pcb = nuevoPCB;
+		procesoCola->socket_CPU = socketCPU;
+		procesoCola->socket_CONSOLA = socketConsola;
+		queue_push(estado->listo,procesoCola);
+		sendRemasterizado(socketDeConsola, MENSAJE_PID, sizeof(int), &pid_actual); //Semaforos Warning!!
 	}
 	else{
 		  char* espacioInsuficiente = malloc(sizeof(char)*60);
@@ -905,7 +910,6 @@ void analizarEstadoProceso(){
 		  sendRemasterizado(socketConsola,ESPACIO_INSUFICIENTE, sizeof(int), &espacioInsuficiente);
 		  disminuirPID();
 	}
-	free(unPaquete);
 }
 
 void* manejadorConexionConsola (void* socket){
@@ -921,7 +925,7 @@ void* manejadorConexionConsola (void* socket){
 				  cantPag = obtenerCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
 				  inicializarPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj);
 				  prepararProgramaEnMemoria(socketParaMemoria,ASIGNAR_PAGINAS);
-				  analizarEstadoProceso();
+				  analizarEstadoProceso(socketDeConsola);
 				  free(paqueteRecibidoDeConsola);
 				  break;
 			  case CORTO:
@@ -983,16 +987,28 @@ void* manejadorConexionConsola (void* socket){
 //	  }
 //  }
 
+void crearEstados(){
+	estado = malloc(sizeof(Estados));
+	estado->bloqueado = queue_create();
+	estado->ejecutando = queue_create();
+	estado->finalizado = queue_create();
+	estado->listo = queue_create();
+	estado->nuevo = queue_create();
+}
+
 //-----------------------------------MAIN-----------------------------------------------
 
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	verificarParametrosInicio(argc);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
-	inicializarKernel(argv[1]);
+	//verificarParametrosInicio(argc);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
+	//inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
+	crearEstados();
+	pid_actual = 1;
+	cantPag = 0;
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
 	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketQueAcepta;
