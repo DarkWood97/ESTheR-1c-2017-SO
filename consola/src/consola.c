@@ -110,6 +110,7 @@ void* iniciarPrograma(void* programa)
 {
 	Programa* unPrograma = (Programa*)programa;
 	bool paqueteNoUsado = false;
+	paqueteHiloCorrecto = malloc(sizeof(paquete));
 
 	while(1){
 		if((unPrograma->pid==paqueteHiloCorrecto->tipoMsj)&&(paqueteNoUsado)){
@@ -118,7 +119,7 @@ void* iniciarPrograma(void* programa)
 			unPrograma->impresiones++;
 			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
 			paqueteNoUsado = false;
-			free(paqueteHiloCorrecto);
+			//free(paqueteHiloCorrecto);
 			pthread_mutex_unlock(&mutexPaquete);
 		}
 
@@ -167,6 +168,7 @@ void recibirPID(long int tamanio,char* mensaje)
 			programa->impresiones = 0;
 			list_add(listaProcesos,programa);
 			PIDNoRecibido = false;
+			log_info(loggerConsola, "Se recibio correctamente el pid %d de kernel...", programa->pid);
 		} else if(paqueteRecibido->tipoMsj==ESPACIO_INSUFICIENTE){
 			pthread_mutex_unlock(&mutexImpresiones);
 			printf("No hay espacio suficiente para iniciar el programa\n");
@@ -174,7 +176,7 @@ void recibirPID(long int tamanio,char* mensaje)
 
 		free(paqueteRecibido);
 	}
-	free(programa);
+	//free(programa);
 }
 
 void prepararPrograma(char* path){
@@ -185,7 +187,7 @@ void prepararPrograma(char* path){
 	long int tamanio = obtenerTamanioArchivo(archivoRecibido)+1;
 	char* mensaje = leerArchivo(archivoRecibido,tamanio);
 
-	free((char*)path);
+	//free((char*)path);
 	fclose(archivoRecibido);
 
 	recibirPID(tamanio,mensaje);
@@ -335,7 +337,7 @@ void* manejadorInterfaz()
 		} else{
 			puts("Error de comando");
 		}
-		comando = realloc(comando,50*sizeof(char));
+		//comando = realloc(comando,50*sizeof(char));
 	}
 }
 //------------------------------------------------------------------------------------------------------------------

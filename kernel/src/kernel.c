@@ -895,8 +895,8 @@ void analizarEstadoProceso(int socketDeConsola){
 		proceso->paginas = cantPag;
 		list_add(tablaKernel, proceso);
 		log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
-		prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
-		//enviarPCB(socketCPU);
+		//prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
+		enviarPCB(socketCPU);
 		procesoCola->abortado=false;
 		procesoCola->pcb = nuevoPCB;
 		procesoCola->socket_CPU = socketCPU;
@@ -924,7 +924,7 @@ void* manejadorConexionConsola (void* socket){
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
 				  cantPag = obtenerCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
 				  inicializarPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj);
-				  prepararProgramaEnMemoria(socketParaMemoria,ASIGNAR_PAGINAS);
+				  prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
 				  analizarEstadoProceso(socketDeConsola);
 				  free(paqueteRecibidoDeConsola);
 				  break;
@@ -1001,10 +1001,10 @@ void crearEstados(){
 int main(int argc, char *argv[]) {
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	tablaKernel = list_create();
-	//verificarParametrosInicio(argc);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
-	//inicializarKernel(argv[1]);
+	verificarParametrosInicio(argc);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
+	inicializarKernel(argv[1]);
 	cola_CPU_libres = queue_create();
 	crearEstados();
 	pid_actual = 1;

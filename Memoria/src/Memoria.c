@@ -568,7 +568,7 @@ void inicializarProceso(paquete* paqueteParaIniciar, int socketConPeticionDeInic
 	usleep(RETARDO_MEMORIA);
 	log_info(loggerMemoria,"Retardo...");
 	reservarPaginasParaProceso(pid, cantidadDePaginas,socketConPeticionDeInicio);
-	free(paqueteParaIniciar);
+	//free(paqueteParaIniciar);
 }
 //-----------------------------------FINALIZAR PROCESO---------------------------------------//
 void finalizarProceso(paquete *paqueteDeFinalizacion, int socketConPeticionDeFinalizacion){
@@ -739,6 +739,7 @@ void *manejadorConexionKernel(void* socket){
 		default:
 			perror("No se recibio correctamente el mensaje");
 		}
+		free(paqueteRecibidoDeKernel);
 	}
 }
 //--------------------------------------------MANEJADOR CPU--------------------------------------//
