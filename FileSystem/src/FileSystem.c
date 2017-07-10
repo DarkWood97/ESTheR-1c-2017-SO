@@ -66,14 +66,14 @@ char* armarNombreArchivo(int bloque){
 void fileSystemCrear(t_config *configuracion) {
 	verificarParametrosCrear(configuracion,2);
 	puerto = config_get_int_value(configuracion, "PUERTO");
-	punto_Montaje = config_get_string_value(configuracion,"PUNTO_MONTAJE");
+	punto_Montaje = string_new();
+	string_append(&punto_Montaje, config_get_string_value(configuracion,"PUNTO_MONTAJE"));
 }
 
 void inicializarFileSystem(char *path) {
-	t_config *configuracionFileSystem = (t_config*)malloc(sizeof(t_config));
-	*configuracionFileSystem = generarT_ConfigParaCargar(path);
+	t_config *configuracionFileSystem = generarT_ConfigParaCargar(path);
 	fileSystemCrear(configuracionFileSystem);
-	free(configuracionFileSystem);
+	config_destroy(configuracionFileSystem);
 }
 void mostrarConfiguracionesFileSystem() {
 	printf("PUERTO=%d\n", puerto);
