@@ -55,7 +55,11 @@ typedef struct __attribute__((packed)) {
 //	//TablaKernel tablaKernel;
 //} PCB;
 
-
+typedef struct{
+  int numPagina;
+  int offset;
+  int tamanioPuntero;
+}direccion;
 
 typedef struct __attribute__((packed)) {
 	uint32_t size;
@@ -73,22 +77,21 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
 	unsigned char nombreVariables;
 	int valorVariables;
-} variable;
-
+} variableCompartida;
 
 
 typedef struct{
-  int numPagina;
-  int offset;
-  int tam;
-}retVar;
+  char nombreVariable;
+  direccion *direccionDeVariable;
+}variable;
+
 
 typedef struct {
 	int pos;
 	t_list* args;
 	t_list* vars;
 	int retPos;
-	retVar retVar;
+	direccion retVar;
 } Stack;
 
 typedef struct __attribute__((packed)) {
@@ -188,7 +191,7 @@ int sacarTamanioDeLista(t_list* contexto){
 	int i, tamanioDeContexto;
 	for(i = 0; i<list_size(contexto); i++){
 		Stack *contextoAObtener = list_get(contexto, i);
-		tamanioDeContexto += sizeof(int)*4+sizeof(retVar)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
+		tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
 		//free(contextoAObtener);
 	}
 	return tamanioDeContexto;
@@ -230,6 +233,74 @@ void *serializarPCB(PCB* pcbASerializar){
 	memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->tamContextos, sizeof(int));
 	memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas+sacarTamanioDeLista(pcbASerializar->contextos), contextoActualSerializado, sacarTamanioDeLista(pcbASerializar->contextos));
 	return pcbSerializada;
+}
+
+void desserializarVariables(t_list *variables, paquete *paqueteConVariables, int* dondeEstoy){
+	int cantidadDeVariables;
+	memcpy(&cantidadDeVariables, paqueteConVariables->mensaje+*dondeEstoy, sizeof(int));
+	*dondeEstoy += sizeof(int);
+	int i;
+	for(i = 0; i<cantidadDeVariables; i++){
+		variable *variable = malloc(sizeof(variable));
+		memcpy(&variable->nombreVariable, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(char));
+		*dondeEstoy += sizeof(char);
+		variable->direccionDeVariable = malloc(sizeof(direccion));
+		memcpy(&variable->direccionDeVariable->numPagina, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
+		*dondeEstoy += sizeof(int);
+		memcpy(&variable->direccionDeVariable->offset, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
+		*dondeEstoy += sizeof(int);
+		memcpy(&variable->direccionDeVariable->tamanioPuntero, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
+		*dondeEstoy += sizeof(int);
+		list_add(variables, variable);
+	}
+}
+
+void desserializarContexto(PCB* pcbConContexto, paquete* paqueteConContexto, int dondeEstoy){
+	int nivelDeContexto;
+	for(nivelDeContexto = 0; nivelDeContexto<pcbConContexto->tamContextos; nivelDeContexto++){
+		Stack *contextoAAgregarAPCB = malloc(sizeof(Stack));
+		contextoAAgregarAPCB->args = list_create();
+		contextoAAgregarAPCB->vars = list_create();
+		memcpy(&contextoAAgregarAPCB->pos, paqueteConContexto->mensaje+dondeEstoy, sizeof(int));
+		dondeEstoy +=sizeof(int);
+		desserializarVariables(contextoAAgregarAPCB->args, paqueteConContexto, &dondeEstoy);
+		desserializarVariables(contextoAAgregarAPCB->vars, paqueteConContexto, &dondeEstoy);
+		memcpy(&contextoAAgregarAPCB->retPos, paqueteConContexto->mensaje + dondeEstoy, sizeof(int));
+		memcpy(&contextoAAgregarAPCB->retVar, paqueteConContexto->mensaje + dondeEstoy + sizeof(int), sizeof(direccion));
+		list_add(pcbConContexto->contextos, contextoAAgregarAPCB);
+		dondeEstoy += sizeof(int);
+	}
+}
+
+int desserializarTIntructions(PCB* pcbDesserializada, paquete *paqueteConPCB){
+	int i, auxiliar = 0;
+	memcpy(&pcbDesserializada->cantidadDeT_Intructions, paqueteConPCB->mensaje+(sizeof(int)*3), sizeof(int));
+	pcbDesserializada->cod = malloc(pcbDesserializada->cantidadDeT_Intructions*sizeof(t_intructions));
+	for(i = 0; i<pcbDesserializada->cantidadDeT_Intructions; i++){
+		memcpy(&pcbDesserializada->cod[auxiliar].start, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
+		auxiliar++;
+		memcpy(&pcbDesserializada->cod[auxiliar].offset, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
+		auxiliar++;
+	}
+	int retorno = sizeof(int)*(4+auxiliar);
+	return retorno;
+}
+
+PCB* desserializarPCB(paquete *paqueteConPCB){
+	PCB* pcbDesserializada = malloc(paqueteConPCB->tamMsj);
+	memcpy(&pcbDesserializada->pid, paqueteConPCB->mensaje, sizeof(int));
+	memcpy(&pcbDesserializada->programCounter, paqueteConPCB->mensaje+sizeof(int), sizeof(int));
+	memcpy(&pcbDesserializada->cantidadPaginasCodigo, paqueteConPCB->mensaje+sizeof(int)*2, sizeof(int));
+	int dondeEstoy = desserializarTIntructions(pcbDesserializada, paqueteConPCB);
+	memcpy(&pcbDesserializada->tamEtiquetas, paqueteConPCB->mensaje+dondeEstoy, sizeof(int));
+	pcbDesserializada->etiquetas = string_new();
+	memcpy(pcbDesserializada->etiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy, pcbDesserializada->tamEtiquetas);
+	memcpy(&pcbDesserializada->exitCode, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamEtiquetas, sizeof(int));
+	memcpy(&pcbDesserializada->tamContextos, paqueteConPCB->mensaje+sizeof(int)*2+dondeEstoy+pcbDesserializada->tamEtiquetas, sizeof(int));
+	dondeEstoy +=sizeof(int)*3+pcbDesserializada->tamEtiquetas;
+	pcbDesserializada->contextos = list_create();
+	desserializarContexto(pcbDesserializada, paqueteConPCB, dondeEstoy);
+	return pcbDesserializada;
 }
 
 int tamanioDeArray(char** array){
@@ -284,9 +355,9 @@ int waitSemaforo(t_proceso *proceso, char *semaforo) {
 void asignarVariableCompartida(char nombreVariable,int valor){
 	int i = 0;
 	for(;i<=list_size(variablesCompartidas);i++){
-		variable* variable = list_remove(variablesCompartidas,i);
+		variableCompartida* variable = list_remove(variablesCompartidas,i);
 		if((variable->nombreVariables)==nombreVariable){
-			variable->valorVariables = valor;
+			variable->nombreVariables = valor;
 			list_add_in_index(variablesCompartidas, i, variable);
 		}
 		else{
@@ -299,7 +370,7 @@ void asignarVariableCompartida(char nombreVariable,int valor){
 int obtenerVariableCompartida(char nombreVariable){
 	int i = 0;
 	for(;i<=list_size(variablesCompartidas);i++){
-		variable* variable = list_get(variablesCompartidas,i);
+		variableCompartida* variable = list_get(variablesCompartidas,i);
 		if((variable->nombreVariables)==nombreVariable){
 			return variable->valorVariables;
 		}
@@ -313,7 +384,7 @@ int obtenerVariableCompartida(char nombreVariable){
 void inicializarVariablesCompartidas(){
 	int i = 0;
 	for(;shared_Vars[i]!=NULL;i++){
-		variable* variables;
+		variableCompartida* variables;
 		variables->nombreVariables=shared_Vars[i];
 		list_add(variablesCompartidas,variables);
 	}
@@ -426,6 +497,12 @@ void enviarPCB(int socket, PCB* pcbAEnviar){
 	int tamanioDePCB = sacarTamanioPCB(pcbAEnviar);
 	sendRemasterizado(socket, MENSAJE_PCB, tamanioDePCB, pcbSerializada);
 
+}
+
+void recibirPCB(int socket, int tamanio){
+	paquete* pcbSerializada = recvRemasterizado(socket);
+	nuevoPCB = desserializarPCB(pcbSerializada);
+	free(pcbSerializada);
 }
 
 //////////////////////////////////////////MANEJADOR DE CPU/////////////////////////////////////////////////////////////////////////
