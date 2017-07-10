@@ -125,7 +125,7 @@ void preparandoParaEjecutar(){
 }
 
 void avanzarEnEjecucion(){
-	pcbEnProceso->ProgramCounter++;
+	pcbEnProceso->programCounter++;
 }
 
 void modificarQuantum(){
@@ -135,13 +135,13 @@ void modificarQuantum(){
 }
 
 char* pedirLineaAMemoria(){
-	int cuantoLeer = pcbEnProceso->cod[pcbEnProceso->ProgramCounter].offset;
+	int cuantoLeer = pcbEnProceso->cod[pcbEnProceso->programCounter].offset;
 	char* lineaDeInstruccion = malloc(cuantoLeer+1);
 	void* mensajeParaMemoria = malloc(sizeof(int)*4);
-	memcpy(mensajeParaMemoria, &pcbEnProceso->PID, sizeof(int));
-	int numeroDePagina = (pcbEnProceso->cod[pcbEnProceso->ProgramCounter].comienzo)/tamPaginasMemoria;
+	memcpy(mensajeParaMemoria, &pcbEnProceso->pid, sizeof(int));
+	int numeroDePagina = (pcbEnProceso->cod[pcbEnProceso->programCounter].start)/tamPaginasMemoria;
 	memcpy(mensajeParaMemoria+sizeof(int), &numeroDePagina, sizeof(int));
-	int offset = pcbEnProceso->cod[pcbEnProceso->ProgramCounter].comienzo%tamPaginasMemoria;
+	int offset = pcbEnProceso->cod[pcbEnProceso->programCounter].start%tamPaginasMemoria;
 	memcpy(mensajeParaMemoria+sizeof(int)*2, &offset, sizeof(int));
 	memcpy(mensajeParaMemoria+sizeof(int)*3, &cuantoLeer, sizeof(int));
 	sendRemasterizado(socketMemoria, LEER_DATOS, cuantoLeer, mensajeParaMemoria);
@@ -160,10 +160,62 @@ char* pedirLineaAMemoria(){
 	}
 }
 
+void limpiarContexto(Stack* contextoALimpiar){
+	list_destroy_and_destroy_elements(contextoALimpiar->args, free);
+	list_destroy_and_destroy_elements(contextoALimpiar->vars, free);
+	free(contextoALimpiar);
+}
+
+void destruirPCB(){
+	log_info(loggerCPU, "Se prosigue a limpiar la PCB para el proximo proceso...");
+	list_destroy_and_destroy_elements(pcbEnProceso->contextos, (void*)limpiarContexto);
+	free(pcbEnProceso->etiquetas);
+	free(pcbEnProceso->cod);
+	free(pcbEnProceso);
+	log_info(loggerCPU, "PCB limpiada exitosamente...");
+}
+
+void enviarPCBAKernel(int tipoDeEnvio){
+	int tamanioPCB = sacarTamanioPCB(pcbEnProceso);
+	void *pcbSerializada = serializarPCB(pcbEnProceso);
+	sendRemasterizado(socketKernel, tipoDeEnvio, tamanioPCB, pcbSerializada);
+	free(pcbSerializada);
+	destruirPCB();
+}
+
+void chequearEstaAbortado(){
+	if(programaEnEjecucionAbortado){
+		log_info(loggerCPU, "Enviando la PCB del proceso %d por haberse abortado, a kernel...", pcbEnProceso->pid);
+		enviarPCBAKernel(PCB_ABORTADO);
+	}
+}
+
+void chequearEstaFinalizado(){
+	if(programaEnEjecucionFinalizado){
+		log_info(loggerCPU, "Enviando la PCB del proceso %d por haberse finalizado, a kernel...", pcbEnProceso->pid);
+		enviarPCBAKernel(PCB_FINALIZADO);
+	}
+}
+
+void chequearEstaBloqueado(){
+	if(programaEnEjecucionBloqueado){
+		log_info(loggerCPU, "Enviando la PCB del proceso %d por haberse bloqueado, a kernel...", pcbEnProceso->pid);
+		enviarPCBAKernel(PCB_BLOQUEADO);
+	}
+}
+
+void chequearFinalizoQuantum(){
+	if(datosParaEjecucion->quantum == 0){
+		log_info(loggerCPU, "Enviando la PCB del proceso %d por terminar su rafaga, a kernel...", pcbEnProceso->pid);
+		enviarPCBAKernel(PCB_FINALIZO_RAFAGA);
+	}
+}
+
 //-----------------MAIN------------//
 int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
+	loggerProgramas = log_create("./logProgramas.txt", "Programas",0,0);
 	verificarParametrosInicio(argc);
 	inicializarCPU(argv[1]);
 	//inicializarCPU("Debug/CPU.config");
@@ -178,7 +230,7 @@ int main(int argc, char *argv[]) {
 	//Handshakes
 	realizarHandshakeConKernel(socketKernel,HANDSHAKE_KERNEL);
 	realizarHandshakeConMemoria(socketMemoria,HANDSHAKE_MEMORIA);
-
+	int quantumAuxiliar = datosParaEjecucion->quantum;
 	//MIENTRAS SIGUSR1 ESTE DESACTIVADO
 	while(!sigusr1EstaActivo)
 	{
@@ -191,9 +243,11 @@ int main(int argc, char *argv[]) {
 			modificarQuantum();
 			avanzarEnEjecucion();
 		}
-//		chequearEstaAbortado();
-//		chequearEstaBloqueado();
-//		chequearFinalizoQuantum();
+		chequearEstaAbortado();
+		chequearEstaFinalizado();
+		chequearEstaBloqueado();
+		chequearFinalizoQuantum();
+		datosParaEjecucion->quantum = quantumAuxiliar;
 	}
 
   return EXIT_SUCCESS;

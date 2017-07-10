@@ -60,3 +60,5 @@ void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
 			exit(-1);
 		}
 }
+
+

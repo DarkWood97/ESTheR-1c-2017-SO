@@ -33,34 +33,51 @@
 
 #ifndef FUNCIONESCPU_H_
 #define FUNCIONESCPU_H_
-
+//------HANDHSAKES
 #define HANDSHAKE_MEMORIA 1001
 #define HANDSHAKE_KERNEL 1003
-#define MENSAJE_IMPRIMIR 101
-#define MENSAJE_PATH  103
-#define PETICION_LECTURA_MEMORIA 104
-#define PETICION_ESCRITURA_MEMORIA 105
-#define MENSAJE_DIRECCION 110
 #define ERROR -1
 #define CORTO 0
-#define PETICION_VARIABLE_COMPARTIDA_KERNEL 111
-#define PETICION_CAMBIO_VALOR_KERNEL 112
-#define DATOS_VARIABLE_COMPARTIDA_KERNEL 1011
-#define DATOS_VARIABLE_MEMORIA 1013
-#define FINALIZO_PROCESO 1000
-#define PIDO_SEMAFORO 13
-#define DOY_SEMAFORO 12
-#define PIDO_RESERVA 11
-#define PIDO_LIBERACION 10
-#define ABRIR_ARCHIVO 9
-#define NO_SE_PUDO_ABRIR 8
-#define BORRAR_ARCHIVO 7
-#define CERRAR_ARCHIVO 6
-#define MOVEME_CURSOR 5
-#define ESCRIBIR_ARCHIVO 4
-#define LEER_DE_ARCHIVO 3
-#define LEER_DATOS 2
-#define DATOS_DE_PAGINA 1
+//-----???
+//#define MENSAJE_IMPRIMIR 101
+//#define MENSAJE_PATH  103
+//#define FINALIZO_PROCESO 1000
+//#define MENSAJE_DIRECCION 110
+//----PETICIONES KERNEL
+#define PETICION_VARIABLE_COMPARTIDA_KERNEL 100
+#define PETICION_CAMBIO_VALOR_KERNEL 101
+#define DATOS_VARIABLE_COMPARTIDA_KERNEL 102
+#define PIDO_RESERVA 103
+#define PIDO_LIBERACION 104
+#define PIDO_SEMAFORO 105
+#define DOY_SEMAFORO 106
+#define BLOQUEO_POR_SEMAFORO 107
+//-----MEMORIA
+#define LEER_DATOS 200
+#define DATOS_DE_PAGINA 201
+#define PETICION_LECTURA_MEMORIA 202
+#define PETICION_ESCRITURA_MEMORIA 203
+//------ARCHIVOS
+#define ABRIR_ARCHIVO 300
+#define NO_SE_PUDO_ABRIR 301
+#define BORRAR_ARCHIVO 302
+#define CERRAR_ARCHIVO 303
+#define MOVEME_CURSOR 304
+#define ESCRIBIR_ARCHIVO 305
+#define LEER_DE_ARCHIVO 306
+#define DATOS_DE_ARCHIVO 307
+#define GUARDAR_DATOS_ARCHIVO 308
+//----------PCB
+#define MENSAJE_PCB 2000
+#define PCB_ABORTADO 2001
+#define PCB_FINALIZADO 2002
+#define PCB_BLOQUEADO 2003
+#define PCB_FINALIZO_RAFAGA 2004
+//---------MENSAJES GENERICOS DE EXITO Y ERROR
+#define OPERACION_CON_ARCHIVO_EXITOSA 10
+#define OPERACION_CON_MEMORIA_EXITOSA 11
+#define OPERACION_CON_KERNEL_EXITOSA 12
+
 
 
 typedef struct __attribute__((packed)) {
@@ -74,47 +91,46 @@ typedef struct {
 	int offset;
 } codeIndex;
 
-typedef struct __attribute__((packed)){
-	int pagina;
-	int offset;
-	int tam;
-} retVar;
-typedef struct {
-	int pos;
-	t_list* args;
-	t_list* vars;
-	int retPos;
-	retVar retVar;
-} Stack;
-typedef struct __attribute__((packed)) {
-	int PID;
-	int ProgramCounter;
-	int paginas_Codigo;
-	codeIndex *cod;
-	char* etiquetas;
-	int exitCode;
-	t_list *contextoActual;
-	int tamContextoActual;
-	int tamEtiquetas;
-	TablaKernel tablaKernel;
-} PCB;
-
 typedef struct{
   int numPagina;
   int offset;
   int tamanioPuntero;
 }direccion;
 
-typedef struct __attribute__((packed))t_contexto
-{
+typedef struct {
 	int pos;
-	t_list *args;
-	t_list *vars;
+	t_list* args;
+	t_list* vars;
 	int retPos;
 	direccion retVar;
-	int tamArgs;
-	int tamVars;
-}t_contexto;
+} Stack;
+
+typedef struct __attribute__((packed)) {
+	int pid;
+	int programCounter;
+	int cantidadPaginasCodigo;
+	int cantidadDeT_Intructions;
+	t_intructions* cod;
+	int tamEtiquetas;
+	char* etiquetas;
+	int tamContextos;
+	int exitCode;
+	t_list *contextos;
+	//TablaKernel tablaKernel;
+} PCB;
+
+
+
+//typedef struct __attribute__((packed))t_contexto
+//{
+//	int pos;
+//	t_list *args;
+//	t_list *vars;
+//	int retPos;
+//	direccion retVar;
+//	int tamArgs;
+//	int tamVars;
+//}t_contexto;
 
 typedef struct{
 	char* algoritmo;
@@ -128,6 +144,7 @@ typedef struct{
 
 //------------------------DEFINE--------------------------------------
 t_log* loggerCPU;
+t_log* loggerProgramas;
 PCB * pcbEnProceso;
 char* IP_KERNEL;
 char* IP_MEMORIA;
@@ -150,15 +167,15 @@ void inicializarCPU(char*);
 void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);
 void verificarParametrosCrear(t_config *,int);
-paquete serializar(void*,int);
-void enviar(int,paquete);
-void realizarHandshake(int, int);
-void destruirPaquete(paquete *) ;
-int _obtenerSizeActual_(int);
-//void deserealizarPCB(paquete,PCB);
-void lineaParaElAnalizador(char * ,char *);
-bool estadoDelPrograma();
-
-
+//paquete serializar(void*,int);
+//void enviar(int,paquete);
+//void realizarHandshake(int, int);
+//void destruirPaquete(paquete *) ;
+//int _obtenerSizeActual_(int);
+////void deserealizarPCB(paquete,PCB);
+//void lineaParaElAnalizador(char * ,char *);
+//bool estadoDelPrograma();
+void *serializarPCB(PCB*);
+int sacarTamanioPCB(PCB*);
 
 #endif /* FUNCIONESCPU_H_ */

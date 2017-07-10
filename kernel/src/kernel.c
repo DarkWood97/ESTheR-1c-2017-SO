@@ -26,32 +26,13 @@ int stack_Size;
 
 //---------------indice de stack----
 
-typedef struct __attribute__((packed)) {
-	int pagina;
-	int offset;
-	int tam;
-} direccion;
 
-typedef struct __attribute__((packed)) {
-	char nombreVariable;
-	direccion direccionDeVariable;
-}variable;
-
-typedef struct __attribute__((packed)) {
-	int pos;
-	t_list* args;
-	t_list* vars;
-	int retPos;
-	direccion retVar;
-	int tamArgs;
-	int tamVars;
-} Stack;
 
 //--------------indice de codigo----
-typedef struct __attribute__((packed)) {
-	int comienzo;
-	int offset;
-} codeIndex;
+//typedef struct __attribute__((packed)) {
+//	int comienzo;
+//	int offset;
+//} codeIndex;
 
 //--------------indice de codigo-----
 
@@ -61,18 +42,20 @@ typedef struct __attribute__((packed)) {
 	int paginas;
 } TablaKernel;
 
-typedef struct __attribute__((packed)) {
-	int PID;
-	int ProgramCounter;
-	int paginas_Codigo;
-	codeIndex* cod;
-	char* etiquetas;
-	int exitCode;
-	t_list *contextoActual;
-	int tamContextoActual;
-	int tamEtiquetas;
-	TablaKernel tablaKernel;
-} PCB;
+//typedef struct __attribute__((packed)) {
+//	int PID;
+//	int ProgramCounter;
+//	int paginas_Codigo;
+//	t_intructions* cod;
+//	char* etiquetas;
+//	int exitCode;
+//	t_list *contextoActual;
+//	int tamContextoActual;
+//	int tamEtiquetas;
+//	//TablaKernel tablaKernel;
+//} PCB;
+
+
 
 typedef struct __attribute__((packed)) {
 	uint32_t size;
@@ -90,7 +73,37 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
 	unsigned char nombreVariables;
 	int valorVariables;
-} SharedVars;
+} variable;
+
+
+
+typedef struct{
+  int numPagina;
+  int offset;
+  int tam;
+}retVar;
+
+typedef struct {
+	int pos;
+	t_list* args;
+	t_list* vars;
+	int retPos;
+	retVar retVar;
+} Stack;
+
+typedef struct __attribute__((packed)) {
+	int pid;
+	int programCounter;
+	int cantidadPaginasCodigo;
+	int cantidadDeT_Intructions;
+	t_intructions* cod;
+	int tamEtiquetas;
+	char* etiquetas;
+	int tamContextos;
+	int exitCode;
+	t_list *contextos;
+	//TablaKernel tablaKernel;
+} PCB;
 
 typedef struct __attribute__((packed)) {
   int socket_CPU;
@@ -147,6 +160,78 @@ int socketParaMemoria;
 int socketCPU;
 
 //////////////////////////////FUNCIONES SEMAFOROS/////////////////////////////////////////////////////////////////////////////////////
+void *serializarT_Intructions(PCB *pcbConT_intruction){
+  void *serializacion = malloc(sizeof(t_intructions)*pcbConT_intruction->cantidadDeT_Intructions);
+  int i, auxiliar1 = 0;
+  for(i = 0; i<pcbConT_intruction->cantidadDeT_Intructions; i++){
+    memcpy(serializacion+sizeof(int)*auxiliar1, &pcbConT_intruction->cod[i].start, sizeof(int));
+    auxiliar1++;
+    memcpy(serializacion+sizeof(int)*auxiliar1,&pcbConT_intruction->cod[i].offset, sizeof(int));
+    auxiliar1++;
+  }
+  return serializacion;
+}
+
+void* serializarVariable(t_list* variables){
+	void* variableSerializada = malloc(list_size(variables)*sizeof(variable));
+	int i;
+	int cantidadDeVariables = list_size(variables);
+	memcpy(variableSerializada, &cantidadDeVariables, sizeof(int));
+	for(i = 1; i<cantidadDeVariables; i++){
+		variable *variableObtenida = list_get(variables, i);
+    	memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
+	}
+	return variableSerializada;
+}
+
+int sacarTamanioDeLista(t_list* contexto){
+	int i, tamanioDeContexto;
+	for(i = 0; i<list_size(contexto); i++){
+		Stack *contextoAObtener = list_get(contexto, i);
+		tamanioDeContexto += sizeof(int)*4+sizeof(retVar)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
+		//free(contextoAObtener);
+	}
+	return tamanioDeContexto;
+}
+
+void *serializarContextoActual(PCB* pcbConContextos){
+	void* contextoSerializado = malloc(sacarTamanioDeLista(pcbConContextos->contextos));
+  int i;
+  for(i = 0; i<pcbConContextos->tamContextos; i++){
+    Stack* contexto = list_get(pcbConContextos->contextos, i);
+    memcpy(contextoSerializado, &contexto->pos, sizeof(int));
+    void *argsSerializadas = serializarVariable(contexto->args);
+    void *varsSerializadas = serializarVariable(contexto->vars);
+    memcpy(contextoSerializado+sizeof(int), argsSerializadas, list_size(contexto->args)*sizeof(variable));
+    memcpy(contextoSerializado+sizeof(int)+list_size(contexto->args)*sizeof(variable), varsSerializadas, list_size(contexto->vars)*sizeof(variable));
+    memcpy(contextoSerializado+list_size(contexto->args)*sizeof(variable)+list_size(contexto->vars)*sizeof(variable), &contexto->retPos, sizeof(int));
+  }
+  return contextoSerializado;
+}
+
+int sacarTamanioPCB(PCB* pcbASerializar){
+ int tamanio= sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+sacarTamanioDeLista(pcbASerializar->contextos)+string_length(pcbASerializar->etiquetas);
+ return tamanio;
+}
+
+void *serializarPCB(PCB* pcbASerializar){
+	int tamanioPCB = sacarTamanioPCB(pcbASerializar);
+	void* pcbSerializada = malloc(tamanioPCB);
+	memcpy(pcbSerializada, &pcbASerializar->pid, sizeof(int));
+	memcpy(pcbSerializada+sizeof(int), &pcbASerializar->programCounter, sizeof(int));
+	memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadPaginasCodigo, sizeof(int));
+	void* indiceDeCodigoSerializado = serializarT_Intructions(pcbASerializar);
+	memcpy(pcbSerializada+sizeof(int)*3, &pcbASerializar->cantidadDeT_Intructions, sizeof(int));
+	memcpy(pcbSerializada+sizeof(int)*4, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions);
+	memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions, &pcbASerializar->tamEtiquetas, sizeof(int));
+	memcpy(pcbSerializada+ sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions, pcbASerializar->etiquetas, pcbASerializar->tamEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
+	memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->exitCode, sizeof(int));
+	void* contextoActualSerializado = serializarContextoActual(pcbASerializar);
+	memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->tamContextos, sizeof(int));
+	memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas+sacarTamanioDeLista(pcbASerializar->contextos), contextoActualSerializado, sacarTamanioDeLista(pcbASerializar->contextos));
+	return pcbSerializada;
+}
+
 int tamanioDeArray(char** array){
 	int tamanio = ((strlen((char*)array)/sizeof(char*))*sizeof(int)); //Asi se saca el tamanio del array, calculo cuantos char* hay, lo divido por el tamanio de char*, lo que me da la cantidad de elementos, y lo multiplico por el tamanio de un int
 	return tamanio;
@@ -199,7 +284,7 @@ int waitSemaforo(t_proceso *proceso, char *semaforo) {
 void asignarVariableCompartida(char nombreVariable,int valor){
 	int i = 0;
 	for(;i<=list_size(variablesCompartidas);i++){
-		SharedVars* variable = list_remove(variablesCompartidas,i);
+		variable* variable = list_remove(variablesCompartidas,i);
 		if((variable->nombreVariables)==nombreVariable){
 			variable->valorVariables = valor;
 			list_add_in_index(variablesCompartidas, i, variable);
@@ -214,7 +299,7 @@ void asignarVariableCompartida(char nombreVariable,int valor){
 int obtenerVariableCompartida(char nombreVariable){
 	int i = 0;
 	for(;i<=list_size(variablesCompartidas);i++){
-		SharedVars* variable = list_get(variablesCompartidas,i);
+		variable* variable = list_get(variablesCompartidas,i);
 		if((variable->nombreVariables)==nombreVariable){
 			return variable->valorVariables;
 		}
@@ -228,7 +313,7 @@ int obtenerVariableCompartida(char nombreVariable){
 void inicializarVariablesCompartidas(){
 	int i = 0;
 	for(;shared_Vars[i]!=NULL;i++){
-		SharedVars* variables;
+		variable* variables;
 		variables->nombreVariables=shared_Vars[i];
 		list_add(variablesCompartidas,variables);
 	}
@@ -241,7 +326,7 @@ t_proceso* dameProceso(t_queue *cola, int pid ) {
 
 	for (; a<queue_size(cola); a++ ){
 		t_proceso *procesoAux=(t_proceso*)list_get(cola->elements, a);
-		if (procesoAux->pcb->PID == pid){
+		if (procesoAux->pcb->pid == pid){
 			return (t_proceso*)list_remove(cola->elements, a);
 		}
 	}
@@ -250,14 +335,15 @@ t_proceso* dameProceso(t_queue *cola, int pid ) {
 
 
 void enviarANuevo(PCB* pcbNuevo){
-	t_proceso* proceso;
+	t_proceso* proceso = malloc(sizeof(t_proceso));
 	proceso->pcb = pcbNuevo;
 	proceso->abortado=false;
 	if(queue_size(estado->nuevo)<grado_Multiprog){
 	  log_info(loggerKernel, "Se agrega nuevo proceso a ejecutar.");
 	  queue_push(estado->nuevo,proceso);
 	}else{
-	  log_info(loggerKernel, "No se pudo agregar el proceso %d, por el grado de multiprogramacion",proceso->pcb->PID);
+	  log_info(loggerKernel, "No se pudo agregar el proceso %d, por el grado de multiprogramacion",proceso->pcb->pid);
+	  free(proceso); //Agrego para liberar lo que se crea arriba, ya que no se usa
 	}
 }
 
@@ -284,8 +370,8 @@ int obtenerNumeroPagina(int pid,int* offset){
 		if(tk->pid==pid){
 			t_proceso* proceso = dameProceso(estado->ejecutando,pid);
 			list_add(estado->ejecutando->elements, proceso);
-			(*offset) = proceso->pcb->cod[i].comienzo;
-			valor =((TAM_PAGINA*(tk->paginas))-(proceso->pcb->cod[i].comienzo));
+			(*offset) = proceso->pcb->cod[i].start;
+			valor =((TAM_PAGINA*(tk->paginas))-(proceso->pcb->cod[i].start));
 			int cantidad = (valor) % (TAM_PAGINA);
 			if (valor % TAM_PAGINA != 0) {
 				cantidad++;
@@ -335,6 +421,13 @@ void leerDatosSolicitud(int pid,int tamALeer,int socketMemoria){
 	free(paquete.mensaje);
 }
 
+void enviarPCB(int socket, PCB* pcbAEnviar){
+	void* pcbSerializada = serializarPCB(pcbAEnviar);
+	int tamanioDePCB = sacarTamanioPCB(pcbAEnviar);
+	sendRemasterizado(socket, MENSAJE_PCB, tamanioDePCB, pcbSerializada);
+
+}
+
 //////////////////////////////////////////MANEJADOR DE CPU/////////////////////////////////////////////////////////////////////////
 void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
   while(1){
@@ -349,7 +442,7 @@ void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
 	      }
 	      switch (paqueteRecibidoDeCPU.tipoMsj) {
 	        case MENSAJE_PCB:
-	          enviarPCB(*(int*)socketCPU);
+	          enviarPCB(*(int*)socketCPU, nuevoPCB); //CAMBIAR EL TEMA DE NUEVOPCB POR UNA VARIABLE QUE NO SEA GLOBAL
 	          break;
 	        case RECIBIR_PCB:
 	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
@@ -358,7 +451,7 @@ void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
 	          list_add(estado->ejecutando, proceso);
 	          break;
 	        case FINALIZAR_PROGRAMA:
-	        	enviarASalida(estado->ejecutando,pid);
+	        	enviarASalida(estado->finalizado,*(int*)pid);
 	        break;
 	        case WAIT_SEMAFORO: ;
 	        	t_proceso* procesoWait = dameProceso(estado->ejecutando,*(int*)pid);
@@ -423,11 +516,11 @@ int comenzarAEjecutar(int pid, int socketMemoria){
 		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
 			t_proceso* proceso = queue_peek(estado->ejecutando);
 
-			int cpuUtilizada = queue_peek(cola_CPU_libres);
+			int cpuUtilizada = (int)queue_peek(cola_CPU_libres);
 			queue_pop(cola_CPU_libres);
 
 			pthread_t hilo_manejadorProceso;
-			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->PID,socketMemoria));
+			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->pid,socketMemoria)); //??
 			pthread_attr_destroy(hilo_manejadorProceso);
 			return cpuUtilizada;
 		}
@@ -570,8 +663,8 @@ void verificarProcesos(socketConsola){
 	for(;i<(list_size(listaFiltrada));i++){
 		t_proceso* proceso = list_get(listaFiltrada, i);
 		proceso->pcb->exitCode = -6;
-		t_queue* cola = chequearEstado(proceso->pcb->PID);
-		enviarASalida(cola,proceso->pcb->PID);
+		t_queue* cola = chequearEstado(proceso->pcb->pid);
+		enviarASalida(cola,proceso->pcb->pid);
 	}
 	list_destroy(listaFiltrada);
 }
@@ -581,7 +674,7 @@ void finalizarPrograma(int pid){
 	if((proceso=chequearListas(pid))!=NULL){
 		proceso->abortado=true;
 		t_queue* cola = chequearEstado(pid);
-		enviarASalida(cola,proceso->pcb->PID);
+		enviarASalida(cola,proceso->pcb->pid);
 		proceso->pcb->exitCode=-7;
 	}
 	else{
@@ -593,7 +686,7 @@ void consultarListado(){
 	int tamanio = list_size(tablaKernel);
 	int posicion = 0;
 	for(; posicion<tamanio;posicion++){
-		TablaKernel* tk = list_get(tablaKernel, posicion); //A los gomasos
+		TablaKernel* tk = list_get(tablaKernel, posicion); //A los gomasos ??
 		printf("%d ", tk->pid);
 	}
 }
@@ -619,7 +712,7 @@ void consultarEstado(char* estado){
 	if(cola!=NULL){
 		for(; posicion<tamanio;posicion++){
 			t_proceso* tp = list_get(cola->elements, posicion);
-			printf("%d ", tp->pcb->PID);
+			printf("%d ", tp->pcb->pid);
 		}
 	}
 	else{
@@ -641,6 +734,23 @@ void reanudarPlanificacion(){
 	estadoPlanificacion=true;
 }
 //----------------------------------------FUNCIONES KERNEL------------------------------------------
+void imprimirArrayDeChar(char* arrayDeChar[]) {
+	int i = 0;
+	printf("[");
+	for (; arrayDeChar[i] != NULL; i++) {
+		printf("%s ", arrayDeChar[i]);
+	}
+	puts("]");
+}
+
+void imprimirArrayDeInt(int arrayDeInt[]) {
+	int i = 0;
+	printf("[");
+	for (; arrayDeInt[i] != NULL; i++) {
+		printf("%d ", arrayDeInt[i]);
+	}
+	puts("]");
+}
 void crearKernel(t_config *configuracion) {
 	verificarParametrosCrear(configuracion, 14);
 	puerto_Prog = config_get_int_value(configuracion, "PUERTO_PROG");
@@ -697,13 +807,13 @@ int disminuirPID() {
 	return pid_actual;
 }
 
-codeIndex* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
-	codeIndex* code = malloc((sizeof(int)*2)*metadata_program->instrucciones_size);
+t_intructions* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
+	t_intructions* code = malloc((sizeof(int)*2)*metadata_program->instrucciones_size);
 	int i = 0;
 
 	for (; i < metadata_program->instrucciones_size; i++) {
 		log_info(loggerKernel, "Instruccion inicio:%d offset:%d %.*s",metadata_program->instrucciones_serializado[i].start,metadata_program->instrucciones_serializado[i].offset,metadata_program->instrucciones_serializado[i].offset,buffer+ metadata_program->instrucciones_serializado[i].start);
-		code[i].comienzo = metadata_program->instrucciones_serializado[i].start;
+		code[i].start = metadata_program->instrucciones_serializado[i].start;
 		code[i].offset = metadata_program->instrucciones_serializado[i].offset;
 	}
 
@@ -716,34 +826,33 @@ char* cargarEtiquetasIndex(t_metadata_program* metadata_program,int sizeEtiqueta
 	return etiquetas;
 }
 
-t_list* inicializarStack(t_list *contexto) {
+void inicializarStack(t_list *contexto) {
 	Stack* stack = malloc(sizeof(Stack));
-	t_list *contextocero;
-	contextocero = list_create();
+	contexto = list_create();
+	//t_list *contextocero;
+	//contextocero = list_create();
 
 	stack->args = list_create();
 	stack->vars = list_create();
 	stack->pos = 0;
-	stack->tamArgs = 0;
-	stack->tamVars = 0;
 
-	list_add(contextocero, stack);
+	list_add(contexto, stack);
 
-	return contextocero;
+	//return contextocero;
 }
 
 void inicializarPCB(char* buffer,int tamanioBuffer) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
 	nuevoPCB = malloc(sizeof(PCB));
-	nuevoPCB->PID = aumentarPID();
-	nuevoPCB->ProgramCounter = 0;
-	nuevoPCB->paginas_Codigo = (int)ceil((double)tamanioBuffer / (double)cantPag);
+	nuevoPCB->pid = aumentarPID();
+	nuevoPCB->programCounter = 0;
+	nuevoPCB->cantidadPaginasCodigo = (int)ceil((double)tamanioBuffer / (double)cantPag);
 	nuevoPCB->cod = cargarCodeIndex(buffer, metadata_program);
 	nuevoPCB->tamEtiquetas = metadata_program->etiquetas_size;
 	nuevoPCB->etiquetas = cargarEtiquetasIndex(metadata_program,nuevoPCB->tamEtiquetas);
-	nuevoPCB->contextoActual = list_create();
-	nuevoPCB->contextoActual = inicializarStack(nuevoPCB->contextoActual);
-	nuevoPCB->tamContextoActual = 1;
+	//nuevoPCB->contextos = list_create();
+	inicializarStack(nuevoPCB->contextos);
+	nuevoPCB->tamContextos= 1;
 
 	metadata_destruir(metadata_program);
 }
@@ -791,61 +900,26 @@ void prepararProgramaEnMemoria(int socket,int FUNCION) {
 	free(mensaje);
 }
 
-void recibirPCB(void* mensaje){
-	memcpy(&nuevoPCB->PID,mensaje, sizeof(int));
-	memcpy(&nuevoPCB->ProgramCounter,mensaje, sizeof(int));
-	memcpy(&nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
-	memcpy(&nuevoPCB->cod,(codeIndex*)(mensaje+(sizeof(int)*3)), sizeof(codeIndex));
-	memcpy(&nuevoPCB->exitCode,mensaje+(sizeof(int)*3)+sizeof(codeIndex), sizeof(int));
-	memcpy(&nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*4)+sizeof(codeIndex), sizeof(int));
-	memcpy(&nuevoPCB->contextoActual,mensaje+(sizeof(int)*5)+sizeof(codeIndex), nuevoPCB->tamContextoActual);
-	memcpy(&nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*5)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, sizeof(int));
-	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas);
-	memcpy(&nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(&nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*7)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(&nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*8)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-
-	free(mensaje);
-}
-
-void enviarPCB(int socketCPU){
-	void* mensaje = malloc((sizeof(int)*10)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas);
-	memcpy(mensaje, &nuevoPCB->PID, sizeof(int));
-	memcpy(mensaje+sizeof(int), &nuevoPCB->ProgramCounter, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*2), &nuevoPCB->paginas_Codigo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*3), &nuevoPCB->cod, sizeof(codeIndex));
-	memcpy(mensaje+(sizeof(int)*3)+sizeof(codeIndex), &nuevoPCB->exitCode, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*4)+sizeof(codeIndex), &nuevoPCB->tamContextoActual, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*5)+sizeof(codeIndex), nuevoPCB->contextoActual, nuevoPCB->tamContextoActual);
-	memcpy(mensaje+(sizeof(int)*5)+nuevoPCB->tamContextoActual+sizeof(codeIndex), &nuevoPCB->tamEtiquetas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*6)+nuevoPCB->tamContextoActual+sizeof(codeIndex), &nuevoPCB->etiquetas, nuevoPCB->tamEtiquetas);
-	memcpy(mensaje+(sizeof(int)*6)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex), &nuevoPCB->tablaKernel.paginas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*7)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex), &nuevoPCB->tablaKernel.pid, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex), &nuevoPCB->tablaKernel.tamaniosPaginas, sizeof(int));
-
-	int tamanioMensaje = (sizeof(int)*8)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas+sizeof(codeIndex);
-	sendRemasterizado(socketCPU,MENSAJE_PCB,tamanioMensaje,mensaje);
-}
+//void recibirPCB(void* mensaje){
+//	memcpy(&nuevoPCB->PID,mensaje, sizeof(int));
+//	memcpy(&nuevoPCB->ProgramCounter,mensaje, sizeof(int));
+//	memcpy(&nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
+//	memcpy(&nuevoPCB->cod,(codeIndex*)(mensaje+(sizeof(int)*3)), sizeof(codeIndex));
+//	memcpy(&nuevoPCB->exitCode,mensaje+(sizeof(int)*3)+sizeof(codeIndex), sizeof(int));
+//	memcpy(&nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*4)+sizeof(codeIndex), sizeof(int));
+//	memcpy(&nuevoPCB->contextoActual,mensaje+(sizeof(int)*5)+sizeof(codeIndex), nuevoPCB->tamContextoActual);
+//	memcpy(&nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*5)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, sizeof(int));
+//	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas);
+//	memcpy(&nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+//	memcpy(&nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*7)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+//	memcpy(&nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*8)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
+//
+//	free(mensaje);
+//}
 
 //--------------------------------------FUNCIONES DE ARRAY----------------------------------------
 
-void imprimirArrayDeChar(char* arrayDeChar[]) {
-	int i = 0;
-	printf("[");
-	for (; arrayDeChar[i] != NULL; i++) {
-		printf("%s ", arrayDeChar[i]);
-	}
-	puts("]");
-}
 
-void imprimirArrayDeInt(int arrayDeInt[]) {
-	int i = 0;
-	printf("[");
-	for (; arrayDeInt[i] != NULL; i++) {
-		printf("%d ", arrayDeInt[i]);
-	}
-	puts("]");
-}
 
 //-----------------------------------MANEJADOR KERNEL----------------------------------
 
@@ -896,11 +970,11 @@ void analizarEstadoProceso(int socketDeConsola){
 		list_add(tablaKernel, proceso);
 		log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
 		//prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
-		enviarPCB(socketCPU);
 		procesoCola->abortado=false;
 		procesoCola->pcb = nuevoPCB;
 		procesoCola->socket_CPU = socketCPU;
 		procesoCola->socket_CONSOLA = socketConsola;
+		//enviarPCB(socketCPU, procesoCola->pcb); NO TENDRIA QUE ESTAR APARTE, SINO SIEMPRE QUE LLEGUE UN PROGRAMA SE VA A MANDAR A CPU
 		queue_push(estado->listo,procesoCola);
 		sendRemasterizado(socketDeConsola, MENSAJE_PID, sizeof(int), &pid_actual); //Semaforos Warning!!
 	}
@@ -1013,6 +1087,7 @@ int main(int argc, char *argv[]) {
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
 	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketQueAcepta;
 	int *socketDeConsola;
+	int* socketCPUAAgregar;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
@@ -1070,7 +1145,9 @@ int main(int argc, char *argv[]) {
 //							FD_CLR(socketParaMemoria,&socketsMaster);
 //								break;
 						case CPU:
-							queue_push(cola_CPU_libres,socketAChequear);
+							socketCPUAAgregar = malloc(sizeof(int));
+							*socketCPUAAgregar = socketAChequear;
+							queue_push(cola_CPU_libres,socketCPUAAgregar);
 							handshakeCPU(socketAChequear);
 							//enviarAEjecutar(int pid);
 							//socketCPU = comenzarAEjecutar(int pid);

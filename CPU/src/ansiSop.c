@@ -50,7 +50,7 @@ void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_vari
 t_valor_variable recibirLecturaDeMemoria(){
 	t_valor_variable valorDeVariable;
 	paquete *paqueteConDatosDeLectura = recvRemasterizado(socketMemoria);
-	if(paqueteConDatosDeLectura->tipoMsj == DATOS_VARIABLE_MEMORIA){
+	if(paqueteConDatosDeLectura->tipoMsj == DATOS_DE_PAGINA){
 		valorDeVariable = *(int*)paqueteConDatosDeLectura->mensaje;
 	}else{
 		log_info(loggerCPU, "No se recibio correctamente el valor de la variable de memoria.");
@@ -95,42 +95,20 @@ void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variabl
 	free(buffer);
 }
 
-void* serializarPCB(PCB* unPCB){
-	void* mensaje = malloc((sizeof(int)*8)+sizeof(codeIndex)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas);
-	memcpy(mensaje, &pcbEnProceso->PID, sizeof(int));
-	memcpy(mensaje+sizeof(int), &pcbEnProceso->ProgramCounter, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*2), &pcbEnProceso->paginas_Codigo, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*3), &pcbEnProceso->cod, sizeof(codeIndex));
-	memcpy(mensaje+(sizeof(int)*3)+sizeof(codeIndex), &pcbEnProceso->exitCode, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*4)+sizeof(codeIndex), &pcbEnProceso->tamContextoActual, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*5)+sizeof(codeIndex), pcbEnProceso->contextoActual, pcbEnProceso->tamContextoActual);
-	memcpy(mensaje+(sizeof(int)*5)+pcbEnProceso->tamContextoActual+sizeof(codeIndex), &pcbEnProceso->tamEtiquetas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*6)+pcbEnProceso->tamContextoActual+sizeof(codeIndex), &pcbEnProceso->etiquetas, pcbEnProceso->tamEtiquetas);
-	memcpy(mensaje+(sizeof(int)*6)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex), &pcbEnProceso->tablaKernel.paginas, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*7)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex), &pcbEnProceso->tablaKernel.pid, sizeof(int));
-	memcpy(mensaje+(sizeof(int)*8)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex), &pcbEnProceso->tablaKernel.tamaniosPaginas, sizeof(int));
-
-	return mensaje;
-}
-
-int sacarTamanioPCB(PCB* unPCB){
-	return ((sizeof(int)*8)+pcbEnProceso->tamContextoActual+pcbEnProceso->tamEtiquetas+sizeof(codeIndex));
-}
-
-void finalizarProceso(PCB *pcb){
-	programaEnEjecucionFinalizado = 1;
-	void* pcbSerializada;
-	pcbSerializada = serializarPCB(pcb);
-	sendRemasterizado(socketKernel, FINALIZO_PROCESO, sacarTamanioPCB(pcb), pcbSerializada);
-	if(sigusr1EstaActivo){
-		yaMePuedoDesconectar = true;
-	}
-	free(pcbSerializada);
-}
+//void finalizarProceso(PCB *pcb){
+////	programaEnEjecucionFinalizado = 1;
+////	void* pcbSerializada;
+////	pcbSerializada = serializarPCB(pcb);
+////	sendRemasterizado(socketKernel, FINALIZO_PROCESO, sacarTamanioPCB(pcb), pcbSerializada);
+////	if(sigusr1EstaActivo){
+////		yaMePuedoDesconectar = true;
+////	}
+////	free(pcbSerializada);
+//}
 
 int obtenerPCAnterior(PCB *pcb){
-	t_contexto* contextoAEvaluar;
-	contextoAEvaluar = list_get(pcb->contextoActual, list_size(pcb->contextoActual)-1);
+	Stack* contextoAEvaluar;
+	contextoAEvaluar = list_get(pcb->contextos, list_size(pcb->contextos)-1);
 	return contextoAEvaluar->retPos;
 }
 
@@ -139,22 +117,22 @@ int obtenerPCAnterior(PCB *pcb){
  }
 
  int obtenerPosicionDeStackAnterior(){
- 	t_contexto *contextoQueNecesito;
- 	contextoQueNecesito = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+ 	Stack *contextoQueNecesito;
+ 	contextoQueNecesito = list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-1);
  	int posicionARetornar = contextoQueNecesito->pos;
  	free(contextoQueNecesito);
  	return posicionARetornar;
  }
 
- void generarContexto(t_contexto *contextoAGenerar){
+ void generarContexto(Stack *contextoAGenerar){
    contextoAGenerar->args = list_create();
    contextoAGenerar->vars = list_create();
-   contextoAGenerar->retPos = pcbEnProceso->ProgramCounter;
+   contextoAGenerar->retPos = pcbEnProceso->programCounter;
    contextoAGenerar->pos = obtenerPosicionDeStackAnterior()+1;
  }
 
- t_contexto* obtenerContextoAnterior(){
-   return list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-2);
+ Stack* obtenerContextoAnterior(){
+   return list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-2);
  }
 
  t_puntero convertirDeDireccionAPuntero(direccion *direccionAConvertir){
@@ -169,23 +147,23 @@ int obtenerPCAnterior(PCB *pcb){
    return direccionDeVariable;
  }
 
- int obtenerCantidadDeVars(t_contexto *contextoACalcular){
+ int obtenerCantidadDeVars(Stack *contextoACalcular){
    return list_size(contextoACalcular->vars);
  }
 
- int obtenerCantidadDeArgs(t_contexto *contextoACalcular){
+ int obtenerCantidadDeArgs(Stack *contextoACalcular){
    return list_size(contextoACalcular->args);
  }
 
  direccion* generarDireccionParaArgumento(int cantidadDeContextos){
    direccion *direccionAnterior;
    direccionAnterior = malloc(sizeof(direccion));
-   t_contexto *contextoActual = list_get(pcbEnProceso->contextoActual, cantidadDeContextos-1);
+   Stack *contextoActual = list_get(pcbEnProceso->contextos, cantidadDeContextos-1);
    int cantidadDeArgumentos = list_size(contextoActual->args);
    if(cantidadDeContextos == 1 && cantidadDeArgumentos == 0){
      //generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeArgs(contextoActual) == 0){
-     t_contexto *contextoAnterior = obtenerContextoAnterior();
+     Stack *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->args, list_size(contextoAnterior->args)-1));
      direccionAnterior->offset +=4;
    }else{
@@ -198,12 +176,12 @@ int obtenerPCAnterior(PCB *pcb){
  direccion* generarDireccionParaVariable(int cantidadDeContextos){
    direccion *direccionAnterior;
    direccionAnterior = malloc(sizeof(direccion));
-   t_contexto *contextoActual = list_get(pcbEnProceso->contextoActual, cantidadDeContextos-1);
+   Stack *contextoActual = list_get(pcbEnProceso->contextos, cantidadDeContextos-1);
    int cantidadDeVars = list_size(contextoActual->vars);
    if(cantidadDeContextos == 1 && cantidadDeVars == 0){
      //generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeVars(contextoActual) == 0){
-     t_contexto *contextoAnterior = obtenerContextoAnterior();
+     Stack *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->vars, list_size(contextoAnterior->vars)-1));
      direccionAnterior->offset += 4;
    }else{
@@ -218,7 +196,7 @@ void agregarVariableAVars(direccion *direccionDeVariable, t_nombre_variable iden
    variable = malloc(sizeof(variable));
    variable->direccionDeVariable = direccionDeVariable;
    variable->nombreVariable = identificador_variable;
-   t_contexto *contextoParaAgregar = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+   Stack *contextoParaAgregar = list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-1);
    list_add(contextoParaAgregar->vars, variable);
    /*
     * La otra opcion seria:
@@ -233,8 +211,30 @@ void agregarVariableAVars(direccion *direccionDeVariable, t_nombre_variable iden
  	variable = malloc(sizeof(variable));
  	variable->direccionDeVariable = direccionDeVariable;
  	variable->nombreVariable = identificador_variable;
- 	t_contexto* contextoParaAgregar = list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
+ 	Stack* contextoParaAgregar = list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-1);
  	list_add(contextoParaAgregar->args, variable);
 
  	//list_add((list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1))->args, variable);
+ }
+
+ void mandarAGuardarDatosDeArchivo(paquete *paqueteConDatos, t_puntero punteroDeDatos){
+ 	if(paqueteConDatos->tipoMsj == DATOS_DE_ARCHIVO){
+ 		log_info(loggerProgramas, "El proceso %d leyo exitosamente del archivo...", pcbEnProceso->pid);
+ 		void *bufferParaKernel = malloc(sizeof(t_puntero)+paqueteConDatos->tamMsj);
+ 		memcpy(bufferParaKernel, &punteroDeDatos, sizeof(t_puntero));
+ 		memcpy(bufferParaKernel+sizeof(t_puntero), paqueteConDatos->mensaje, paqueteConDatos->tamMsj);
+ 		sendRemasterizado(socketKernel, GUARDAR_DATOS_ARCHIVO, sizeof(t_puntero)+paqueteConDatos->tamMsj, bufferParaKernel);
+ 		free(paqueteConDatos);
+ 		free(bufferParaKernel);
+ 		int respuestaDeKernel = recvDeNotificacion(socketKernel);
+ 		if(respuestaDeKernel != OPERACION_CON_ARCHIVO_EXITOSA){
+ 			log_info(loggerProgramas, "El proceso %d no pudo guardar los datos leidos del archivo...", pcbEnProceso->pid);
+ 			log_info(loggerProgramas, "Se prosigue a abortar el proceso %d...", pcbEnProceso->pid);
+ 			programaEnEjecucionAbortado = true;
+ 		}
+ 	}else{
+ 		log_info(loggerProgramas, "El proceso %d no pudo leer del archivo...", pcbEnProceso->pid);
+ 		log_info(loggerProgramas, "Se prosigue a abortar el proceso %d...", pcbEnProceso->pid);
+ 		programaEnEjecucionAbortado = true;
+ 	}
  }
