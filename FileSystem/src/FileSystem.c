@@ -6,7 +6,7 @@
 #include <sys/mman.h>
 #include <math.h>
 
-#define ES_KERNEL 1
+#define ES_KERNEL 1006
 #define CORTO_KERNEL 2
 #define GUARDAR_DATOS 3
 #define OBTENER_DATOS 4
@@ -30,6 +30,16 @@ int cantidad_bloque;
 t_bitarray 	*bitarray;
 int socketKernel;
 char* mmapBitmap;
+
+//FUNCION APARTE
+t_config *generarT_Config(char *path) {
+	t_config *configuracionDelComponente;
+	if((configuracionDelComponente = config_create(path)) == NULL){
+		perror("Error de ruta de archivo");
+		exit(-1);
+	}
+	return configuracionDelComponente;
+}
 
 //------CONFIGURACION FILESYSTEM-----------------------------------------------
 //void inicializarMmap(){
@@ -75,9 +85,9 @@ char* concatenarPath(char* path){
 	return cadenaAux;
 }
 
-char* armarNombreArchivo(char bloque){
+char* armarNombreArchivo(int bloque){
 	char* bloqueAux=malloc(string_length(bloque)+string_length(".bin"));
-	string_append(&bloqueAux, bloque);
+	string_append(&bloqueAux, string_itoa(bloque));
 	string_append(&bloqueAux,".bin");
 	return bloqueAux;
 }
@@ -131,7 +141,7 @@ void metadataFileSystem(){
 //	string_append(&path,punto_Montaje);
 //	string_append(&path,"/Metadata/Metadata.config");
 	char *path="Debug/Metadata.config";
-	t_config* metadata =generarT_ConfigParaCargar(path);
+	t_config* metadata =generarT_Config(path);
 	obtenerMetadata(metadata);
 	config_destroy(metadata);
 }
@@ -143,200 +153,292 @@ long int obtenerTamanioArchivo(FILE* archivo){
 	 return nTamArch;
 }
 
+
 //----------------------------FUNCIONES ARCHIVOS------------------------------------------------
 
-//Chequear
-int bloqueVacio(){
-	int i=0;
-	int tamaniobitarray=bitarray_get_max_bit(bitarray);
-	int aux = bitarray_get_max_bit(bitarray);
-	int ocupado;
-	for(;i<tamaniobitarray ;i++){
-		ocupado= bitarray_test_bit(bitarray,aux);
-		if(ocupado==0){
-			bitarray_set_bit(bitarray, aux);
-			return aux;
-		}
-		aux--;
-	}
-}
+//Validar Archivo
+bool validarArchivo(char* path){
+	char* cadena=malloc(strlen(punto_Montaje)+strlen(path)+strlen("/Archivos/"));
+	cadena=concatenarPath(path);
+	FILE* archivo=fopen(cadena,"r");
+	if (archivo == NULL) {
+			log_info(loggerFS,"No existe el archivo");
+			return false;
 
-void liberarBloques(int* bloques){
-	int i=0;
-	for(;i<string_length(bloques);i++){
-		bitarray_clean_bit(bitarray, bloques[i]);//Uso este a set?
-	}
-}
-
-char* obtenerBloque(){
-
-}
-
-bool crearArchivoDeFS(char* cadena,char modoDeArchivo){
-		char* bloque=string_new();
-		if(modoDeArchivo=="c"){
-			t_config* archivo = generarT_ConfigParaCargar(cadena);
-			//config_set_value(archivo,"TAMANIO",NULL);
-			bloque=obtenerBloque();//HACER--------------------------------------------------------
-			//config_set_value(archivo, "BLOQUES", bloque);
+		} else {
+			log_info(loggerFS,"Existe el archivo");
 			return true;
 		}
-		return false;
 }
 
-int cantidadBloques(int tamanio){
-	return tamanio/tamanio_bloque;
+//Borrar Archivo
+void liberarBloques(char** bloques){
+	int i=0;
+	char* pathBloque;
+	char* pathArchivo;
+	int bloquePosicion;
+	for(;bloques[i]=!NULL;i++){
+		bloquePosicion=atoi(bloques[i]);
+		pathBloque=string_new();
+		pathArchivo=string_new();
+		pathBloque=armarNombreArchivo(bloques[i]);
+		pathArchivo=concatenarPath(pathBloque);
+		remove(pathArchivo);
+		bitarray_clean_bit(bitarray, bloquePosicion);
+		free(pathBloque);
+		free(pathArchivo);
+	}
 }
 
 bool seBorroArchivoDeFS(char* pathDeArchivo){
 	  char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	  cadena=concatenarPath(pathDeArchivo);
-	  FILE* archivoPathRecibido=fopen(cadena,"r");
-	  int tamanio;
-	  int* bloques;
-	  fread(&tamanio,sizeof(int),1,archivoPathRecibido);
-	  int largo= cantidadBloques(tamanio);
-	  fread(&bloques,sizeof(int),largo-1,archivoPathRecibido);
-	  liberarBloques(bloques);
-		fclose(archivoPathRecibido);//TIENE QUE IR?
-	  if(remove(cadena)==0){
-		return true;
+	  t_config* archivo=generarT_Config(cadena);
+	  int tamanio=config_get_int_value(archivo,"TAMANIO");
+	  char** bloques= config_get_array_value(archivo,"BLOQUES");
+	  config_destroy(archivo);
+	  if(remove(cadena)>=0){
+		  liberarBloques(bloques);
+		  log_info(loggerFS,"se borro el archivo %s correctamente",cadena);
+		  return true;
+	  }else{
+		  log_info(loggerFS,"se borro el archivo %s correctamente",cadena);
+		  return false;
 	  }
-	  return false;
+
 }
 
-
-bool chequearArchivo(char* path){
-	char* cadena=malloc(strlen(punto_Montaje)+strlen(path)+strlen("/Archivos/"));
-	cadena=concatenarPath(path);
-	if(access(cadena, F_OK) == 0){//NO SE DEBE ABRIR PRIMERO EL ARCHIVO?
-		return true;
-	}else{
-		return false;
+//Crear archivo
+int obtenerBloque(){
+	int i=0;
+	for(;i<bitarray_get_max_bit(bitarray);i++){
+		if(!bitarray_test_bit(bitarray,i)){
+			return i;
+		}
 	}
+	return 0;
 }
 
-void verificarArchivo (void* mensaje){
+void crearArchivo (void* mensaje){
 	char modoDeArchivo;
 	int tamanioPath;
 	char* pathDeArchivo;
 	memcpy(modoDeArchivo,mensaje,sizeof(char));
 	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
 	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
+	int bloque;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo);
-	if(!chequearArchivo(pathDeArchivo)){
-		crearArchivoDeFS(cadena,modoDeArchivo);
-		log_info(loggerFS, "Se creo el archivo %s exitosamente.",cadena);
+	FILE* archivo=fopen(cadena,"w+");
+	if(archivo!=NULL){
+		fputs("TAMANIO=0",archivo);
+		fputc('\n',archivo);
+		fputs("BLOQUES=[",archivo);
+		bloque=obtenerBloque();
+		if(bloque!=0){
+			fputs(bloque,archivo);
+			log_info(loggerFS,"Se asigna a %s correctamente el bloque %d",cadena,bloque);
+			log_info(loggerFS, "Se creo el archivo %s exitosamente.",cadena);
+		}else{
+			log_info(loggerFS,"No se pudo crear el archivo %s por falta de bloques disponibles",cadena);
+		}
+		fputc(']',archivo);
+		fputc('\n',archivo);
 	}else{
-		 log_info(loggerFS, "No se pudo crear el archivo %s.", cadena);
+		log_info(loggerFS, "No se pudo crear el archivo %s.", cadena);
 	}
 }
 
-void leerBloques(int tamanioArchivo, char* bloques, int size, int offset){
-	int bloque= offset/tamanio_bloque;
-	int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
-	//Hacer malloc
-//	char* datosDelBloque=malloc(size);
-	char *datosDelBloque = string_new();
-//	char* cadenaBloque=malloc(strlen(bloques[bloque])+strlen(".bin"));
-	char *cadenaBloque = string_new();
-	cadenaBloque=armarNombreArchivo(bloques[bloque]);
-	char* path=malloc(strlen(punto_Montaje)+strlen(cadenaBloque));
-	path=concatenarPath(cadenaBloque);
-	if((offset+size) < tamanioArchivo){
-		fseek(path,offset,SEEK_SET);
-		if(resto>0){
-			//Moridificar size
-			fread(&datosDelBloque,sizeof(datosDelBloque),size,path);
-			if(send(socketKernel,&datosDelBloque,sizeof(datosDelBloque),0)==-1){
-				log_info(loggerFS, "", cadenaBloque);
-				exit(-1);
-			}
+//------------------------------------------------------------------------
+//
+//int bloqueVacio(){
+//	int i=0;
+//	int tamaniobitarray=bitarray_get_max_bit(bitarray);
+//	int aux = bitarray_get_max_bit(bitarray);
+//	int ocupado;
+//	for(;i<tamaniobitarray ;i++){
+//		ocupado= bitarray_test_bit(bitarray,aux);
+//		if(ocupado==0){
+//			bitarray_set_bit(bitarray, aux);
+//			return aux;
+//		}
+//		aux--;
+//	}
+//}
+//
+//
+//int cantidadBloques(int tamanio){
+//	return tamanio/tamanio_bloque;
+//}
+//
+
+
+
+// OBTENER DATOS
+
+
+
+void leerBloques(int tamanioArchivo, char** bloques, int size, int offset){
+	char* datosDelBloque=string_new();
+	int primerBloqueALeer=offset/tamanio_bloque;
+
+	int faltante = (tamanio_bloque*(primerBloqueALeer+1))-(offset+size);//+1 por si cae en el primer bloque-->0
+
+	if(tamanioArchivo>(size+offset)){
+		//Creo el path del bloque
+		int bloque=atoi(bloques[primerBloqueALeer]);
+		char* cadenaBloque=string_new();
+		cadenaBloque=armarNombreArchivo(bloque);
+		FILE* archivoBloque=fopen(cadenaBloque,"r");
+		fseek(archivoBloque,offset,SEEK_SET);
+
+		if(faltante>0){
+			fgets(datosDelBloque,size,archivoBloque);
+
 		}else{
-			fread(&datosDelBloque,sizeof(datosDelBloque),(size-resto),path);
-			int sobrante=(offset+size)-(tamanio_bloque*bloque);
-			while(sobrante>tamanio_bloque){
-				bloque++;
-				//Abrir archivo
-				cadenaBloque=armarNombreArchivo(bloques[bloque]);
-				path=concatenarPath(cadenaBloque);
-				fseek(path,0,SEEK_SET);
-				if(sobrante<tamanio_bloque){
-					fread(&datosDelBloque,sizeof(datosDelBloque),sobrante,path);
+			fgets(datosDelBloque,(tamanio_bloque-offset),archivoBloque);
+			fclose(archivoBloque);
+			primerBloqueALeer++;
+
+			faltante=(size+offset)-tamanio_bloque;//Lo que falta leer del size (positivo)
+			while(faltante>0){
+				//Paso al siguiente bloque
+				bloque=atoi(bloques[primerBloqueALeer]);
+										//ESTA BIEN HACER OTRO STRIGN NEW Y FILE?
+				char* cadenaBloque=string_new();
+				cadenaBloque=armarNombreArchivo(bloque);
+				FILE* archivoBloque=fopen(cadenaBloque,"r");
+				fseek(archivoBloque,0,SEEK_SET);
+
+				char* leido=malloc(faltante);
+
+				if(faltante<tamanioArchivo){
+					fgets(leido,size,archivoBloque);
+					faltante=faltante-size;
+					string_append(&datosDelBloque,leido);
 				}else{
-					fread(&datosDelBloque,sizeof(datosDelBloque),tamanio_bloque,path);
+					fgets(leido,tamanio_bloque,archivoBloque);
+					faltante=faltante-tamanio_bloque;
+					string_append(&datosDelBloque,leido);
 				}
-				sobrante=sobrante-tamanio_bloque;
+				primerBloqueALeer++;
 			}
 		}
+		//MANDAR A KERNEL
+
+	}else{
+		log_info(loggerFS,"Lo pedido para leer supera el tamanio del bloque");
 	}
+
 }
 
 void obtenerDatosDelArchivo(void* mensaje){
-	char modoDeArchivo;
 	int tamanioPath,size,offset;
-	char* pathDeArchivo;
-	memcpy(modoDeArchivo,mensaje,sizeof(char));
+	char* pathDeArchivo=string_new();
 	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
 	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
 	memcpy(offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
 	memcpy(size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
 
 	int tamanioArchivo;
-	int* bloques;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo);
-	if(modoDeArchivo=="r"){
-		t_config* archivo=generarT_ConfigParaCargar(cadena);
-		int tamanioArchivo=config_get_int_value(archivo,"TAMANIO");
-		char** bloques= config_get_array_value(archivo,"BLOQUES");//DUDA
-		leerBloques(tamanioArchivo,bloques,size,offset);
-		//ENVIAR A KERNEL
-		log_info(loggerFS, "Se obtuvieron los datos del archivo %s exitosamente.",cadena);
-	}else{
-		log_info(loggerFS, "Modo incorrecto del archivo %s .",cadena);
-	}
+
+	t_config* archivo=generarT_Config(cadena);
+	int tamanio=config_get_int_value(archivo,"TAMANIO");
+	char** bloques= config_get_array_value(archivo,"BLOQUES");
+	log_info(loggerFS,"Se encontro el archivo %s y se procede a leer los datos del mismo",cadena);
+	leerBloques(tamanio,bloques,size,offset);
 }
 
-void guardarBloques(int tamanioArchivo,char*bloques,int size,int offset,char* buffer){
-	int bloque=offset/tamanio_bloque;
-	int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
+// GUARDAR DATOS
 
-	char* datosDelBloque=malloc(size);
-	char* cadenaBloque=malloc(strlen(bloques[bloque])+strlen(".bin"));
-	cadenaBloque=armarNombreArchivo(bloques[bloque]);
-	char* path=malloc(strlen(punto_Montaje)+strlen(cadenaBloque));
-	path=concatenarPath(cadenaBloque);
 
-	if((offset+size) < tamanioArchivo){
-		fseek(path,offset,SEEK_SET);
-		if(resto>0){
-			fwrite(buffer,sizeof(buffer),size,path);
-		}else{
-			fwrite(buffer,sizeof(buffer),(size-resto),path);
-			int sobrante=(offset+size)-(tamanio_bloque*bloque);
-			while(sobrante>tamanio_bloque){
-				bloque++;
-				cadenaBloque=armarNombreArchivo(bloques[bloque]);
-				path=concatenarPath(cadenaBloque);
-				fseek(path,0,SEEK_SET);
-				if(sobrante<tamanio_bloque){
-					fwrite(buffer,sizeof(buffer),sobrante,path);
-				}else{
-					fwrite(buffer,sizeof(buffer),tamanio_bloque,path);
-				}
-				sobrante=sobrante-tamanio_bloque;
-			}
-		}
-	}
+void guardarBloques(char**bloques,int size,int offset,char* buffer){
+//	char* datosDelBloque=string_new();
+//	int primerBloqueALeer=offset/tamanio_bloque;
+//
+//	int faltante = (tamanio_bloque*(primerBloqueALeer+1))-(offset+size);//+1 por si cae en el primer bloque-->0
+//	//if(tamanioArchivo>(size+offset)){
+//		//Creo el path del bloque
+//		int bloque=atoi(bloques[primerBloqueALeer]);
+//		char* cadenaBloque=string_new();
+//		cadenaBloque=armarNombreArchivo(bloque);
+//		FILE* archivoBloque=fopen(cadenaBloque,"r");
+//		fseek(archivoBloque,offset,SEEK_SET);
+//		if(faltante>0){
+//			fgets(datosDelBloque,size,archivoBloque);
+//		}else{
+//			fgets(datosDelBloque,(tamanio_bloque-offset),archivoBloque);
+//			fclose(archivoBloque);
+//			primerBloqueALeer++;
+//
+//			faltante=(size+offset)-tamanio_bloque;//Lo que falta leer del size (positivo)
+//			while(faltante>0){
+//				//Paso al siguiente bloque
+//				bloque=atoi(bloques[primerBloqueALeer]);
+//											//ESTA BIEN HACER OTRO STRIGN NEW Y FILE?
+//				char* cadenaBloque=string_new();
+//				cadenaBloque=armarNombreArchivo(bloque);
+//				FILE* archivoBloque=fopen(cadenaBloque,"r");
+//				fseek(archivoBloque,0,SEEK_SET);
+//				char* leido=malloc(faltante);
+//				//if(faltante<tamanioArchivo){
+//					fgets(leido,size,archivoBloque);
+//					faltante=faltante-size;
+//					string_append(&datosDelBloque,leido);
+//				}else{
+//					fgets(leido,tamanio_bloque,archivoBloque);
+//					faltante=faltante-tamanio_bloque;
+//					string_append(&datosDelBloque,leido);
+//				}
+//				primerBloqueALeer++;
+//			}
+//		}
+//			//MANDAR A KERNEL
+//
+//	}else{
+//		log_info(loggerFS,"Lo pedido para leer supera el tamanio del bloque");
+//	}
+
+
+
+
+//	//int bloque=offset/tamanio_bloque;
+//	//int resto = (tamanio_bloque*bloque)-(offset+size);//Chequear, sino modulo
+//
+//	char* datosDelBloque=malloc(size);
+//	char* cadenaBloque=malloc(strlen(bloques[bloque])+strlen(".bin"));
+//	cadenaBloque=armarNombreArchivo(bloques[bloque]);
+//	char* path=malloc(strlen(punto_Montaje)+strlen(cadenaBloque));
+//	path=concatenarPath(cadenaBloque);
+//
+//	if((offset+size) < tamanioArchivo){
+//		fseek(path,offset,SEEK_SET);
+//		if(resto>0){
+//			fwrite(buffer,sizeof(buffer),size,path);
+//		}else{
+//			fwrite(buffer,sizeof(buffer),(size-resto),path);
+//			int sobrante=(offset+size)-(tamanio_bloque*bloque);
+//			while(sobrante>tamanio_bloque){
+//				bloque++;
+//				cadenaBloque=armarNombreArchivo(bloques[bloque]);
+//				path=concatenarPath(cadenaBloque);
+//				fseek(path,0,SEEK_SET);
+//				if(sobrante<tamanio_bloque){
+//					fwrite(buffer,sizeof(buffer),sobrante,path);
+//				}else{
+//					fwrite(buffer,sizeof(buffer),tamanio_bloque,path);
+//				}
+//				sobrante=sobrante-tamanio_bloque;
+//			}
+//		}
+//	}
 }
 
 void guardarDatosArchivo(void* mensaje){
-	char modoDeArchivo;
 	int tamanioPath,tamanioBuffer,size,offset;
 	char* pathDeArchivo,buffer;
-	memcpy(modoDeArchivo,mensaje,sizeof(char));
 	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
 	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
 	memcpy(offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
@@ -344,19 +446,15 @@ void guardarDatosArchivo(void* mensaje){
 	memcpy(tamanioBuffer,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int),sizeof(int));
 	memcpy(buffer,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int)+sizeof(int),tamanioBuffer);
 
-	int tamanioArchivo;
-	int* bloques;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo);
-	if(modoDeArchivo=="w"){
-		t_config* archivo=generarT_ConfigParaCargar(cadena);
-		int tamanioArchivo=config_get_int_value(archivo,"TAMANIO");
-		char** bloques= config_get_array_value(archivo,"BLOQUES");
-		guardarBloques(tamanioArchivo,bloques,size,offset,buffer);
-		log_info(loggerFS, "Se guardaron los datos del archivo %s exitosamente.",cadena);
-	}else{
-		log_info(loggerFS, "Modo incorrecto del archivo %s .",cadena);
-	}
+
+	t_config* archivo=generarT_Config(cadena);
+	int tamanioArchivo=config_get_int_value(archivo,"TAMANIO");
+	char** bloques= config_get_array_value(archivo,"BLOQUES");
+	log_info(loggerFS,"Se encontro el archivo %s y se procede a guardar los datos %s en el mismo",cadena,buffer);
+	guardarBloques(bloques,size,offset,buffer);
+
 }
 
 //---------------------------------------------------------------------------------
@@ -398,15 +496,6 @@ int recibirEntero(){
   return enteroRecibido;
 }
 
-//char* recibirChar(int tamMsj){
-//  char* path = malloc(tamMsj);
-//  if(recv(socketKernel,path,tamMsj,0)==-1){
-//    log_info(loggerFS,"Error al recibir el path de archivo.");
-//    exit(-1);
-//  }
-//  return path;
-//	//free(path);
-//}
 //---------------------------------HANDSHAKE-----------------------------------------
 void recibirHandshakeDeKernel(){
   int quienEs;
@@ -459,7 +548,7 @@ int main(int argc, char *argv[]) {
 	    }
 	    switch (paqueteRecibidoDeKernel.tipoMsj) {
 	      case VALIDAR_ARCHIVO:
-	        existeArchivo = chequearArchivo(paqueteRecibidoDeKernel.mensaje);
+	        existeArchivo = validarArchivo(paqueteRecibidoDeKernel.mensaje);
 	        if(send(socketKernel,&existeArchivo,sizeof(bool),0)==-1){
 	          log_info(loggerFS, "Error al enviar existencia de archivo.", paqueteRecibidoDeKernel.mensaje);
 	          exit(-1);
@@ -474,7 +563,7 @@ int main(int argc, char *argv[]) {
 	        break;
 	      case CREAR_ARCHIVO:
 //	    	recibirMensajeCrear(paqueteRecibidoDeKernel.mensaje);
-			verificarArchivo(paqueteRecibidoDeKernel.mensaje);
+			crearArchivo(paqueteRecibidoDeKernel.mensaje);
 	        break;
 	      case OBTENER_DATOS:
 	    	//recibirMensajeObtenerDatos(paqueteRecibidoDeKernel.mensaje);
