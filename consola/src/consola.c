@@ -119,7 +119,7 @@ void* iniciarPrograma(void* programa)
 			unPrograma->impresiones++;
 			list_replace(listaProcesos, obtenerPosicionHilo(), programa);
 			paqueteNoUsado = false;
-			//free(paqueteHiloCorrecto);
+			free(paqueteHiloCorrecto);
 			pthread_mutex_unlock(&mutexPaquete);
 		}
 
@@ -139,6 +139,7 @@ void* iniciarPrograma(void* programa)
 			paqueteNoUsado = true;
 			pthread_mutex_unlock(&mutexPaquete);
 			}
+
 
 		free(paqueteRecibido);
 	}

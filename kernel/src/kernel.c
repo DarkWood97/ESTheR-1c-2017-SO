@@ -36,12 +36,6 @@ int stack_Size;
 
 //--------------indice de codigo-----
 
-typedef struct __attribute__((packed)) {
-	int pid;
-	int tamaniosPaginas;
-	int paginas;
-} TablaKernel;
-
 //typedef struct __attribute__((packed)) {
 //	int PID;
 //	int ProgramCounter;
@@ -109,12 +103,18 @@ typedef struct __attribute__((packed)) {
 } PCB;
 
 typedef struct __attribute__((packed)) {
-  int socket_CPU;
-  int socket_CONSOLA;
-  PCB *pcb;
-  bool abortado;
+	int nroPag;
+	int espacioDisponible;
+} administracionPagina;
 
+typedef struct __attribute__((packed)) {
+	int socket_CPU;
+	int socket_CONSOLA;
+	PCB *pcb;
+	bool abortado;
+	t_list* paginasPorProcesos;
 } t_proceso;
+
 
 //--VARIABLES GLOBALES------------------------------------------------------
 #define CONEXION_CONSOLA 1005
@@ -128,7 +128,7 @@ typedef struct __attribute__((packed)) {
 #define SOY_KERNEL_MEMORIA 1002
 #define CPU 1003
 #define CONSOLA 1005
-#define INICIAR_PROGRAMA 501
+#define INICIALIZAR_PROGRAMA 501
 #define ASIGNAR_PAGINAS 502
 #define FINALIZAR_PROGRAMA 503
 #define INICIO_EXITOSO 50
@@ -149,8 +149,6 @@ t_log * loggerKernel;
 bool YA_HAY_UNA_CONSOLA = false;
 int pid_actual;
 int TAM_PAGINA;
-int cantPag;
-PCB* nuevoPCB;
 t_list* tablaKernel;
 Estados* estado;
 t_queue* cola_CPU_libres;
@@ -158,9 +156,7 @@ t_queue** colas_semaforos;
 bool estadoPlanificacion =true;
 t_list* variablesCompartidas;
 sem_t sem_ready;
-int socketConsola;
 int socketParaMemoria;
-int socketCPU;
 
 //////////////////////////////FUNCIONES SEMAFOROS/////////////////////////////////////////////////////////////////////////////////////
 void *serializarT_Intructions(PCB *pcbConT_intruction){
@@ -188,11 +184,11 @@ void* serializarVariable(t_list* variables){
 }
 
 int sacarTamanioDeLista(t_list* contexto){
-	int i, tamanioDeContexto;
+	int i, tamanioDeContexto = 0;
 	for(i = 0; i<list_size(contexto); i++){
 		Stack *contextoAObtener = list_get(contexto, i);
 		tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
-		//free(contextoAObtener);
+		free(contextoAObtener);
 	}
 	return tamanioDeContexto;
 }
@@ -398,10 +394,20 @@ t_proceso* dameProceso(t_queue *cola, int pid ) {
 	for (; a<queue_size(cola); a++ ){
 		t_proceso *procesoAux=(t_proceso*)list_get(cola->elements, a);
 		if (procesoAux->pcb->pid == pid){
+			return procesoAux;
+		}
+	}
+}
+
+t_proceso* sacarProceso(t_queue *cola, int pid ) {
+	int a = 0;
+
+	for (; a<queue_size(cola); a++ ){
+		t_proceso *procesoAux=(t_proceso*)list_get(cola->elements, a);
+		if (procesoAux->pcb->pid == pid){
 			return (t_proceso*)list_remove(cola->elements, a);
 		}
 	}
-	return NULL;
 }
 
 
@@ -431,26 +437,6 @@ void enviarAEjecutar(int pid){
 void enviarASalida(t_queue* cola,int pid){
 	t_proceso *proceso = dameProceso(cola,pid);
 	queue_push(estado->finalizado,proceso);
-}
-
-int obtenerNumeroPagina(int pid,int* offset){
-	int i = 0;
-	int valor;
-	for(;i<=(list_size(tablaKernel));i++){
-		TablaKernel* tk = list_get(tablaKernel,i);
-		if(tk->pid==pid){
-			t_proceso* proceso = dameProceso(estado->ejecutando,pid);
-			list_add(estado->ejecutando->elements, proceso);
-			(*offset) = proceso->pcb->cod[i].start;
-			valor =((TAM_PAGINA*(tk->paginas))-(proceso->pcb->cod[i].start));
-			int cantidad = (valor) % (TAM_PAGINA);
-			if (valor % TAM_PAGINA != 0) {
-				cantidad++;
-			}
-			//return valor;
-		}
-	}
-	return valor;
 }
 
 void escribirDatos(int socketMemoria,void* buffer, int tamanio,int pid){
@@ -499,10 +485,11 @@ void enviarPCB(int socket, PCB* pcbAEnviar){
 
 }
 
-void recibirPCB(int socket, int tamanio){
+PCB* recibirPCB(int socket, int tamanio){
 	paquete* pcbSerializada = recvRemasterizado(socket);
-	nuevoPCB = desserializarPCB(pcbSerializada);
+	PCB* unPCB = desserializarPCB(pcbSerializada);
 	free(pcbSerializada);
+	return unPCB;
 }
 
 //////////////////////////////////////////MANEJADOR DE CPU/////////////////////////////////////////////////////////////////////////
@@ -525,7 +512,7 @@ void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
 	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
 	          t_proceso* proceso = dameProceso(estado->ejecutando,*(int*)pid);
 	          proceso->pcb = nuevoPCB;
-	          list_add(estado->ejecutando, proceso);
+	          queue_push(estado->ejecutando,proceso);
 	          break;
 	        case FINALIZAR_PROGRAMA:
 	        	enviarASalida(estado->finalizado,*(int*)pid);
@@ -538,12 +525,12 @@ void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
 	        	paqueteWait.tamMsj = sizeof(int);
 	        	paqueteWait.tipoMsj = WAIT_SEMAFORO;
 	        	paqueteWait.mensaje = &caso;
-	        	if(send(socketCPU, &paqueteWait, paqueteWait.tamMsj, 0) == -1){
+	        	if(send((int)socketCPU, &paqueteWait, paqueteWait.tamMsj, 0) == -1){
 	        		perror("Error al enviar si el semaforo fue bloqueado");
 	        	    log_info(loggerKernel, "Error al enviar si el semaforo fue bloqueado");
 	        	    exit(-1);
 	        	}
-	        	list_add(estado->ejecutando, procesoWait);
+	        	queue_push(estado->ejecutando,procesoWait);
 	        	break;
 	        case SIGNAL_SEMAFORO:
 	        	signalSemaforo(paqueteRecibidoDeCPU.mensaje);
@@ -598,7 +585,6 @@ int comenzarAEjecutar(int pid, int socketMemoria){
 
 			pthread_t hilo_manejadorProceso;
 			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->pid,socketMemoria)); //??
-			pthread_attr_destroy(hilo_manejadorProceso);
 			return cpuUtilizada;
 		}
 	}
@@ -690,7 +676,7 @@ t_list* filtrarLista(int socket){
 	for(;i<(queue_size(estado->ejecutando));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
 		queue_pop(colaAuxiliar);
-		if((proceso->socket_CONSOLA)==socket){
+		if(((int)proceso->socket_CONSOLA)==socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
@@ -701,7 +687,7 @@ t_list* filtrarLista(int socket){
 	for(;i<(queue_size(estado->bloqueado));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
 		queue_pop(colaAuxiliar);
-		if((proceso->socket_CONSOLA)==socket){
+		if(((int)proceso->socket_CONSOLA)==socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
@@ -712,7 +698,7 @@ t_list* filtrarLista(int socket){
 	for(;i<(queue_size(estado->listo));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
 		queue_pop(colaAuxiliar);
-		if((proceso->socket_CONSOLA)==socket){
+		if(((int)proceso->socket_CONSOLA)==socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
@@ -723,7 +709,7 @@ t_list* filtrarLista(int socket){
 	for(;i<(queue_size(estado->nuevo));i++){
 		t_proceso* proceso = queue_peek(colaAuxiliar);
 		queue_pop(colaAuxiliar);
-		if((proceso->socket_CONSOLA)==socket){
+		if(((int)proceso->socket_CONSOLA)==socket){
 			list_add(listaFiltrada, proceso);
 		}
 	}
@@ -763,7 +749,7 @@ void consultarListado(){
 	int tamanio = list_size(tablaKernel);
 	int posicion = 0;
 	for(; posicion<tamanio;posicion++){
-		TablaKernel* tk = list_get(tablaKernel, posicion); //A los gomasos ??
+		TablaProceso* tk = list_get(tablaKernel, posicion); //A los gomasos ??
 		printf("%d ", tk->pid);
 	}
 }
@@ -903,9 +889,9 @@ char* cargarEtiquetasIndex(t_metadata_program* metadata_program,int sizeEtiqueta
 	return etiquetas;
 }
 
-void inicializarStack(t_list *contexto) {
+t_list* inicializarStack() {
 	Stack* stack = malloc(sizeof(Stack));
-	contexto = list_create();
+	t_list* contexto = list_create();
 	//t_list *contextocero;
 	//contextocero = list_create();
 
@@ -915,23 +901,27 @@ void inicializarStack(t_list *contexto) {
 
 	list_add(contexto, stack);
 
+	return contexto;
+
 	//return contextocero;
 }
 
-void inicializarPCB(char* buffer,int tamanioBuffer) {
+PCB* crearPCB(char* buffer,int tamanioBuffer,int cantPag) {
 	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
-	nuevoPCB = malloc(sizeof(PCB));
-	nuevoPCB->pid = aumentarPID();
-	nuevoPCB->programCounter = 0;
-	nuevoPCB->cantidadPaginasCodigo = (int)ceil((double)tamanioBuffer / (double)cantPag);
-	nuevoPCB->cod = cargarCodeIndex(buffer, metadata_program);
-	nuevoPCB->tamEtiquetas = metadata_program->etiquetas_size;
-	nuevoPCB->etiquetas = cargarEtiquetasIndex(metadata_program,nuevoPCB->tamEtiquetas);
-	//nuevoPCB->contextos = list_create();
-	inicializarStack(nuevoPCB->contextos);
-	nuevoPCB->tamContextos= 1;
+	PCB* unPCB = malloc(sizeof(PCB));
+
+	unPCB->pid = aumentarPID();
+	unPCB->programCounter = 0;
+	unPCB->cantidadPaginasCodigo = (int)ceil((double)tamanioBuffer / (double)cantPag);
+	unPCB->cod = cargarCodeIndex(buffer, metadata_program);
+	unPCB->tamEtiquetas = metadata_program->etiquetas_size;
+	unPCB->etiquetas = cargarEtiquetasIndex(metadata_program,unPCB->tamEtiquetas);
+	unPCB->contextos = inicializarStack();
+	unPCB->tamContextos= 1;
 
 	metadata_destruir(metadata_program);
+
+	return unPCB;
 }
 
 void realizarHandshakeMemoria(int socket) {
@@ -969,11 +959,11 @@ int obtenerCantidadPaginas(char* codigo) {
 	return cantidad;
 }
 
-void prepararProgramaEnMemoria(int socket,int FUNCION) {
+void verificarEspacioMemoria(int cantPag) {
 	void* mensaje = malloc(sizeof(int) * 2);
 	memcpy(mensaje, &pid_actual, sizeof(int));
 	memcpy(mensaje + sizeof(int), &cantPag, sizeof(int));
-	sendRemasterizado(socket, FUNCION, sizeof(int)*2, mensaje);
+	sendRemasterizado(socket, INICIALIZAR_PROGRAMA, sizeof(int)*2, mensaje);
 	free(mensaje);
 }
 
@@ -1034,31 +1024,104 @@ void *manejadorTeclado(){
 	free(comando);
 }
 
-void analizarEstadoProceso(int socketDeConsola){
+void asignarCPU(int socketDeConsola, PCB* unPCB){
+
+	t_proceso* procesoActual = malloc(sizeof(t_proceso));
+
+	if(!queue_is_empty(cola_CPU_libres)){
+		int socketCPU = (int)queue_pop(cola_CPU_libres);
+		procesoActual->abortado=false;
+		procesoActual->pcb = unPCB;
+		procesoActual->socket_CPU = socketCPU;
+		procesoActual->socket_CONSOLA = socketDeConsola;
+		queue_push(estado->ejecutando,procesoActual);
+	}
+	else{
+		procesoActual->abortado=true;
+		procesoActual->pcb = unPCB;
+		procesoActual->socket_CONSOLA = socketDeConsola;
+		queue_push(estado->listo,procesoActual);
+	}
+
+	free(procesoActual);
+}
+
+int calcularCantidadPaginas(int valor){
+	int cantidad = (valor) % (TAM_PAGINA);
+	if (valor % TAM_PAGINA != 0) {
+		cantidad++;
+	}
+	return cantidad;
+}
+
+int obtenerNumeroPagina(int pid,int* offset){
+	int i = 0;
+	int cantidad;
+	for(;i<=(list_size(tablaKernel));i++){
+		TablaProceso* tablaProceso = list_get(tablaKernel,i);
+		if(tablaProceso->pid==pid){
+			t_proceso* proceso = dameProceso(estado->listo,pid);
+			(*offset) = proceso->pcb->cod[i].start;
+			int valor =((TAM_PAGINA*(tablaProceso->paginas))-(proceso->pcb->cod[i].start));
+			cantidad = calcularCantidadPaginas(valor);
+		}
+	}
+	return cantidad;
+}
+
+void enviarDatosAMemoria(char* datos, int pid){
+	int tamanio = strlen(datos);
+	int cantidad = calcularCantidadPaginas(tamanio);
+	int i = 0;
+
+	for(;i<cantidad;i++){
+		int resto = tamanio-TAM_PAGINA*i;
+		if(resto>TAM_PAGINA){
+			void* mensaje = malloc((sizeof(int)*4)+TAM_PAGINA);
+			int* offset;
+			int numPagina = obtenerNumeroPagina(pid,offset);
+			memcpy(mensaje,&pid,sizeof(int));
+			memcpy(mensaje+sizeof(int),&numPagina, sizeof(int));
+			memcpy(mensaje+(sizeof(int)*2), &offset,sizeof(int));
+			memcpy(mensaje+(sizeof(int)*3), &TAM_PAGINA,sizeof(int));
+			memcpy(mensaje+(sizeof(int)*4), datos,TAM_PAGINA);
+			free(mensaje);
+			free(offset);
+		}
+		else{
+			void* mensaje = malloc((sizeof(int)*4)+resto);
+			int* offset;
+			int numPagina = obtenerNumeroPagina(pid,offset);
+			memcpy(mensaje,&pid,sizeof(int));
+			memcpy(mensaje+sizeof(int),&numPagina, sizeof(int));
+			memcpy(mensaje+(sizeof(int)*2), &offset,sizeof(int));
+			memcpy(mensaje+(sizeof(int)*3), &resto,sizeof(int));
+			memcpy(mensaje+(sizeof(int)*4), datos,resto);
+			free(mensaje);
+			free(offset);
+		}
+	}
+}
+
+
+void analizarEstadoProceso(int socketDeConsola, int cantPag, PCB* unPCB, char* codigo){
 	int inicio = recvDeNotificacion(socketParaMemoria);
 	if(inicio==INICIO_EXITOSO){
-		TablaKernel *proceso;
-		t_proceso* procesoCola;
-		proceso = malloc(sizeof(TablaKernel));
-		procesoCola = malloc(sizeof(t_proceso));
-		proceso->pid = pid_actual;
-		proceso->tamaniosPaginas = TAM_PAGINA;
-		proceso->paginas = cantPag;
-		list_add(tablaKernel, proceso);
 		log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
-		//prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
-		procesoCola->abortado=false;
-		procesoCola->pcb = nuevoPCB;
-		procesoCola->socket_CPU = socketCPU;
-		procesoCola->socket_CONSOLA = socketConsola;
-		//enviarPCB(socketCPU, procesoCola->pcb); NO TENDRIA QUE ESTAR APARTE, SINO SIEMPRE QUE LLEGUE UN PROGRAMA SE VA A MANDAR A CPU
-		queue_push(estado->listo,procesoCola);
-		sendRemasterizado(socketDeConsola, MENSAJE_PID, sizeof(int), &pid_actual); //Semaforos Warning!!
+		TablaProceso *procesoAAgregar;
+		procesoAAgregar = malloc(sizeof(TablaProceso));
+		procesoAAgregar->pid = pid_actual;
+		procesoAAgregar->tamaniosPaginas = TAM_PAGINA;
+		procesoAAgregar->paginas = cantPag;
+		list_add(tablaKernel, procesoAAgregar);
+		enviarDatosAMemoria(codigo,unPCB->pid);
+		asignarCPU(socketDeConsola,unPCB);
+		sendRemasterizado(socketDeConsola, MENSAJE_PID, sizeof(int), &pid_actual);
 	}
 	else{
 		  char* espacioInsuficiente = malloc(sizeof(char)*60);
 		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
-		  sendRemasterizado(socketConsola,ESPACIO_INSUFICIENTE, sizeof(int), &espacioInsuficiente);
+		  sendRemasterizado((int)socketDeConsola,ESPACIO_INSUFICIENTE, sizeof(int), &espacioInsuficiente);
 		  disminuirPID();
 	}
 }
@@ -1071,19 +1134,18 @@ void* manejadorConexionConsola (void* socket){
 	     paquete* mensajeAux;
 	      switch (paqueteRecibidoDeConsola->tipoMsj) {
 			  case MENSAJE_CODIGO:
-				  //mensajeAux = recvRemasterizado(socketDeConsola);
 				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  cantPag = obtenerCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
-				  inicializarPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj);
-				  prepararProgramaEnMemoria(socketParaMemoria,INICIAR_PROGRAMA);
-				  analizarEstadoProceso(socketDeConsola);
+				  int cantPag = obtenerCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
+				  PCB* unPCB = crearPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj,cantPag);
+				  verificarEspacioMemoria(cantPag);
+				  analizarEstadoProceso(socketDeConsola, cantPag, unPCB,(char*)paqueteRecibidoDeConsola->Mensaje);
 				  free(paqueteRecibidoDeConsola);
 				  break;
 			  case CORTO:
 				  printf("El socket %d corto la conexion\n",socketDeConsola);
 				  verificarProcesos(socketDeConsola);
 				  close(socketDeConsola);
-				  puts("Te la comes igual que ivan el trolazo");
+				  puts("Te la comes igual que ivan el trolazo xD");
 				  break;
 			  case FINALIZAR_PROGRAMA:
 				  mensajeAux = recvRemasterizado(socketDeConsola);
@@ -1159,12 +1221,13 @@ int main(int argc, char *argv[]) {
 	cola_CPU_libres = queue_create();
 	crearEstados();
 	pid_actual = 1;
-	cantPag = 0;
+	int socketCPU;
+	int socketConsola;
+	int* socketDeConsola;
+	int* socketCPUAAgregar;
 	sem_init(&sem_ready, 0, 0);
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
 	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketQueAcepta;
-	int *socketDeConsola;
-	int* socketCPUAAgregar;
 	fd_set socketsCliente, socketsConPeticion, socketsMaster;
 	FD_ZERO(&socketsCliente);
 	FD_ZERO(&socketsConPeticion);
@@ -1217,18 +1280,11 @@ int main(int argc, char *argv[]) {
 							pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketDeConsola);
 							FD_CLR(socketAChequear,&socketsCliente);
 							break;
-//						case MEMORIA:
-//							pthread_create(&hiloManejadorMemoria,NULL,manejadorConexionMemoria,(void*)socketAChequear);
-//							FD_CLR(socketParaMemoria,&socketsMaster);
-//								break;
 						case CPU:
 							socketCPUAAgregar = malloc(sizeof(int));
 							*socketCPUAAgregar = socketAChequear;
 							queue_push(cola_CPU_libres,socketCPUAAgregar);
 							handshakeCPU(socketAChequear);
-							//enviarAEjecutar(int pid);
-							//socketCPU = comenzarAEjecutar(int pid);
-							//pthread_create(&hiloManejadorCPU, NULL,  manejadorConexionCPU, (void*)socketAChequear);
 							log_info(loggerKernel,"Se registro nueva CPU...\n");
 							FD_CLR(socketAChequear,&socketsCliente);
 							break;
