@@ -155,13 +155,19 @@ int obtenerPCAnterior(PCB *pcb){
    return list_size(contextoACalcular->args);
  }
 
+ void generarDireccionDePrimeraPagina(direccion *direccionAnterior){
+ 	direccionAnterior->numPagina = 0;
+ 	direccionAnterior->offset = pcbEnProceso->cantidadPaginasCodigo; //LA ULTIMA PAGINA DE CODIGO ES CANTIDAD-1
+ 	direccionAnterior->tamanioPuntero = 4;
+ }
+
  direccion* generarDireccionParaArgumento(int cantidadDeContextos){
    direccion *direccionAnterior;
    direccionAnterior = malloc(sizeof(direccion));
    Stack *contextoActual = list_get(pcbEnProceso->contextos, cantidadDeContextos-1);
    int cantidadDeArgumentos = list_size(contextoActual->args);
    if(cantidadDeContextos == 1 && cantidadDeArgumentos == 0){
-     //generarDireccionDePrimeraPagina(direccionAnterior);
+	   generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeArgs(contextoActual) == 0){
      Stack *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->args, list_size(contextoAnterior->args)-1));
