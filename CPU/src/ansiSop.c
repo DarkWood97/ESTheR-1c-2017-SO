@@ -44,7 +44,10 @@ direccion *obtenerDireccionDePuntero(t_puntero puntero){
 }
 
 void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_variable sirveParaTamanio){
-	sendRemasterizado(socketMemoria, PETICION_LECTURA_MEMORIA, sizeof(direccion), direccionVirtual);
+	void *mensajeDePeticionLectura = malloc(sizeof(int)+sizeof(direccion));
+	memcpy(mensajeDePeticionLectura, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDePeticionLectura+sizeof(int), direccionVirtual, sizeof(direccion));
+	sendRemasterizado(socketMemoria, PETICION_LECTURA_MEMORIA, sizeof(direccion)+sizeof(int), mensajeDePeticionLectura);
 }
 
 t_valor_variable recibirLecturaDeMemoria(){
@@ -61,10 +64,11 @@ t_valor_variable recibirLecturaDeMemoria(){
 }
 
 void realizarPeticionDeEscrituraEnMemoria(direccion* direcVirtual, t_valor_variable valorAAsignar){
-	void *buffer = malloc(sizeof(direccion)+sizeof(t_valor_variable));
-	memcpy(buffer,direcVirtual,sizeof(direccion));
-	memcpy(buffer + sizeof(direccion), &valorAAsignar, sizeof(t_valor_variable));
-	sendRemasterizado(socketMemoria, PETICION_ESCRITURA_MEMORIA , sizeof(direccion)+sizeof(t_valor_variable), buffer);
+	void *buffer = malloc(sizeof(direccion)+sizeof(t_valor_variable)+sizeof(int));
+	memcpy(buffer,&pcbEnProceso->pid, sizeof(int));
+	memcpy(buffer+sizeof(int),direcVirtual,sizeof(direccion));
+	memcpy(buffer + sizeof(direccion) +sizeof(int), &valorAAsignar, sizeof(t_valor_variable));
+	sendRemasterizado(socketMemoria, PETICION_ESCRITURA_MEMORIA , sizeof(int)+sizeof(direccion)+sizeof(t_valor_variable), buffer);
 	free(buffer);
 }
 
@@ -73,8 +77,9 @@ t_valor_variable recibirValorCompartida(){
 	paquete *paqueteDeVariableCompartida = recvRemasterizado(socketKernel);
 	if(paqueteDeVariableCompartida->tipoMsj == DATOS_VARIABLE_COMPARTIDA_KERNEL){
 		valorVariableCompartida = *(t_valor_variable*)paqueteDeVariableCompartida->mensaje;
+		log_info(loggerCPU, "Se recibio el valor de la variable compartida %d...", valorVariableCompartida);
 	}else{
-		log_info(loggerCPU, "No se recibio correctamente el valor de la variable compartida de kernel.");
+		log_info(loggerCPU, "No se recibio correctamente el valor de la variable compartida de kernel...");
 		exit(-1);
 	}
 	free(paqueteDeVariableCompartida);
@@ -82,15 +87,19 @@ t_valor_variable recibirValorCompartida(){
 }
 
 t_valor_variable consultarVariableCompartida(char* nombreDeLaVariable){
-	sendRemasterizado(socketKernel, PETICION_VARIABLE_COMPARTIDA_KERNEL, string_length(nombreDeLaVariable), nombreDeLaVariable);
+	void *mensajeDeVarCompartida = malloc(sizeof(int)+string_length(nombreDeLaVariable));
+	memcpy(mensajeDeVarCompartida, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeVarCompartida+sizeof(int), nombreDeLaVariable, string_length(nombreDeLaVariable));
+	sendRemasterizado(socketKernel, PETICION_VARIABLE_COMPARTIDA_KERNEL, string_length(nombreDeLaVariable)+sizeof(int), mensajeDeVarCompartida);
 	return recibirValorCompartida();
 }
 
 void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variable valor){
-	int tamanioDelMensaje = string_length(nombreDeVariableAModificar)+sizeof(t_valor_variable);
+	int tamanioDelMensaje = string_length(nombreDeVariableAModificar)+sizeof(t_valor_variable)+sizeof(int);
 	void *buffer = malloc(tamanioDelMensaje);
-	memcpy(buffer, nombreDeVariableAModificar, string_length(nombreDeVariableAModificar));
-	memcpy(buffer+string_length(nombreDeVariableAModificar), &valor, sizeof(t_valor_variable));
+	memcpy(buffer, &pcbEnProceso->pid, sizeof(int));
+	memcpy(buffer+sizeof(int), nombreDeVariableAModificar, string_length(nombreDeVariableAModificar));
+	memcpy(buffer+sizeof(int)+string_length(nombreDeVariableAModificar), &valor, sizeof(t_valor_variable));
 	sendRemasterizado(socketKernel, PETICION_CAMBIO_VALOR_KERNEL, tamanioDelMensaje, buffer);
 	free(buffer);
 }
