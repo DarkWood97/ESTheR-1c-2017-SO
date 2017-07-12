@@ -170,8 +170,11 @@ void retornar(t_valor_variable retorno){
 //--------------------WAIT------------//
 void pedirWait(t_nombre_semaforo identificador_semaforo){
 	log_info(loggerProgramas, "El proceso %d pidio wait al semaforo %s...", pcbEnProceso->pid, identificador_semaforo);
-	int tamanio = string_length(identificador_semaforo); // Tengo que agregar el barra cero?
-	sendRemasterizado(socketKernel, PIDO_SEMAFORO, tamanio, identificador_semaforo);
+	int tamanio = string_length(identificador_semaforo)+sizeof(int); // Tengo que agregar el barra cero?
+	void *paqueteDeWait = malloc(tamanio);
+	memcpy(paqueteDeWait, &pcbEnProceso->pid, sizeof(int));
+	memcpy(paqueteDeWait+sizeof(int), identificador_semaforo, string_length(identificador_semaforo));
+	sendRemasterizado(socketKernel, PIDO_SEMAFORO, tamanio, paqueteDeWait);
 	paquete *paqueteParaVerSiMeBloqueo;
 	paqueteParaVerSiMeBloqueo = recvRemasterizado(socketKernel);
 	if(paqueteParaVerSiMeBloqueo->tipoMsj == BLOQUEO_POR_SEMAFORO){
@@ -183,15 +186,23 @@ void pedirWait(t_nombre_semaforo identificador_semaforo){
 
 void pedirSignal(t_nombre_semaforo identificador_semaforo){
 	log_info(loggerProgramas, "El proceso %d dio signal del semaforo %c...", pcbEnProceso->pid, identificador_semaforo);
-	int tamanio = string_length(identificador_semaforo); // Tengo que agregar el barra cero?
-	sendRemasterizado(socketKernel, DOY_SEMAFORO, tamanio, identificador_semaforo);
+	int tamanio = string_length(identificador_semaforo)+sizeof(int); // Tengo que agregar el barra cero?
+	void *mensajeDeSignal = malloc(tamanio);
+	memcpy(mensajeDeSignal, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeSignal+sizeof(int), identificador_semaforo, string_length(identificador_semaforo));
+	sendRemasterizado(socketKernel, DOY_SEMAFORO, tamanio, mensajeDeSignal);
+	free(mensajeDeSignal);
 }
 
 //---------------RESERVAR--------------//
 
 t_puntero reservarMemoria(t_valor_variable espacio){
 	log_info(loggerProgramas, "El proceso %d pidio memoria por un espacio de %d...", pcbEnProceso->pid, espacio);
-	sendRemasterizado(socketKernel, PIDO_RESERVA, sizeof(int), &espacio);
+	void *mensajeDeAlocamiento = malloc(sizeof(int)+sizeof(t_valor_variable));
+	memcpy(mensajeDeAlocamiento, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeAlocamiento+sizeof(int), &espacio, sizeof(t_valor_variable));
+	sendRemasterizado(socketKernel, PIDO_RESERVA, sizeof(int)+sizeof(t_valor_variable), mensajeDeAlocamiento);
+	free(mensajeDeAlocamiento);
 	paquete *paqueteConT_Puntero;
 	paqueteConT_Puntero = recvRemasterizado(socketKernel);
 	if(paqueteConT_Puntero->tipoMsj != OPERACION_CON_KERNEL_EXITOSA){
@@ -200,23 +211,30 @@ t_puntero reservarMemoria(t_valor_variable espacio){
 		programaEnEjecucionAbortado = true;
 	}
 	log_info(loggerProgramas, "Se recibio puntero al espacio reservado %d...", *(t_puntero*)paqueteConT_Puntero->mensaje);
-	return *(t_puntero*)paqueteConT_Puntero->mensaje;
+	t_puntero punteroARetornar = *(t_puntero*)paqueteConT_Puntero->mensaje;
+	free(paqueteConT_Puntero);
+	return punteroARetornar;
 }
 
 //----------------LIBERAR------------//
 void liberarMemoria(t_puntero puntero){
 	log_info(loggerProgramas, "El proceso %d pidio liberacion de memoria en el puntero %d...", pcbEnProceso->pid, puntero);
-	sendRemasterizado(socketKernel, PIDO_LIBERACION, sizeof(t_puntero), &puntero);
+	void *mensajeDeLiberacion = malloc(sizeof(int)+sizeof(t_puntero));
+	memcpy(mensajeDeLiberacion, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeLiberacion+sizeof(int), &puntero, sizeof(t_puntero));
+	sendRemasterizado(socketKernel, PIDO_LIBERACION, sizeof(t_puntero)+sizeof(int), mensajeDeLiberacion);
+	free(mensajeDeLiberacion);
 }
 
 //----------------ABRIR------------//
 
 t_descriptor_archivo abrimeArchivo(t_direccion_archivo direccion, t_banderas flags){
 	log_info(loggerProgramas, "El proceso %d pidio que se abra el archivo con la ruta %s...", pcbEnProceso->pid, direccion);
-	int tamanioMensaje = string_length(direccion) + sizeof(t_banderas);
+	int tamanioMensaje = string_length(direccion) + sizeof(t_banderas) + sizeof(int);
 	void* mensajeAEnviar = malloc(tamanioMensaje);
-	memcpy(mensajeAEnviar,direccion,string_length(direccion));
-	memcpy(mensajeAEnviar + string_length(direccion), &flags, sizeof(t_banderas));
+	memcpy(mensajeAEnviar, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeAEnviar+sizeof(int),direccion,string_length(direccion));
+	memcpy(mensajeAEnviar + string_length(direccion) + sizeof(int), &flags, sizeof(t_banderas));
 	sendRemasterizado(socketKernel, ABRIR_ARCHIVO, tamanioMensaje, mensajeAEnviar);
 	free(mensajeAEnviar);
 	paquete *paqueteConDescriptorDeArchivo;
@@ -226,14 +244,20 @@ t_descriptor_archivo abrimeArchivo(t_direccion_archivo direccion, t_banderas fla
 		log_info(loggerProgramas, "El proceso %d es abortado...", pcbEnProceso->pid);
 		programaEnEjecucionAbortado = true;
 	}
-	return (t_descriptor_archivo)paqueteConDescriptorDeArchivo->mensaje;
+	t_descriptor_archivo descriptorARetornar = *(t_descriptor_archivo*)paqueteConDescriptorDeArchivo->mensaje;
+	free(paqueteConDescriptorDeArchivo);
+	return descriptorARetornar;
 }
 
 //-------------BORRAR-----------//
 
 void borrameArchivo(t_descriptor_archivo descriptor_archivo){
 	log_info(loggerProgramas, "El proceso %d pidio que se borre el archivo %d...", pcbEnProceso->pid, descriptor_archivo);
-	sendRemasterizado(socketKernel, BORRAR_ARCHIVO, sizeof(t_descriptor_archivo), &descriptor_archivo);
+	void *mensajeDeBorrado = malloc(sizeof(t_descriptor_archivo)+sizeof(int));
+	memcpy(mensajeDeBorrado, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeBorrado + sizeof(int), &descriptor_archivo, sizeof(t_descriptor_archivo));
+	sendRemasterizado(socketKernel, BORRAR_ARCHIVO, sizeof(t_descriptor_archivo) + sizeof(int), mensajeDeBorrado);
+	free(mensajeDeBorrado);
 	int notificacion = recvDeNotificacion(socketKernel);
 	if(notificacion != OPERACION_CON_ARCHIVO_EXITOSA){
 		log_info(loggerProgramas, "El proceso %d no pudo borrar el archivo %d...", pcbEnProceso->pid, descriptor_archivo);
@@ -246,7 +270,11 @@ void borrameArchivo(t_descriptor_archivo descriptor_archivo){
 
 void cerrameArchivo(t_descriptor_archivo descriptor_archivo){
 	log_info(loggerProgramas, "El proceso %d pidio que se cierre el archivo %d...", pcbEnProceso->pid, descriptor_archivo);
-	sendRemasterizado(socketKernel, CERRAR_ARCHIVO, sizeof(t_descriptor_archivo), &descriptor_archivo);
+	void *mensajeDeCerrado = malloc(sizeof(int)+sizeof(t_descriptor_archivo));
+	memcpy(mensajeDeCerrado, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeCerrado + sizeof(int), &descriptor_archivo, sizeof(t_descriptor_archivo));
+	sendRemasterizado(socketKernel, CERRAR_ARCHIVO, sizeof(t_descriptor_archivo) + sizeof(int), mensajeDeCerrado);
+	free(mensajeDeCerrado);
 	int notificacion = recvDeNotificacion(socketKernel);
 	if(notificacion != OPERACION_CON_ARCHIVO_EXITOSA){
 		log_info(loggerProgramas, "El proceso %d no pudo cerrar el archivo %d...", pcbEnProceso->pid, descriptor_archivo);
@@ -259,10 +287,11 @@ void cerrameArchivo(t_descriptor_archivo descriptor_archivo){
 
 void movemeElCursor(t_descriptor_archivo descriptor_archivo, t_valor_variable posicion){
 	log_info(loggerProgramas, "El proceso %d pidio que se mueva el cursor dentro del archivo %d a la posicion %d...", pcbEnProceso->pid, descriptor_archivo, posicion);
-	int tamanioMensaje = sizeof(descriptor_archivo) + sizeof(t_valor_variable);
+	int tamanioMensaje = sizeof(descriptor_archivo) + sizeof(t_valor_variable) + sizeof(int);
 	void* mensajeDeCursor = malloc(tamanioMensaje);
-	memcpy(mensajeDeCursor, &descriptor_archivo, sizeof(descriptor_archivo));
-	memcpy(mensajeDeCursor+sizeof(descriptor_archivo), &posicion, sizeof(t_valor_variable));
+	memcpy(mensajeDeCursor, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeCursor+sizeof(int), &descriptor_archivo, sizeof(descriptor_archivo));
+	memcpy(mensajeDeCursor+sizeof(descriptor_archivo)+sizeof(int), &posicion, sizeof(t_valor_variable));
 	sendRemasterizado(socketKernel, MOVEME_CURSOR, tamanioMensaje, mensajeDeCursor);
 	int notificacion = recvDeNotificacion(socketKernel);
 	if(notificacion != OPERACION_CON_ARCHIVO_EXITOSA){
@@ -277,11 +306,12 @@ void movemeElCursor(t_descriptor_archivo descriptor_archivo, t_valor_variable po
 
 void escribimeArchivo(t_descriptor_archivo descriptor_archivo, void* informacion, t_valor_variable tamanio){
 	log_info(loggerProgramas, "El proceso %d pidio que se escriba en el archivo %d, el contenido %p de tamanio %d", pcbEnProceso->pid, descriptor_archivo, informacion, tamanio);
-	int tamanioMensaje = sizeof(t_descriptor_archivo)+tamanio+sizeof(t_valor_variable);
+	int tamanioMensaje = sizeof(t_descriptor_archivo)+tamanio+sizeof(t_valor_variable) + sizeof(int);
 	void* mensajeDeEscritura = malloc(tamanioMensaje);
-	memcpy(mensajeDeEscritura, &descriptor_archivo, sizeof(t_descriptor_archivo));
-	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo), informacion, tamanio);
-	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+tamanio, &tamanio, sizeof(t_valor_variable));
+	memcpy(mensajeDeEscritura, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeEscritura+sizeof(int), &descriptor_archivo, sizeof(t_descriptor_archivo));
+	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+sizeof(int), informacion, tamanio);
+	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+tamanio+sizeof(int), &tamanio, sizeof(t_valor_variable));
 	sendRemasterizado(socketKernel, ESCRIBIR_ARCHIVO, tamanioMensaje, mensajeDeEscritura);
 	if(recvDeNotificacion(socketKernel) != OPERACION_CON_ARCHIVO_EXITOSA){
 		log_info(loggerProgramas, "El proceso %d no pudo escribir en el archivo %d...", pcbEnProceso->pid, descriptor_archivo);
@@ -294,11 +324,12 @@ void escribimeArchivo(t_descriptor_archivo descriptor_archivo, void* informacion
 //-----------LEER----------//
 
 void leemeDeArchivo(t_descriptor_archivo descriptor_archivo, t_puntero informacion, t_valor_variable tamanio){
-	int tamanioMensaje = sizeof(t_descriptor_archivo)+sizeof(t_puntero)+sizeof(t_valor_variable); //Chequear si es necesario sumar el barra cero
+	int tamanioMensaje = sizeof(t_descriptor_archivo)+sizeof(t_puntero)+sizeof(t_valor_variable)+sizeof(int); //Chequear si es necesario sumar el barra cero
 	void *mensajeDeLectura = malloc(tamanioMensaje);
-	memcpy(mensajeDeLectura, &descriptor_archivo, sizeof(t_descriptor_archivo));
-	memcpy(mensajeDeLectura+sizeof(t_descriptor_archivo), &informacion, tamanio);
-	memcpy(mensajeDeLectura+sizeof(t_descriptor_archivo)+tamanio, &tamanio, sizeof(t_valor_variable));
+	memcpy(mensajeDeLectura, &pcbEnProceso->pid, sizeof(int));
+	memcpy(mensajeDeLectura+sizeof(int), &descriptor_archivo, sizeof(t_descriptor_archivo));
+	memcpy(mensajeDeLectura+sizeof(t_descriptor_archivo)+sizeof(int), &informacion, tamanio);
+	memcpy(mensajeDeLectura+sizeof(t_descriptor_archivo)+tamanio+sizeof(int), &tamanio, sizeof(t_valor_variable));
 	sendRemasterizado(socketKernel, LEER_DE_ARCHIVO, tamanioMensaje, mensajeDeLectura);
 	free(mensajeDeLectura);
 	paquete *paqueteConDatosDeLectura = recvRemasterizado(socketKernel);

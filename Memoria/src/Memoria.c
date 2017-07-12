@@ -12,25 +12,25 @@
 
 #include <ctype.h>
 
-
-#define FALTA_RECURSOS_MEMORIA -50
-#define ESPACIO_INSUFICIENTE -2
-#define ES_CPU 1001
-#define HANG_UP_CPU -1001
-#define ES_KERNEL 1002
+//MENSAJES EXITO Y ERROR
+#define OPERACION_EXITOSA_CON_MEMORIA 100
+#define OPERACION_FALLIDA_CON_MEMORIA -100
+//HANDSHAKES
+#define ES_CPU 1000
+#define HANG_UP_CPU 0
+#define ES_KERNEL 1001
+#define TAMANIO_PAGINA_PARA_KERNEL 1011
+#define TAMANIO_PAGINA_PARA_CPU 1010
+#define HANG_UP_KERNEL 0
+//PETICIONES A MEMORIA
 #define INICIALIZAR_PROGRAMA 501
 #define ASIGNAR_PAGINAS 502
 #define FINALIZAR_PROGRAMA 503
 #define LEER_DATOS 504
 #define ESCRIBIR_DATOS 505
-#define INICIO_EXITOSO 50
-#define SE_PUDO_COPIAR 2001
-#define NO_SE_PUEDE_COPIAR -2001
-#define DATOS_DE_PAGINA 103
-#define TAMANIO_PAGINA_PARA_KERNEL 102
-#define TAMANIO_PAGINA_PARA_CPU 105
-#define HANG_UP_KERNEL 0
 #define LIBERAR_PAGINA 506
+#define DATOS_DE_PAGINA 507
+
 
 typedef struct __attribute__((packed)){
 	int frame;
@@ -283,7 +283,7 @@ int obtenerCantidadDePaginasDe(int pid){ //Funcion sirve para asignar y para siz
 
 void copiarAArchivoDump(char* mensajeACopiar){
 	int tamanioAEscribir = string_length(mensajeACopiar);
-	FILE* dump = fopen("./dump.txt","a");
+	FILE* dump = fopen("./dump.dump","a");
 	fwrite(mensajeACopiar,tamanioAEscribir,1,dump);
 	fclose(dump);
 }
@@ -473,7 +473,7 @@ bool espacioInsuficienteParaLaPagina(int tamanio, int offset){
 }
 
 int buscarFrameProceso(int pid, int numPagina){
-	int numFrame, frameBuscado;
+	int numFrame, frameBuscado = -1;
 	usleep(RETARDO_MEMORIA);
 	log_info(loggerMemoria, "Retardo...");
 	log_info(loggerMemoria, "Buscando los datos en memoria...");
@@ -488,22 +488,27 @@ int buscarFrameProceso(int pid, int numPagina){
 
 void almacenarBytesEnMemoria(int pid, int numPagina, int offset, int tamanio, void* buffer){
 	int numFrameProceso = buscarFrameProceso(pid, numPagina);
-	log_info(loggerMemoria, "Se encontro el frame asociado a la pagina numero %d del proceso %d.",numPagina, pid);
-	long int comienzoDePagina = numFrameProceso*MARCOS_SIZE;
-	memcpy(entradasDeTabla + comienzoDePagina+offset, buffer, tamanio);
-	log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en el frame %d.", pid, numFrameProceso);
-	if(estaCargadoEnCache(pid, numPagina)){
-		log_info(loggerMemoria, "El proceso %d, que pidio escritura de datos en memoria en su pagina %numPagina, se encuentra en cache.", pid, numPagina);
-		actualizarDatosDeCache(pid, numPagina, offset, tamanio, buffer);
-		log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en la pagina %d." ,pid, numPagina);
+	if(numFrameProceso != -1){
+			log_info(loggerMemoria, "Se encontro el frame asociado a la pagina numero %d del proceso %d.",numPagina, pid);
+		long int comienzoDePagina = numFrameProceso*MARCOS_SIZE;
+		memcpy(entradasDeTabla + comienzoDePagina+offset, buffer, tamanio);
+		log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en el frame %d.", pid, numFrameProceso);
+		if(estaCargadoEnCache(pid, numPagina)){
+			log_info(loggerMemoria, "El proceso %d, que pidio escritura de datos en memoria en su pagina %numPagina, se encuentra en cache.", pid, numPagina);
+			actualizarDatosDeCache(pid, numPagina, offset, tamanio, buffer);
+			log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en la pagina %d." ,pid, numPagina);
+		}else{
+			log_info(loggerMemoria, "La pagina %d del proceso %d no se encuentra en la cache...", numPagina, pid);
+			log_info(loggerMemoria, "Se procede a agregar la pagina %d del proceso %d.", numPagina, pid);
+			void* contenidoDePagina = malloc(MARCOS_SIZE);
+			memcpy(contenidoDePagina, entradasDeTabla+comienzoDePagina, MARCOS_SIZE);
+			agregarACache(pid, numPagina, contenidoDePagina);
+			free(contenidoDePagina);
+		}
 	}else{
-		log_info(loggerMemoria, "La pagina %d del proceso %d no se encuentra en la cache...", numPagina, pid);
-		log_info(loggerMemoria, "Se procede a agregar la pagina %d del proceso %d.", numPagina, pid);
-		void* contenidoDePagina = malloc(MARCOS_SIZE);
-		memcpy(contenidoDePagina, entradasDeTabla+comienzoDePagina, MARCOS_SIZE);
-		agregarACache(pid, numPagina, contenidoDePagina);
-		free(contenidoDePagina);
+
 	}
+
 }
 
 void *leer(int pid, int pagina, int tamALeer, int offset){
@@ -523,24 +528,26 @@ void *leer(int pid, int pagina, int tamALeer, int offset){
 void reservarPaginasParaProceso(int pid, int cantidadDePaginas, int socketConPeticion){
 	pthread_mutex_lock(&mutexTablaInvertida);
 		if(!hayEspacioParaNuevoProceso(cantidadDePaginas)){
-			sendDeNotificacion(socketConPeticion, ESPACIO_INSUFICIENTE);
-			log_info(loggerMemoria, "No se encontro espacio suficiente para almacenar el programa %d en memoria.", pid);
+			sendDeNotificacion(socketConPeticion, OPERACION_FALLIDA_CON_MEMORIA);
+			log_info(loggerMemoria, "No se encontro espacio suficiente para almacenar el programa %d en memoria...", pid);
 		}else{
-			log_info(loggerMemoria, "Se ha encontrado suficiente espacio en la memoria para el programa %d.", pid);
+			log_info(loggerMemoria, "Se ha encontrado suficiente espacio en la memoria para el programa %d...", pid);
 			int ultimaPaginaProceso = obtenerCantidadDePaginasDe(pid);
 			int paginaChequeada, cantidadDePaginasAsignadas = 0;
+			log_info(loggerMemoria, "Retardo...");
 			usleep(RETARDO_MEMORIA);
 			for(paginaChequeada = 0; paginaChequeada<MARCOS && cantidadDePaginasAsignadas<cantidadDePaginas; paginaChequeada++){
 				if(ocupaCeroPaginas(paginaChequeada)&&noHayNingunProceso(paginaChequeada)){
 					entradasDeTabla[paginaChequeada].pid = pid;
 					entradasDeTabla[paginaChequeada].pagina = ultimaPaginaProceso;
+					log_info(loggerMemoria, "Se le asigno la pagina %d al proceso %d que esta en el frame %d...", ultimaPaginaProceso, pid, paginaChequeada);
 					ultimaPaginaProceso++;
 					cantidadDePaginasAsignadas++;
 				}
 			}
-			log_info(loggerMemoria, "Se le han asignado correctamente las paginas al proceso %d.", pid);
+			log_info(loggerMemoria, "Se le han asignado correctamente las paginas al proceso %d...", pid);
 			pthread_mutex_unlock(&mutexTablaInvertida);
-			sendDeNotificacion(socketConPeticion, INICIO_EXITOSO);
+			sendDeNotificacion(socketConPeticion, OPERACION_EXITOSA_CON_MEMORIA);
 		}
 }
 
@@ -556,7 +563,7 @@ void asignarPaginasAProceso(paquete* paqueteDeAsignacion, int socketConPeticionD
 	int pid, cantidadDePaginas;
 	memcpy(&pid, paqueteDeAsignacion->mensaje, sizeof(int));
 	memcpy(&cantidadDePaginas, paqueteDeAsignacion->mensaje + sizeof(int), sizeof(int));
-	log_info(loggerMemoria, "Se recibio una peticion de %d paginas para el proceso %d", cantidadDePaginas, pid);
+	log_info(loggerMemoria, "Se recibio una peticion de %d paginas para el proceso %d...", cantidadDePaginas, pid);
 	reservarPaginasParaProceso(pid,cantidadDePaginas,socketConPeticionDeAsignacion);
 }
 //-----------------------------------INICIAR PROCESO----------------------------------------//
@@ -564,9 +571,10 @@ void inicializarProceso(paquete* paqueteParaIniciar, int socketConPeticionDeInic
 	int pid, cantidadDePaginas;
 	memcpy(&pid, paqueteParaIniciar->mensaje,sizeof(int));
 	memcpy(&cantidadDePaginas, paqueteParaIniciar->mensaje+sizeof(int), sizeof(int));
+	log_info(loggerMemoria, "Se pasa a buscar espacio para el proceso %d...", pid);
 //	log_info(loggerMemoria,"Se ha encontrado espacio suficiente para inicializar el programa %d",pid);
-	usleep(RETARDO_MEMORIA);
-	log_info(loggerMemoria,"Retardo...");
+	//usleep(RETARDO_MEMORIA);
+	//log_info(loggerMemoria,"Retardo...");
 	reservarPaginasParaProceso(pid, cantidadDePaginas,socketConPeticionDeInicio);
 	//free(paqueteParaIniciar);
 }
@@ -575,10 +583,12 @@ void finalizarProceso(paquete *paqueteDeFinalizacion, int socketConPeticionDeFin
 	int pidProceso;
 	int numeroDePagina;
 	memcpy(&pidProceso, paqueteDeFinalizacion->mensaje, sizeof(int));
-	log_info(loggerMemoria, "Se pasa a buscar y eliminar las entradas del proceso %d en cache.", pidProceso);
+	log_info(loggerMemoria, "Se pasa a buscar y eliminar las entradas del proceso %d en cache...", pidProceso);
 	limpiarProcesoDeCache(pidProceso);
+	log_info(loggerMemoria, "Retardo...");
 	usleep(RETARDO_MEMORIA);
 	pthread_mutex_lock(&mutexTablaInvertida);
+	log_info(loggerMemoria, "Se pasa a buscar y eliminar las entradas del proceso %d en la tabla de paginas...", pidProceso);
 	for(numeroDePagina = 0; numeroDePagina<MARCOS; numeroDePagina++){
 		if(entradasDeTabla[numeroDePagina].pid == pidProceso){
 			entradasDeTabla[numeroDePagina].pid = -1;
@@ -601,9 +611,9 @@ void escribirDatos(paquete *paqueteDeEscritura ,int socketConPeticionDeEscritura
 		memcpy(bufferConDatos, paqueteDeEscritura->mensaje + 4*sizeof(int),tamanio);
 		almacenarBytesEnMemoria(pid, numPagina, offset, tamanio, bufferConDatos);
 		log_info(loggerMemoria, "Se ha copiado los datos en la pagina numero %d del proceso %d correctamente.",numPagina, pid);
-		sendDeNotificacion(socketConPeticionDeEscritura, SE_PUDO_COPIAR);
+		sendDeNotificacion(socketConPeticionDeEscritura, OPERACION_EXITOSA_CON_MEMORIA);
 	}else{
-		sendDeNotificacion(socketConPeticionDeEscritura, NO_SE_PUEDE_COPIAR);
+		sendDeNotificacion(socketConPeticionDeEscritura, OPERACION_FALLIDA_CON_MEMORIA);
 	}
 }
 //-----------------------------------------LEER DATOS DE MEMORIA------------------------------//
@@ -620,22 +630,21 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
 }
 //------------------------------LIBERAR PAGINA---------------------------------------//
 
-/*
- * void liberarPagina(paquete *paqueteDeLiberacion, int socketConPeticionDeLiberacion){
-  int pid, numPagina;
-  memcpy(&pid, paqueteDeLiberacion->mensaje, sizeof(int));
-  memcpy(&numPagina, paqueteDeLiberacion->mensaje + sizeof(int), sizeof(int));
-  int numeroDeFrame = funcionHash(int pid, int numPagina);
-  if(puedeSerLiberada(numeroDeFrame)){
-    entradasDeTabla[numeroDeFrame].pid = -1;
-    entradasDeTabla[numeroDeFrame].numPagina = -1;
-    sendDeNotificacion(socketConPeticionDeLiberacion, SE_PUDO_LIBERAR);
-  }else{
-    sendDeNotificacion(socketConPeticionDeLiberacion, NO_SE_PUDO_LIBERAR);
-  }
-}
- *
- */
+
+//void liberarPagina(paquete *paqueteDeLiberacion, int socketConPeticionDeLiberacion){
+//	int pid, numPagina;
+//	memcpy(&pid, paqueteDeLiberacion->mensaje, sizeof(int));
+//	memcpy(&numPagina, paqueteDeLiberacion->mensaje + sizeof(int), sizeof(int));
+//	int numeroDeFrame = buscarFrameProceso(pid, numPagina);
+//	if(puedeSerLiberada(numeroDeFrame)){
+//		entradasDeTabla[numeroDeFrame].pid = -1;
+//		entradasDeTabla[numeroDeFrame].pagina = -1;
+//		sendDeNotificacion(socketConPeticionDeLiberacion, OPERACION_EXITOSA_CON_MEMORIA);
+//	}else{
+//		sendDeNotificacion(socketConPeticionDeLiberacion, OPERACION_FALLIDA_CON_MEMORIA);
+//	}
+//}
+
 //------------------------------------------------HILOS MEMORIA-----------------------------------------//
 //--------------------------------------------MANEJADOR TECLADO-----------------------------------------//
 
@@ -645,55 +654,81 @@ void *manejadorTeclado(){
 	size_t tamanioMaximo = 50;
 	while(1){
 		puts("Esperando comando...");
+		log_info(loggerMemoria, "Esperando comando en la consola de memoria...");
 		getline(&comando, &tamanioMaximo, stdin);
+		log_info(loggerMemoria, "Comando recibido en la consola de memoria...");
+		log_info(loggerMemoria, "Interpretando comando recibido...");
 		int tamanioRecibido = strlen(comando);
 		comando[tamanioRecibido-1] = '\0';
 		if(string_equals_ignore_case(comando,"dump")){
+			log_info(loggerMemoria, "Se recibio peticion por consola para hacer dump de todos los datos de memoria...");
+			log_info(loggerMemoria, "Comenzando dump...");
 			dumpDeTodosLosDatos();
+			log_info(loggerMemoria, "Se termino de hacer el dump de todos los datos...");
 		}else if(string_equals_ignore_case(comando, "size")){
+			log_info(loggerMemoria, "Se recibio peticion por consola para hacer size de toda la memoria...");
+			log_info(loggerMemoria, "Comenzando size...");
 			sizeMemoria();
+			log_info(loggerMemoria, "Se termino de hacer el size de la memoria...");
 		}else{
 			char* posibleRetardo = string_substring_until(comando, 7);
 			char* posibleFlush = string_substring_until(comando, 5);
 			char* posibleDump = string_substring_until(comando, 4);
 			char* posibleSize = string_substring_until(comando, 4);
 			if(string_equals_ignore_case(posibleRetardo, "retardo")){  //
+				log_info(loggerMemoria, "Se recibio peticion por consola para cambiar el valor de retardo...");
 				char* valorARetardar = string_substring_from(comando, 8);
 				if(!esNumero(valorARetardar)){
-					perror("Error de valor de retardo");
+					log_error(loggerMemoria, "Error en el valor de retardo...");
+					perror("Error en el valor de retardo...");
 				}else{
 					int retardoRequerido = atoi(valorARetardar);
 					retardo(retardoRequerido);
 					log_info(loggerMemoria,"Se ha modificado el RETARDO_MEMORIA a %d",retardoRequerido);
 				}
 			}else if(string_equals_ignore_case(posibleFlush, "flush")){
+				log_info(loggerMemoria, "Se recibio una peticion por consola para hacer flush de la cache...");
 				flushCache();
+				log_info(loggerMemoria, "Flush de la cache terminado...");
 			}else if(string_equals_ignore_case(posibleDump, "dump")){
+				log_info(loggerMemoria, "Se recibio una peticion por consola para hacer dump...");
 				char* queDumpear = string_new();
 				queDumpear = string_substring_from(comando, 5);
 				if(string_equals_ignore_case(queDumpear,"cache")){
-				    //Dumpear cache
+					log_info(loggerMemoria, "El dump a realizar es de cache...");
+					//DUMP CACHE
+					log_info(loggerMemoria, "Dump de cache terminado...");
 				}else if(string_equals_ignore_case(queDumpear,"estructuras")){
+					log_info(loggerMemoria, "El dump a realizar es de las estructuras de memoria...");
 				    dumpEstructurasDeMemoria();
+				    log_info(loggerMemoria, "Dump de estructuras terminado...");
 				}else if(esNumero(queDumpear)){
 					int pid = atoi(queDumpear);
+					log_info(loggerMemoria, "El dump a realizar es de los datos del pid %d...", pid);
 				    dumpDeUnProceso(pid);
+					log_info(loggerMemoria, "Dump de proceso terminado...");
 				}else{
-					perror("Error de segundo parametro de dump");
+					log_error(loggerMemoria, "Error en el segundo parametro de dump...");
+					perror("Error en el segundo parametro de dump");
 				}
 				free(queDumpear);
 			}else if(string_equals_ignore_case(posibleSize, "size")){
+				log_info(loggerMemoria, "Se recibio una peticion por consola para hacer size de un proceso...");
 				char* procesoASizear = string_new();
 				procesoASizear = string_substring_from(comando, 5);
 				if(!esNumero(procesoASizear)){
-					perror("Error del primer parametro en el size");
+					perror("Error en el pid del proceso...");
+					log_error(loggerMemoria, "Error en el pid del proceso...");
 				}else{
 					int pid = atoi(procesoASizear);
+					log_info(loggerMemoria, "El size se hara sobre el proceso %d...", pid);
 					free(procesoASizear);
 					sizeProceso(pid);
+					log_info(loggerMemoria, "Size de proceso terminado...");
 				}
 			}else{
 				puts("Error de comando");
+				log_error(loggerMemoria, "Error en el comando ingresado...");
 			}
 			comando = realloc(comando,50*sizeof(char));
 		}
@@ -723,10 +758,10 @@ void *manejadorConexionKernel(void* socket){
 			log_info(loggerMemoria, "Se recibio una peticion de escritura por parte del kernel...");
 			escribirDatos(paqueteRecibidoDeKernel, socketKernel);
 			break;
-		case LIBERAR_PAGINA:
-			log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina por parte de kernel...");
-			//liberarPagina(paqueteRecibidoDeKernel, *(int*)socketKernel);
-			break;
+//		case LIBERAR_PAGINA:
+//			log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina por parte de kernel...");
+//			liberarPagina(paqueteRecibidoDeKernel, *(int*)socketKernel);
+//			break;
 		case FINALIZAR_PROGRAMA:
 			log_info(loggerMemoria, "Se recibio una peticion para finalizar un programa por parte del kernel...");
 			finalizarProceso(paqueteRecibidoDeKernel, socketKernel);
@@ -738,6 +773,7 @@ void *manejadorConexionKernel(void* socket){
 			exit(0);
 		default:
 			perror("No se recibio correctamente el mensaje");
+			log_error(loggerMemoria, "No se reconoce la peticion hecha por el kernel...");
 		}
 		free(paqueteRecibidoDeKernel);
 	}
@@ -763,7 +799,9 @@ void *manejadorConexionCPU (void *socket){
     	  break;
       default:
     	  perror("No se reconoce el mensaje enviado por CPU");
+    	  log_error(loggerMemoria, "No se reconoce la peticion realizada por la CPU %d...", socketCPU);
 	  }
+	  free(paqueteRecibidoDeCPU);
   }
 }
 //------------------------------------------FIN DE FUNCIONES MANEJADORAS DE HILOS------------------------//
@@ -777,6 +815,7 @@ int main(int argc, char *argv[]) {
 	inicializarMemoria(argv[1]);
 	//paquete paqueteDeRecepcion, paqDePaginas;
 	//inicializarMemoria(path);
+	log_info(loggerMemoria, "Levantando memoria desde archivo de configuracion...");
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
 	entradasDeTabla= (entradaTabla*) memoriaSistema;
@@ -790,6 +829,7 @@ int main(int argc, char *argv[]) {
 	FD_ZERO(&aceptarConexiones);
 	FD_ZERO(&fd_setAuxiliar);
 	socketEscuchaMemoria = ponerseAEscucharClientes(PUERTO, 0);
+	log_info(loggerMemoria, "Escuchando clientes...");
 	FD_SET(socketEscuchaMemoria,&aceptarConexiones);
 	int socketMaximo = socketEscuchaMemoria;
 
@@ -802,6 +842,7 @@ int main(int argc, char *argv[]) {
 			perror("Error de select en memoria.");
 			exit(-1);
 		}
+		log_info(loggerMemoria, "Se recibio una conexion de un socket cliente...");
 		for(socketClienteChequeado = 0; socketClienteChequeado<=socketMaximo; socketClienteChequeado++){
 			if(FD_ISSET(socketClienteChequeado,&fd_setAuxiliar)){
 				if(socketClienteChequeado == socketEscuchaMemoria){
