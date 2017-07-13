@@ -46,13 +46,22 @@ typedef struct __attribute__((packed)) {
 } codeIndex;
 
 int main(void) {
-	paquete *unPaquete;
-	codeIndex *codigo = malloc(sizeof(codeIndex)*2);
-	codigo[1].comienzo = 1;
-	codigo[2].comienzo = 2;
-	int socketConsola = ponerseAEscucharClientes(5000, 0);
-	aceptarConexionDeCliente(socketConsola);
-	sendRemasterizado(socketConsola, 1, sizeof(codeIndex)*2, codigo);
+	int socket = conectarAServer("127.0.0.1", 5002);
+	int pid = 3;
+	int cantidadPaginas = 4;
+	sendDeNotificacion(socket, 1002);
+	paquete *paqueteConPaginas = recvRemasterizado(socket);
+	free(paqueteConPaginas);
+	void *mensaje = malloc(sizeof(int)*2);
+	memcpy(mensaje, &pid, sizeof(int));
+	memcpy(mensaje+sizeof(int), &cantidadPaginas, sizeof(int));
+	sendRemasterizado(socket, 501, sizeof(int)*2, mensaje);
+	int noti = recvDeNotificacion(socket);
+	if(noti == -1){
+		puts("Anda bien");
+	}else{
+		puts("Anda mal");
+	}
 	while(1){
 		/*unPaquete = recvRemasterizado(socketConsola);
 		printf("Mensaje recibido: %p"*//*,unPaquete->mensaje);*/

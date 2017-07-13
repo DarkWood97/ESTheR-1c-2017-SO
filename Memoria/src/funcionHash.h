@@ -89,10 +89,11 @@ typedef struct{
 t_log * loggerMemoria;
 void* memoriaSistema;
 entradaTabla* entradasDeTabla;
-void* punteroAPrincipioDeDatos;
+//void* punteroAPrincipioDeDatos;
 pthread_mutex_t mutexTablaInvertida;
 t_list *paginasPorProcesos;
 int cantidadPaginasDeTabla;
+int cantidadPaginasLibres;
 cache *cacheDeMemoria;
 
 //-----VALORES DE MEMORIA--------//

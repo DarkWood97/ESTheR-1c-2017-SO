@@ -57,7 +57,8 @@ int calcularTamanioDeTabla(){
 
 void crearEstructuraAdministrativa(){ //Tabla de paginas invertidas
 	cantidadPaginasDeTabla = calcularTamanioDeTabla();
-	punteroAPrincipioDeDatos = memoriaSistema + cantidadPaginasDeTabla*MARCOS_SIZE;
+	cantidadPaginasLibres = MARCOS-cantidadPaginasDeTabla;
+	//punteroAPrincipioDeDatos = memoriaSistema + cantidadPaginasDeTabla*MARCOS_SIZE;
 	int paginaChequeada;
 	for(paginaChequeada = 0; paginaChequeada<cantidadPaginasDeTabla;paginaChequeada++){
 		entradasDeTabla[paginaChequeada].frame = paginaChequeada;
@@ -212,6 +213,49 @@ bool esNumero(char* cadenaAChequear){
 void retardo(int retardoRequerido){
 	RETARDO_MEMORIA = retardoRequerido;
 }
+
+//------------------------MANEJO DE TABLA PAGINA POR PROCESO--------------------------------------------//
+void iniciarPaginaPorProceso(int pid){
+    paginasPorProceso *paginaDelProceso = malloc(sizeof(paginasPorProceso));
+    paginaDelProceso->pid = pid;
+    paginaDelProceso->contadorDePaginasPedidas = 0;
+    paginaDelProceso->cantidadDePaginasAsignadas = 0;
+    list_add(paginasPorProcesos, paginaDelProceso);
+}
+
+paginasPorProceso *buscarPaginaPorProceso(int pid){
+    bool esDelProceso(paginasPorProceso *paginasPorProcesoBuscado){
+        return paginasPorProcesoBuscado->pid == pid;
+    }
+    paginasPorProceso *paginaPorProcesoBuscado = list_find(paginasPorProcesos, (void *)esDelProceso);
+    return paginaPorProcesoBuscado;
+}
+
+void agregarPaginaAProceso(int pid){
+    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
+    paginaDelProceso->contadorDePaginasPedidas++;
+    paginaDelProceso->cantidadDePaginasAsignadas++;
+}
+
+int obtenerUltimaPaginaProceso(int pid){
+    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
+    return paginaDelProceso->contadorDePaginasPedidas;
+}
+
+void liberarPaginaDeProceso(pid){
+    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
+    paginaDelProceso->cantidadDePaginasAsignadas--;
+}
+
+int obtenerCantidadDePaginasDe(int pid){
+    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
+    return paginaDelProceso->cantidadDePaginasAsignadas;
+}
+
+void eliminarPaginaPorProceso(int pid){
+    list_remove_and_destroy_by_condition(paginasPorProcesos, (void*)buscarPaginaPorProceso, free);
+}
+
 
 //int obtenerCantidadDePaginasDe(int pid){ //Funcion sirve para asignar y para size
 //	int cantidadDePaginasDelProceso = 0;
@@ -393,49 +437,6 @@ void flushCache(){
 
 //------------------------FUNCIONES AUXILIARES PARA HILO DE KERNEL--------------------------------------//
 
-//------------------------MANEJO DE TABLA PAGINA POR PROCESO--------------------------------------------//
-void iniciarPaginaPorProceso(int pid){
-    paginasPorProceso *paginaDelProceso = malloc(sizeof(paginasPorProceso));
-    paginaDelProceso->pid = pid;
-    paginaDelProceso->contadorDePaginasPedidas = 0;
-    paginaDelProceso->cantidadDePaginasAsignadas = 0;
-    list_add(paginasPorProcesos, paginaDelProceso);
-}
-
-paginasPorProceso *buscarPaginaPorProceso(int pid){
-    bool esDelProceso(paginasPorProceso *paginasPorProcesoBuscado){
-        return paginasPorProcesoBuscado->pid == pid;
-    }
-    paginasPorProceso *paginaPorProcesoBuscado = list_find(paginasPorProcesos, (void *)esDelProceso);
-    return paginaPorProcesoBuscado;
-}
-
-void agregarPaginaAProceso(int pid){
-    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
-    paginaDelProceso->contadorDePaginasPedidas++;
-    paginaDelProceso->cantidadDePaginasAsignadas++;
-}
-
-int obtenerUltimaPaginaProceso(int pid){
-    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
-    return paginaDelProceso->contadorDePaginasPedidas;
-}
-
-void liberarPaginaDeProceso(pid){
-    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
-    paginaDelProceso->cantidadDePaginasAsignadas--;
-}
-
-int obtenerCantidadDePaginasDe(int pid){
-    paginasPorProceso *paginaDelProceso = buscarPaginaPorProceso(pid);
-    return paginaDelProceso->cantidadDePaginasAsignadas;
-}
-
-void eliminarPaginaPorProceso(int pid){
-    list_remove_and_destroy_by_condition(paginasPorProcesos, (void*)buscarPaginaPorProceso, free);
-}
-
-
 /*bool hayEspacioParaNuevoProceso(int cantidadDePaginasNecesarias){
 	int paginaChequeada;
 	int paginasDisponiblesEncontradas = 0;
@@ -518,26 +519,21 @@ int leer(int pid, int pagina, int tamALeer, int offset, void* datosLeidos){
 }
 
 int reservarPaginasParaProceso(int pid, int cantidadDePaginas){
-	if(cantidadDePaginas<(MARCOS-cantidadPaginasDeTabla)){
-		int *framesAAsignar = malloc(sizeof(int)*cantidadDePaginas);
-		int posicionFrame = 0, auxiliarPosicionFrame = 0;
+	if(cantidadDePaginas<(MARCOS-cantidadPaginasDeTabla) && cantidadDePaginas<cantidadPaginasLibres){
 		int cantidadRestantePedido = cantidadDePaginas;
 		int ultimaPaginaProceso = obtenerCantidadDePaginasDe(pid);
 		pthread_mutex_lock(&mutexTablaInvertida);
-		for(; cantidadRestantePedido>=0; cantidadRestantePedido--){
+		for(; cantidadRestantePedido>0; cantidadRestantePedido--){
 			int frameObtenido = buscarFrameProceso(pid, ultimaPaginaProceso, esPaginaLibre);
 			if(frameObtenido == -1){
 				return OPERACION_FALLIDA;
 			}else{
-				framesAAsignar[posicionFrame] = frameObtenido;
-				posicionFrame++;
+				entradasDeTabla[frameObtenido].pid = pid;
+				entradasDeTabla[frameObtenido].pagina = ultimaPaginaProceso;
+				cantidadPaginasLibres--;
+				ultimaPaginaProceso++;
+				agregarPaginaAProceso(pid);
 			}
-		}
-		for(;auxiliarPosicionFrame<posicionFrame;auxiliarPosicionFrame++){
-			entradasDeTabla[framesAAsignar[auxiliarPosicionFrame]].pid = pid;
-			entradasDeTabla[framesAAsignar[auxiliarPosicionFrame]].pagina = ultimaPaginaProceso;
-			agregarPaginaAProceso(pid);
-			ultimaPaginaProceso++;
 		}
 		pthread_mutex_unlock(&mutexTablaInvertida);
 		return OPERACION_EXITOSA_FINALIZADA;
