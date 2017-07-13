@@ -105,7 +105,7 @@ entradaDeCache* obtenerEntrada(int pid, int numPagina){
 void* leerDeCache(int pid, int numPagina, int tamALeer, int offset){
   entradaDeCache *entradaALeer;
   entradaALeer = obtenerEntrada(pid, numPagina);
-  log_info(loggerMemoria, "Se obtuvo las paginas del proceso %d de la cache.", pid);
+  log_info(loggerMemoria, "Se obtuvo las paginas del proceso %d de la cache...", pid);
   void* lectura = malloc(tamALeer);
   memcpy(lectura, entradaALeer->contenido+offset, tamALeer);
   list_add_in_index(cacheDeMemoria->entradasCache, 0, entradaALeer);
@@ -141,11 +141,13 @@ bool noSuperoLaCantidadMaxDeEntradas(int pid){
 	int esProceso(entradaDeCache* entrada){
 		return entrada->pid == pid;
 	}
-  int cantidadDeEntradasDeProceso = list_size(list_filter(cacheDeMemoria->entradasCache, (void*)esProceso));
-  if(cantidadDeEntradasDeProceso>=CACHE_X_PROC){
-    return false;
-  }
-  return true;
+	t_list *listaFiltrada = list_filter(cacheDeMemoria->entradasCache, (void*)esProceso);
+	int cantidadDeEntradasDeProceso = list_size(listaFiltrada);
+	list_destroy_and_destroy_elements(listaFiltrada, (void*)eliminarEntrada);
+	if(cantidadDeEntradasDeProceso>=CACHE_X_PROC){
+		return false;
+	}
+	return true;
 }
 
 void agregarACache(int pid, int numPagina, void* contenido){
@@ -157,12 +159,13 @@ void agregarACache(int pid, int numPagina, void* contenido){
     memcpy(nuevaEntrada->contenido, contenido, MARCOS_SIZE);
     if(estaLlenaLaCache()){
       sacarLRU();
-      log_info(loggerMemoria, "Se elimino la entrada LRU");
+      log_info(loggerMemoria, "Se elimino la entrada LRU...");
     }
     list_add_in_index(cacheDeMemoria->entradasCache, 0, nuevaEntrada);
-    log_info(loggerMemoria, "Se agrego una entrada para el proceso %d correctamente.", pid);
+    log_info(loggerMemoria, "Se agrego una entrada en cache para el proceso %d correctamente...", pid);
+  }else{
+	  log_info(loggerMemoria, "El proceso %d ha superado la cantidad maxima de entradas en la cache...", pid);
   }
-  log_info(loggerMemoria, "El proceso %d ha superado la cantidad maxima de entradas en la cache", pid);
 }
 
 void actualizarDatosDeCache(int pid, int numPagina, int offset, int tamanio, void*buffer){
@@ -176,7 +179,7 @@ void limpiarProcesoDeCache(int pid){
 		return entrada->pid == pid;
 	}
 	list_remove_and_destroy_by_condition(cacheDeMemoria->entradasCache,(void*)esDeProceso, (void*)eliminarEntrada);
-	log_info(loggerMemoria, "Se ha borrado de cache las paginas del proceso %d.", pid);
+	log_info(loggerMemoria, "Se ha borrado de cache las paginas del proceso %d...", pid);
 }
 
 //-----------------------------FUNCIONES AUXILIARES DE MEMORIA-----------------------------------------//
@@ -481,17 +484,17 @@ int buscarFrameProceso(int pid, int numPagina){
 int almacenarBytesEnMemoria(int pid, int numPagina, int offset, int tamanio, void* buffer){
 	int numFrameProceso = buscarFrameProceso(pid, numPagina, esElFrameCorrecto);
 	if(numFrameProceso != -1){
-		log_info(loggerMemoria, "Se encontro el frame asociado a la pagina numero %d del proceso %d.",numPagina, pid);
+		//log_info(loggerMemoria, "Se encontro el frame asociado a la pagina numero %d del proceso %d...",numPagina, pid);
 		long int comienzoDePagina = numFrameProceso*MARCOS_SIZE;
 		memcpy(entradasDeTabla + comienzoDePagina+offset, buffer, tamanio);
-		log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en el frame %d.", pid, numFrameProceso);
+		log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en el frame %d...", pid, numFrameProceso);
 		if(estaCargadoEnCache(pid, numPagina)){
-			log_info(loggerMemoria, "El proceso %d, que pidio escritura de datos en memoria en su pagina %numPagina, se encuentra en cache.", pid, numPagina);
+			log_info(loggerMemoria, "El proceso %d, que pidio escritura de datos en memoria en su pagina %numPagina, se encuentra en cache...", pid, numPagina);
 			actualizarDatosDeCache(pid, numPagina, offset, tamanio, buffer);
-			log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en la pagina %d." ,pid, numPagina);
+			log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en la pagina %d..." ,pid, numPagina);
 		}else{
 			log_info(loggerMemoria, "La pagina %d del proceso %d no se encuentra en la cache...", numPagina, pid);
-			log_info(loggerMemoria, "Se procede a agregar la pagina %d del proceso %d.", numPagina, pid);
+			log_info(loggerMemoria, "Se procede a agregar la pagina %d del proceso %d a cache...", numPagina, pid);
 			void* contenidoDePagina = malloc(MARCOS_SIZE);
 			memcpy(contenidoDePagina, entradasDeTabla+comienzoDePagina, MARCOS_SIZE);
 			agregarACache(pid, numPagina, contenidoDePagina);
@@ -550,17 +553,24 @@ bool puedeSerLiberada(numeroDeFrame){
 }
 
 void borrarEntradasDeProceso(int pid){
-    paginasPorProceso * paginaDelProceso = list_remove_by_condition(paginasPorProcesos, (void*)buscarPaginaPorProceso);
-    while (paginaDelProceso->contadorDePaginasPedidas > 0) {
-        int numeroDeFrameObtenido = buscarFrameProceso(pid, paginaDelProceso->contadorDePaginasPedidas, esElFrameCorrecto);
-        if(numeroDeFrameObtenido == -1){
-            log_info(loggerMemoria, "La pagina %d del proceso %d ya se habia borrado de memoria...", paginaDelProceso->contadorDePaginasPedidas, pid);
-        }else{
-            entradasDeTabla[numeroDeFrameObtenido].pid = -1;
-            entradasDeTabla[numeroDeFrameObtenido].pagina = -1;
-            log_info(loggerMemoria, "La pagina %d del proceso %d, que se encontraba en el frame %d ha sido borrada...", paginaDelProceso->contadorDePaginasPedidas, pid, numeroDeFrameObtenido);
-        }
-        paginaDelProceso->contadorDePaginasPedidas--;
+	bool esDelProceso(paginasPorProceso *paginasPorProcesoBuscado){
+		return paginasPorProcesoBuscado->pid == pid;
+	}
+    paginasPorProceso * paginaDelProceso = list_remove_by_condition(paginasPorProcesos, (void*)esDelProceso);
+    if(paginaDelProceso != NULL){
+		while ((paginaDelProceso->contadorDePaginasPedidas-1) >= 0) {
+			int numeroDeFrameObtenido = buscarFrameProceso(pid, paginaDelProceso->contadorDePaginasPedidas-1, esElFrameCorrecto);
+			if(numeroDeFrameObtenido == -1){
+				log_info(loggerMemoria, "La pagina %d del proceso %d ya se habia borrado de memoria...", paginaDelProceso->contadorDePaginasPedidas, pid);
+			}else{
+				entradasDeTabla[numeroDeFrameObtenido].pid = -1;
+				log_info(loggerMemoria, "La pagina %d del proceso %d, que se encontraba en el frame %d ha sido borrada...", entradasDeTabla[numeroDeFrameObtenido].pagina, pid, numeroDeFrameObtenido);
+				entradasDeTabla[numeroDeFrameObtenido].pagina = -1;
+			}
+			paginaDelProceso->contadorDePaginasPedidas--;
+		}
+    }else{
+    	log_info(loggerMemoria, "El proceso %d no se encontraba en memoria...", pid);
     }
     free(paginaDelProceso);
 }
@@ -607,6 +617,7 @@ void finalizarProceso(paquete *paqueteDeFinalizacion, int socketConPeticionDeFin
 	log_info(loggerMemoria, "Se pasa a buscar y eliminar las entradas del proceso %d en la tabla de paginas...", pidProceso);
 	borrarEntradasDeProceso(pidProceso);
 	pthread_mutex_unlock(&mutexTablaInvertida);
+	sendDeNotificacion(socketConPeticionDeFinalizacion, OPERACION_EXITOSA_FINALIZADA);
 	log_info(loggerMemoria,"El proceso %d se ha finalizado.",pidProceso);
 }
 //---------------------------------ESCRIBIR DATOS EN MEMORIA--------------------------------//
@@ -626,6 +637,7 @@ void escribirDatos(paquete *paqueteDeEscritura ,int socketConPeticionDeEscritura
 		}else{
 			sendDeNotificacion(socketConPeticionDeEscritura, OPERACION_FALLIDA);
 		}
+		free(bufferConDatos);
 	}else{
 		sendDeNotificacion(socketConPeticionDeEscritura, OPERACION_FALLIDA);
 	}
@@ -781,10 +793,10 @@ void *manejadorConexionKernel(void* socket){
 			log_info(loggerMemoria, "Se recibio una peticion de escritura por parte del kernel...");
 			escribirDatos(paqueteRecibidoDeKernel, socketKernel);
 			break;
-//		case LIBERAR_PAGINA:
-//			log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina por parte de kernel...");
-//			liberarPagina(paqueteRecibidoDeKernel, *(int*)socketKernel);
-//			break;
+		case LIBERAR_PAGINA:
+			log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina por parte de kernel...");
+ 			liberarPagina(paqueteRecibidoDeKernel, socketKernel);
+			break;
 		case FINALIZAR_PROGRAMA:
 			log_info(loggerMemoria, "Se recibio una peticion para finalizar un programa por parte del kernel...");
 			finalizarProceso(paqueteRecibidoDeKernel, socketKernel);
@@ -793,6 +805,7 @@ void *manejadorConexionKernel(void* socket){
 			log_info(loggerMemoria, "Se ha cortado conexion con kernel.");
 			log_info(loggerMemoria, "Cerrando memoria.");
 			close(socketKernel);
+			free(paqueteRecibidoDeKernel);
 			exit(0);
 		default:
 			perror("No se recibio correctamente el mensaje");
@@ -833,11 +846,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	verificarParametrosInicio(argc);
-	//char* path = "Debug/memoria.config";
-	inicializarMemoria(argv[1]);
+	//verificarParametrosInicio(argc);
+	char* path = "Debug/memoria.config";
+	//inicializarMemoria(argv[1]);
 	//paquete paqueteDeRecepcion, paqDePaginas;
-	//inicializarMemoria(path);
+	inicializarMemoria(path);
 	log_info(loggerMemoria, "Levantando memoria desde archivo de configuracion...");
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);

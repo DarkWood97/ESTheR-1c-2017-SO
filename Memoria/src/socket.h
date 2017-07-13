@@ -14,8 +14,8 @@
 //	void* mensaje;
 //}paquete;
 
-int ponerseAEscuchar(int, int);
-int aceptarConexion(int);
+int ponerseAEscucharClientes(int, int);
+int aceptarConexionDeCliente(int);
 void seleccionarYAceptarSockets(int);
 bool enviarMensaje(int, char*);
 int conectarServer(char *, int);
