@@ -5,18 +5,21 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../src/Memoria.c \
+../src/funcionHash.c \
 ../src/funcionesGenericas.c \
 ../src/funcionesSockets.c \
 ../src/socket.c 
 
 OBJS += \
 ./src/Memoria.o \
+./src/funcionHash.o \
 ./src/funcionesGenericas.o \
 ./src/funcionesSockets.o \
 ./src/socket.o 
 
 C_DEPS += \
 ./src/Memoria.d \
+./src/funcionHash.d \
 ./src/funcionesGenericas.d \
 ./src/funcionesSockets.d \
 ./src/socket.d 
