@@ -135,6 +135,7 @@ typedef struct __attribute__((packed)) {
 typedef struct{
 	char* algoritmo;
 	int quantum;
+	int quantumSleep;
 }datosDeKernel;
 
 typedef struct{
