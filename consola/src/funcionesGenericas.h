@@ -26,6 +26,11 @@
 #include <commons/config.h>
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
+#include <math.h>
+#include <sys/select.h>
+#include <commons/temporal.h>
+#include <semaphore.h>
+
 
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
