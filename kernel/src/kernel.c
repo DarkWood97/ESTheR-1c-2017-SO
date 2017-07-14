@@ -7,796 +7,109 @@
 #include <commons/collections/queue.h>
 #include <semaphore.h>
 
-//--TYPEDEF------------------------------------------------------
 
-int puerto_Prog;
-int puerto_Cpu;
-_ip ip_FS;
-int puerto_Memoria;
-_ip ip_Memoria;
-int puerto_FS;
-int quantum;
-int quantum_Sleep;
-char *algoritmo;
-int grado_Multiprog;
-unsigned char *sem_Ids;
-unsigned int *sem_Init;
-unsigned char *shared_Vars;
-int stack_Size;
+#define NUEVO 1
+#define LISTO 1
+#define EJECUTANDO 1
+#define BLOQUEADO 1
+#define FINALIZADO 1
 
-//---------------indice de stack----
-
-
-
-//--------------indice de codigo----
-//typedef struct __attribute__((packed)) {
-//	int comienzo;
-//	int offset;
-//} codeIndex;
-
-//--------------indice de codigo-----
-
-//typedef struct __attribute__((packed)) {
-//	int PID;
-//	int ProgramCounter;
-//	int paginas_Codigo;
-//	t_intructions* cod;
-//	char* etiquetas;
-//	int exitCode;
-//	t_list *contextoActual;
-//	int tamContextoActual;
-//	int tamEtiquetas;
-//	//TablaKernel tablaKernel;
-//} PCB;
-
-typedef struct{
-  int numPagina;
-  int offset;
-  int tamanioPuntero;
-}direccion;
-
-typedef struct __attribute__((packed)) {
-	uint32_t size;
-	bool isFree;
-} HeapMetadata;
-
-typedef struct __attribute__((packed)) {
-	t_queue* nuevo;
-	t_queue* listo;
-	t_queue* ejecutando;
-	t_queue* bloqueado;
-	t_queue* finalizado;
-} Estados;
-
-typedef struct __attribute__((packed)) {
-	unsigned char nombreVariables;
-	int valorVariables;
-} variableCompartida;
-
-
-typedef struct{
-  char nombreVariable;
-  direccion *direccionDeVariable;
-}variable;
-
-
-typedef struct {
-	int pos;
-	t_list* args;
-	t_list* vars;
-	int retPos;
-	direccion retVar;
-} Stack;
-
-typedef struct __attribute__((packed)) {
-	int pid;
-	int programCounter;
-	int cantidadPaginasCodigo;
-	int cantidadDeT_Intructions;
-	t_intructions* cod;
-	int tamEtiquetas;
-	char* etiquetas;
-	int tamContextos;
-	int exitCode;
-	t_list *contextos;
-	//TablaKernel tablaKernel;
-} PCB;
-
-typedef struct __attribute__((packed)) {
-	int nroPag;
-	int espacioDisponible;
-} administracionPagina;
-
-typedef struct __attribute__((packed)) {
-	int socket_CPU;
-	int socket_CONSOLA;
-	PCB *pcb;
-	bool abortado;
-	t_list* paginasPorProcesos;
-} t_proceso;
-
-
-//--VARIABLES GLOBALES------------------------------------------------------
-#define CONEXION_CONSOLA 1005
-#define CORTO 0
-#define ERROR -1
-#define ESPACIO_INSUFICIENTE -2
-#define MENSAJE_IMPRIMIR 101
+#define SOY_KERNEL 1002
+#define FINALIZAR_PROGRAMA_MEMORIA 503
 #define TAMANIO_PAGINA 102
-#define	MENSAJE_CODIGO 103
-#define MENSAJE_PID   105
-#define SOY_KERNEL_MEMORIA 1002
-#define CPU 1003
-#define CONSOLA 1005
-#define INICIALIZAR_PROGRAMA 501
-#define ASIGNAR_PAGINAS 502
-#define FINALIZAR_PROGRAMA 503
-#define INICIO_EXITOSO 50
-#define MENSAJE_PCB 1015
-#define RECIBIR_PCB 1016
-#define WAIT_SEMAFORO 1017
-#define SIGNAL_SEMAFORO 1018
-#define SEMAFORO_BLOQUEADO 1019
-#define SEMAFORO_NO_BLOQUEADO 1020
-#define ASIGNAR_VARIABLE_COMPARTIDA 666
-#define OBTENER_VARIABLE_COMPARTIDA 667
-#define ESCRIBIR_DATOS 505
-#define LEER_DATOS 504
-#define HANDSHAKE_CPU 1003
+
+//------------------------------------------------ESTRUCTURAS--------------------------------------//
+typedef struct __attribute__((__packed__)) {
+	uint32_t size;
+	bool estaLibre;
+}heap;
+
+
+typedef struct __attribute__((__packed__)) {
+	int pagina;
+	int tamanioDisponible;
+	t_list* bloqueHeapMetadata;
+}paginaHeap;
+
+typedef struct __attribute__((__packed__)) {
+	int pid;
+	t_list* pagina;
+}tablaHeap;
+
+typedef struct __attribute__((__packed_)) {
+	int pid;
+	int estado;
+	int programCounter;
+	t_intructions *indiceCodigo;
+	int cantidadPaginasCodigo;
+	t_list* indiceStack;
+	char* indice_etiquetas;
+	tablaHeap* tablaHeap;
+	int exitCode;
+	int socket;
+	int tamanioEtiquetas;
+	bool estaAbortado;
+	int rafagas;
+}PCB;
+
+typedef struct __attribute__((__packed__)) {int FD;
+	int globalFD;
+	char* file;
+	int open;
+}tablaGlobalFS;
+
+typedef struct __attribute__((__packed__)) {
+	int pid;
+	int FD;
+	char* flags;
+	int globalFD;
+}tablaArchivosFS;
+
+//-------------------------------------------VARAIBLES GLOBALES------------------------------
+
+//LOGGER
+t_log* loggerKernel;
 
 //VARIABLES GLOBALES
-t_log * loggerKernel;
-bool YA_HAY_UNA_CONSOLA = false;
-int pid_actual;
-int TAM_PAGINA;
-t_list* tablaKernel;
-Estados* estado;
-t_queue* cola_CPU_libres;
-t_queue** colas_semaforos;
-bool estadoPlanificacion =true;
-t_list* variablesCompartidas;
-sem_t sem_ready;
-int socketParaMemoria;
+int pidActual;
+int socketMemoria;
+int socketFS;
 
-//////////////////////////////FUNCIONES SEMAFOROS/////////////////////////////////////////////////////////////////////////////////////
-void *serializarT_Intructions(PCB *pcbConT_intruction){
-  void *serializacion = malloc(sizeof(t_intructions)*pcbConT_intruction->cantidadDeT_Intructions);
-  int i, auxiliar1 = 0;
-  for(i = 0; i<pcbConT_intruction->cantidadDeT_Intructions; i++){
-    memcpy(serializacion+sizeof(int)*auxiliar1, &pcbConT_intruction->cod[i].start, sizeof(int));
-    auxiliar1++;
-    memcpy(serializacion+sizeof(int)*auxiliar1,&pcbConT_intruction->cod[i].offset, sizeof(int));
-    auxiliar1++;
-  }
-  return serializacion;
-}
+//COLAS
+t_queue* colaBloqueado;
+t_queue* colaEjecutando;
+t_queue* colaFinalizado;
+t_queue* colaListo;
+t_queue* colaNuevo;
+t_queue* listaDeCPULibres;
 
-void* serializarVariable(t_list* variables){
-	void* variableSerializada = malloc(list_size(variables)*sizeof(variable));
-	int i;
-	int cantidadDeVariables = list_size(variables);
-	memcpy(variableSerializada, &cantidadDeVariables, sizeof(int));
-	for(i = 1; i<cantidadDeVariables; i++){
-		variable *variableObtenida = list_get(variables, i);
-    	memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
-	}
-	return variableSerializada;
-}
-
-int sacarTamanioDeLista(t_list* contexto){
-	int i, tamanioDeContexto = 0;
-	for(i = 0; i<list_size(contexto); i++){
-		Stack *contextoAObtener = list_get(contexto, i);
-		tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
-		free(contextoAObtener);
-	}
-	return tamanioDeContexto;
-}
-
-void *serializarContextoActual(PCB* pcbConContextos){
-	void* contextoSerializado = malloc(sacarTamanioDeLista(pcbConContextos->contextos));
-  int i;
-  for(i = 0; i<pcbConContextos->tamContextos; i++){
-    Stack* contexto = list_get(pcbConContextos->contextos, i);
-    memcpy(contextoSerializado, &contexto->pos, sizeof(int));
-    void *argsSerializadas = serializarVariable(contexto->args);
-    void *varsSerializadas = serializarVariable(contexto->vars);
-    memcpy(contextoSerializado+sizeof(int), argsSerializadas, list_size(contexto->args)*sizeof(variable));
-    memcpy(contextoSerializado+sizeof(int)+list_size(contexto->args)*sizeof(variable), varsSerializadas, list_size(contexto->vars)*sizeof(variable));
-    memcpy(contextoSerializado+list_size(contexto->args)*sizeof(variable)+list_size(contexto->vars)*sizeof(variable), &contexto->retPos, sizeof(int));
-  }
-  return contextoSerializado;
-}
-
-int sacarTamanioPCB(PCB* pcbASerializar){
- int tamanio= sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+sacarTamanioDeLista(pcbASerializar->contextos)+string_length(pcbASerializar->etiquetas);
- return tamanio;
-}
-
-void *serializarPCB(PCB* pcbASerializar){
-	int tamanioPCB = sacarTamanioPCB(pcbASerializar);
-	void* pcbSerializada = malloc(tamanioPCB);
-	memcpy(pcbSerializada, &pcbASerializar->pid, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int), &pcbASerializar->programCounter, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadPaginasCodigo, sizeof(int));
-	void* indiceDeCodigoSerializado = serializarT_Intructions(pcbASerializar);
-	memcpy(pcbSerializada+sizeof(int)*3, &pcbASerializar->cantidadDeT_Intructions, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int)*4, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions);
-	memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions, &pcbASerializar->tamEtiquetas, sizeof(int));
-	memcpy(pcbSerializada+ sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions, pcbASerializar->etiquetas, pcbASerializar->tamEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
-	memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->exitCode, sizeof(int));
-	void* contextoActualSerializado = serializarContextoActual(pcbASerializar);
-	memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->tamContextos, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas+sacarTamanioDeLista(pcbASerializar->contextos), contextoActualSerializado, sacarTamanioDeLista(pcbASerializar->contextos));
-	return pcbSerializada;
-}
-
-void desserializarVariables(t_list *variables, paquete *paqueteConVariables, int* dondeEstoy){
-	int cantidadDeVariables;
-	memcpy(&cantidadDeVariables, paqueteConVariables->mensaje+*dondeEstoy, sizeof(int));
-	*dondeEstoy += sizeof(int);
-	int i;
-	for(i = 0; i<cantidadDeVariables; i++){
-		variable *variable = malloc(sizeof(variable));
-		memcpy(&variable->nombreVariable, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(char));
-		*dondeEstoy += sizeof(char);
-		variable->direccionDeVariable = malloc(sizeof(direccion));
-		memcpy(&variable->direccionDeVariable->numPagina, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
-		*dondeEstoy += sizeof(int);
-		memcpy(&variable->direccionDeVariable->offset, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
-		*dondeEstoy += sizeof(int);
-		memcpy(&variable->direccionDeVariable->tamanioPuntero, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
-		*dondeEstoy += sizeof(int);
-		list_add(variables, variable);
-	}
-}
-
-void desserializarContexto(PCB* pcbConContexto, paquete* paqueteConContexto, int dondeEstoy){
-	int nivelDeContexto;
-	for(nivelDeContexto = 0; nivelDeContexto<pcbConContexto->tamContextos; nivelDeContexto++){
-		Stack *contextoAAgregarAPCB = malloc(sizeof(Stack));
-		contextoAAgregarAPCB->args = list_create();
-		contextoAAgregarAPCB->vars = list_create();
-		memcpy(&contextoAAgregarAPCB->pos, paqueteConContexto->mensaje+dondeEstoy, sizeof(int));
-		dondeEstoy +=sizeof(int);
-		desserializarVariables(contextoAAgregarAPCB->args, paqueteConContexto, &dondeEstoy);
-		desserializarVariables(contextoAAgregarAPCB->vars, paqueteConContexto, &dondeEstoy);
-		memcpy(&contextoAAgregarAPCB->retPos, paqueteConContexto->mensaje + dondeEstoy, sizeof(int));
-		memcpy(&contextoAAgregarAPCB->retVar, paqueteConContexto->mensaje + dondeEstoy + sizeof(int), sizeof(direccion));
-		list_add(pcbConContexto->contextos, contextoAAgregarAPCB);
-		dondeEstoy += sizeof(int);
-	}
-}
-
-int desserializarTIntructions(PCB* pcbDesserializada, paquete *paqueteConPCB){
-	int i, auxiliar = 0;
-	memcpy(&pcbDesserializada->cantidadDeT_Intructions, paqueteConPCB->mensaje+(sizeof(int)*3), sizeof(int));
-	pcbDesserializada->cod = malloc(pcbDesserializada->cantidadDeT_Intructions*sizeof(t_intructions));
-	for(i = 0; i<pcbDesserializada->cantidadDeT_Intructions; i++){
-		memcpy(&pcbDesserializada->cod[auxiliar].start, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
-		auxiliar++;
-		memcpy(&pcbDesserializada->cod[auxiliar].offset, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
-		auxiliar++;
-	}
-	int retorno = sizeof(int)*(4+auxiliar);
-	return retorno;
-}
-
-PCB* desserializarPCB(paquete *paqueteConPCB){
-	PCB* pcbDesserializada = malloc(paqueteConPCB->tamMsj);
-	memcpy(&pcbDesserializada->pid, paqueteConPCB->mensaje, sizeof(int));
-	memcpy(&pcbDesserializada->programCounter, paqueteConPCB->mensaje+sizeof(int), sizeof(int));
-	memcpy(&pcbDesserializada->cantidadPaginasCodigo, paqueteConPCB->mensaje+sizeof(int)*2, sizeof(int));
-	int dondeEstoy = desserializarTIntructions(pcbDesserializada, paqueteConPCB);
-	memcpy(&pcbDesserializada->tamEtiquetas, paqueteConPCB->mensaje+dondeEstoy, sizeof(int));
-	pcbDesserializada->etiquetas = string_new();
-	memcpy(pcbDesserializada->etiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy, pcbDesserializada->tamEtiquetas);
-	memcpy(&pcbDesserializada->exitCode, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamEtiquetas, sizeof(int));
-	memcpy(&pcbDesserializada->tamContextos, paqueteConPCB->mensaje+sizeof(int)*2+dondeEstoy+pcbDesserializada->tamEtiquetas, sizeof(int));
-	dondeEstoy +=sizeof(int)*3+pcbDesserializada->tamEtiquetas;
-	pcbDesserializada->contextos = list_create();
-	desserializarContexto(pcbDesserializada, paqueteConPCB, dondeEstoy);
-	return pcbDesserializada;
-}
-
-int tamanioDeArray(char** array){
-	int tamanio = ((strlen((char*)array)/sizeof(char*))*sizeof(int)); //Asi se saca el tamanio del array, calculo cuantos char* hay, lo divido por el tamanio de char*, lo que me da la cantidad de elementos, y lo multiplico por el tamanio de un int
-	return tamanio;
-}
-
-int *inicializarDesdeArrays(char** array1, char** array2){
- // int contador;
-  int* arrayInicializado;
-  arrayInicializado = malloc(tamanioDeArray(array2));
-  int i = 0;
-  for(; array2[i]!=NULL && array1[i]!=NULL; i++){
-    arrayInicializado[i]=atoi(array1[i]);
-  }
-  return arrayInicializado;
-}
-
-void signalSemaforo(char *semaforo) {
-	int i; t_proceso *proceso;
-
-	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
-		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
-
-			if(list_size(colas_semaforos[i]->elements)){
-				proceso = queue_pop(colas_semaforos[i]);
-				queue_push(estado->listo, proceso);
-				sem_post(&sem_ready);
-			}else{
-				sem_Init[i]++;
-			}
-		}
-	}
-	perror("No existe el semaforo");
-}
-
-int waitSemaforo(t_proceso *proceso, char *semaforo) {
-	int i;
-
-	for (i = 0; i < strlen((char*)sem_Ids) / sizeof(char*); i++) {
-		if (strcmp((char*)sem_Ids[i], semaforo) == 0) {
-			queue_push(colas_semaforos[i], proceso);
-			return SEMAFORO_BLOQUEADO;
-		}
-		else{
-			return SEMAFORO_NO_BLOQUEADO;
-		}
-	}
-	perror("No existe el semaforo");
-}
-/////////////////////////////////////////VARIABLES COMPARTIDAS/////////////////////////////////////////////////////////////////////////
-void asignarVariableCompartida(char nombreVariable,int valor){
-	int i = 0;
-	for(;i<=list_size(variablesCompartidas);i++){
-		variableCompartida* variable = list_remove(variablesCompartidas,i);
-		if((variable->nombreVariables)==nombreVariable){
-			variable->nombreVariables = valor;
-			list_add_in_index(variablesCompartidas, i, variable);
-		}
-		else{
-			perror("No existe la variable compartida");
-			exit(-1);
-		}
-	}
-}
-
-int obtenerVariableCompartida(char nombreVariable){
-	int i = 0;
-	for(;i<=list_size(variablesCompartidas);i++){
-		variableCompartida* variable = list_get(variablesCompartidas,i);
-		if((variable->nombreVariables)==nombreVariable){
-			return variable->valorVariables;
-		}
-		else{
-			perror("No existe la variable compartida");
-			exit(-1);
-		}
-	}
-}
-
-void inicializarVariablesCompartidas(){
-	int i = 0;
-	for(;shared_Vars[i]!=NULL;i++){
-		variableCompartida* variables;
-		variables->nombreVariables=shared_Vars[i];
-		list_add(variablesCompartidas,variables);
-	}
-}
-
-////////////////////////////////////////FUNCIONES COLAS////////////////////////////////////////////////////////////////////////////////
-
-t_proceso* dameProceso(t_queue *cola, int pid ) {
-	int a = 0;
-
-	for (; a<queue_size(cola); a++ ){
-		t_proceso *procesoAux=(t_proceso*)list_get(cola->elements, a);
-		if (procesoAux->pcb->pid == pid){
-			return procesoAux;
-		}
-	}
-}
-
-t_proceso* sacarProceso(t_queue *cola, int pid ) {
-	int a = 0;
-
-	for (; a<queue_size(cola); a++ ){
-		t_proceso *procesoAux=(t_proceso*)list_get(cola->elements, a);
-		if (procesoAux->pcb->pid == pid){
-			return (t_proceso*)list_remove(cola->elements, a);
-		}
-	}
-}
+//TABLAS FS
+t_list* tablaAdminArchivos;
+t_list* tablaAdminGlobal;
 
 
-void enviarANuevo(PCB* pcbNuevo){
-	t_proceso* proceso = malloc(sizeof(t_proceso));
-	proceso->pcb = pcbNuevo;
-	proceso->abortado=false;
-	if(queue_size(estado->nuevo)<grado_Multiprog){
-	  log_info(loggerKernel, "Se agrega nuevo proceso a ejecutar.");
-	  queue_push(estado->nuevo,proceso);
-	}else{
-	  log_info(loggerKernel, "No se pudo agregar el proceso %d, por el grado de multiprogramacion",proceso->pcb->pid);
-	  free(proceso); //Agrego para liberar lo que se crea arriba, ya que no se usa
-	}
-}
-
-void enviarAListo(int pid){
-	t_proceso *proceso = dameProceso(estado->nuevo,pid);
-	queue_push(estado->listo,proceso);
-}
-
-void enviarAEjecutar(int pid){
-	t_proceso* proceso = dameProceso(estado->listo,pid);
-	queue_push(estado->ejecutando,proceso);
-}
-
-void enviarASalida(t_queue* cola,int pid){
-	t_proceso *proceso = dameProceso(cola,pid);
-	queue_push(estado->finalizado,proceso);
-}
-
-void escribirDatos(int socketMemoria,void* buffer, int tamanio,int pid){
-	paquete paquete;
-	paquete.mensaje = malloc((sizeof(int)*4)+tamanio);
-	paquete.tipoMsj = ESCRIBIR_DATOS;
-	paquete.tamMsj = (sizeof(int)*4)+tamanio;
-	int *offset;
-	int numPagina = obtenerNumeroPagina(pid,offset);
-	memcpy(paquete.mensaje,&pid,sizeof(int));
-	memcpy(paquete.mensaje+sizeof(int),&numPagina, sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*2), &offset,sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*3), &tamanio,sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*4), buffer,tamanio);
-	if(send(socketMemoria,&paquete,paquete.tamMsj,0) == -1){
-		perror("Error al enviar datos a memoria");
-	    log_info(loggerKernel, "Error al enviar datos a memoria");
-	    exit(-1);
-	}
-	free(paquete.mensaje);
-}
-
-void leerDatosSolicitud(int pid,int tamALeer,int socketMemoria){
-	paquete paquete;
-	paquete.mensaje = malloc(sizeof(int)*4);
-	paquete.tipoMsj = LEER_DATOS;
-	paquete.tamMsj = sizeof(int)*4;
-	int *offset = malloc(sizeof(int));
-	int numPagina = obtenerNumeroPagina(pid,offset);
-	memcpy(paquete.mensaje,&pid,sizeof(int));
-	memcpy(paquete.mensaje+sizeof(int),&numPagina, sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*2), &tamALeer,sizeof(int));
-	memcpy(paquete.mensaje+(sizeof(int)*3), offset,sizeof(int));
-	if(send(socketMemoria,&paquete,paquete.tamMsj,0) == -1){
-		perror("Error al enviar datos para leer de memoria");
-		log_info(loggerKernel, "Error al enviar datos para leer de memoria");
-		exit(-1);
-	}
-	free(paquete.mensaje);
-}
-
-void enviarPCB(int socket, PCB* pcbAEnviar){
-	void* pcbSerializada = serializarPCB(pcbAEnviar);
-	int tamanioDePCB = sacarTamanioPCB(pcbAEnviar);
-	sendRemasterizado(socket, MENSAJE_PCB, tamanioDePCB, pcbSerializada);
-
-}
-
-PCB* recibirPCB(int socket, int tamanio){
-	paquete* pcbSerializada = recvRemasterizado(socket);
-	PCB* unPCB = desserializarPCB(pcbSerializada);
-	free(pcbSerializada);
-	return unPCB;
-}
-
-//////////////////////////////////////////MANEJADOR DE CPU/////////////////////////////////////////////////////////////////////////
-void *manejadorProceso (void* socketCPU,void* pid,void* socketMemoria){
-  while(1){
-	  paquete paqueteRecibidoDeCPU;
-	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tipoMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir el tipo de mensaje de CPU");
-	        exit(-1);
-	      }
-	      if(recv(*(int*)socketCPU, &paqueteRecibidoDeCPU.tamMsj,sizeof(int),0)==-1){
-	        perror("Error al recibir tamanio de mensaje de CPU");
-	        exit(-1);
-	      }
-	      switch (paqueteRecibidoDeCPU.tipoMsj) {
-	        case MENSAJE_PCB:
-	          enviarPCB(*(int*)socketCPU, nuevoPCB); //CAMBIAR EL TEMA DE NUEVOPCB POR UNA VARIABLE QUE NO SEA GLOBAL
-	          break;
-	        case RECIBIR_PCB:
-	          recibirPCB(*(int*)socketCPU,paqueteRecibidoDeCPU.tamMsj);
-	          t_proceso* proceso = dameProceso(estado->ejecutando,*(int*)pid);
-	          proceso->pcb = nuevoPCB;
-	          queue_push(estado->ejecutando,proceso);
-	          break;
-	        case FINALIZAR_PROGRAMA:
-	        	enviarASalida(estado->finalizado,*(int*)pid);
-	        break;
-	        case WAIT_SEMAFORO: ;
-	        	t_proceso* procesoWait = dameProceso(estado->ejecutando,*(int*)pid);
-	        	paquete paqueteWait;
-	        	paqueteWait.mensaje = malloc(sizeof(int));
-	        	int caso = waitSemaforo(procesoWait, paqueteRecibidoDeCPU.mensaje);
-	        	paqueteWait.tamMsj = sizeof(int);
-	        	paqueteWait.tipoMsj = WAIT_SEMAFORO;
-	        	paqueteWait.mensaje = &caso;
-	        	if(send((int)socketCPU, &paqueteWait, paqueteWait.tamMsj, 0) == -1){
-	        		perror("Error al enviar si el semaforo fue bloqueado");
-	        	    log_info(loggerKernel, "Error al enviar si el semaforo fue bloqueado");
-	        	    exit(-1);
-	        	}
-	        	queue_push(estado->ejecutando,procesoWait);
-	        	break;
-	        case SIGNAL_SEMAFORO:
-	        	signalSemaforo(paqueteRecibidoDeCPU.mensaje);
-	        	break;
-	        case ASIGNAR_VARIABLE_COMPARTIDA: ;
-	        	char* nombreVariable;
-	        	int valorVariable;
-	        	int tamanioNombre = paqueteRecibidoDeCPU.tamMsj-sizeof(int);
-				nombreVariable = malloc(tamanioNombre);
-	        	memcpy(nombreVariable, paqueteRecibidoDeCPU.mensaje,tamanioNombre);
-	            memcpy(&valorVariable, paqueteRecibidoDeCPU.mensaje + tamanioNombre,sizeof(int));
-	            asignarVariableCompartida(nombreVariable,valorVariable);
-	        	break;
-	        case OBTENER_VARIABLE_COMPARTIDA: ;
-	        	paquete paqueteVars;
-	        	paqueteVars.mensaje = malloc(sizeof(int));
-	        	paqueteVars.tipoMsj = OBTENER_VARIABLE_COMPARTIDA;
-	        	paqueteVars.tamMsj = sizeof(int);
-	        	paqueteVars.mensaje = obtenerVariableCompartida(paqueteRecibidoDeCPU.mensaje);
-	        	if(send(*(int*)socketCPU, &paqueteVars, paqueteVars.tamMsj, 0) == -1){
-	        		perror("Error al enviar el valor de la variable compartida");
-	        		log_info(loggerKernel, "Error al enviar el valor de la variable compartida");
-	        	    exit(-1);
-	        	}
-	        	free(paqueteVars.mensaje);
-	        	break;
-	        case ESCRIBIR_DATOS: ;
-	        	int tamanio;
-	        	memcpy(&tamanio,paqueteRecibidoDeCPU.mensaje,sizeof(int));
-	        	void* buffer = malloc(tamanio);
-	        	memcpy(buffer,paqueteRecibidoDeCPU.mensaje+sizeof(int),tamanio);
-	        	escribirDatos(*(int*)socketMemoria,buffer,tamanio,*(int*)pid);
-	        	free(buffer);
-	        	break;
-	        case LEER_DATOS:
-	        	leerDatosSolicitud(*(int*)pid,paqueteRecibidoDeCPU.mensaje,*(int*)socketMemoria);
-	        	break;
-	        default:
-	        	perror("No se reconoce el mensaje enviado por CPU");
-	      }
-	  }
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int comenzarAEjecutar(int pid, int socketMemoria){
-	while(estadoPlanificacion){
-		//Semaforos
-		if((!queue_is_empty(estado->listo))&&(!queue_is_empty(cola_CPU_libres))){
-			t_proceso* proceso = queue_peek(estado->ejecutando);
-
-			int cpuUtilizada = (int)queue_peek(cola_CPU_libres);
-			queue_pop(cola_CPU_libres);
-
-			pthread_t hilo_manejadorProceso;
-			pthread_create(&hilo_manejadorProceso,NULL,manejadorProceso,(void*)(cpuUtilizada,proceso->pcb->pid,socketMemoria)); //??
-			return cpuUtilizada;
-		}
-	}
-}
-
-t_proceso* chequearListas(int pid){
-	t_proceso* proceso;
-	t_queue* colaAux = queue_create();
-	colaAux = estado->nuevo;
-	if((proceso=dameProceso(colaAux,pid))!=NULL){
-		queue_destroy(colaAux);
-		return proceso;
-	}
-	else if((proceso=dameProceso(colaAux,pid))!=NULL){
-		queue_destroy(colaAux);
-		return proceso;
-	}
-	else if((proceso=dameProceso(colaAux,pid))!=NULL){
-		queue_destroy(colaAux);
-		return proceso;
-	}
-	else if((proceso=dameProceso(colaAux,pid))!=NULL){
-		queue_destroy(colaAux);
-		return proceso;
-	}
-	else{
-		queue_destroy(colaAux);
-		return NULL;
-	}
-}
-
-t_queue* chequearEstado(int pid){
-	t_proceso* proceso;
-	t_queue* colaAux = queue_create();
-	colaAux = estado->nuevo;
-	t_queue* colaAux2 = queue_create();
-	colaAux2 = estado->listo;
-	t_queue* colaAux3 = queue_create();
-	colaAux3 = estado->ejecutando;
-	t_queue* colaAux4 = queue_create();
-	colaAux4 = estado->bloqueado;
-
-	if((proceso=dameProceso(colaAux,pid))!=NULL){
-		queue_destroy(colaAux);
-		queue_destroy(colaAux2);
-		queue_destroy(colaAux3);
-		queue_destroy(colaAux4);
-		return estado->nuevo;
-	}
-	else if((proceso=dameProceso(colaAux2,pid))!=NULL){
-		queue_destroy(colaAux);
-		queue_destroy(colaAux2);
-		queue_destroy(colaAux3);
-		queue_destroy(colaAux4);
-		return estado->listo;
-	}
-	else if((proceso=dameProceso(colaAux3,pid))!=NULL){
-		queue_destroy(colaAux);
-		queue_destroy(colaAux2);
-		queue_destroy(colaAux3);
-		queue_destroy(colaAux4);
-		return estado->ejecutando;
-	}
-	else if((proceso=dameProceso(colaAux4,pid))!=NULL){
-		queue_destroy(colaAux);
-		queue_destroy(colaAux2);
-		queue_destroy(colaAux3);
-		queue_destroy(colaAux4);
-		return estado->bloqueado;
-	}
-	else{
-		queue_destroy(colaAux);
-		queue_destroy(colaAux2);
-		queue_destroy(colaAux3);
-		queue_destroy(colaAux4);
-		return NULL;
-	}
-}
+//VARIABLES GLOBALES
+bool estadoPlanificacionesSistema;
 
 
-//-----------------------------------------------FUNCIONES DE CONSOLA KERNEL------------------------------------------
 
-t_list* filtrarLista(int socket){
-	t_list* listaFiltrada = list_create();
-	int i = 0;
+//VARIABLES DE CONFIGURACION DEL KERNEL
+int PUERTO_PROG;
+int PUERTO_CPU;
+char* IP_FS;
+int PUERTO_MEMORIA;
+char* IP_MEMORIA;
+int PUERTO_FS;
+int QUANTUM;
+int QUANTUM_SLEEP;
+char* ALGORITMO;
+int GRADO_MULTIPROG;
+char** SEM_IDS;
+char** SEM_UNIT;
+char** SHERED_VARS;
+char** STACK_SIZE;
 
-	t_queue* colaAuxiliar = queue_create();
-	colaAuxiliar = estado->ejecutando;
-	for(;i<(queue_size(estado->ejecutando));i++){
-		t_proceso* proceso = queue_peek(colaAuxiliar);
-		queue_pop(colaAuxiliar);
-		if(((int)proceso->socket_CONSOLA)==socket){
-			list_add(listaFiltrada, proceso);
-		}
-	}
-	queue_destroy(colaAuxiliar);
-
-	colaAuxiliar = queue_create();
-	colaAuxiliar = estado->bloqueado;
-	for(;i<(queue_size(estado->bloqueado));i++){
-		t_proceso* proceso = queue_peek(colaAuxiliar);
-		queue_pop(colaAuxiliar);
-		if(((int)proceso->socket_CONSOLA)==socket){
-			list_add(listaFiltrada, proceso);
-		}
-	}
-	queue_destroy(colaAuxiliar);
-
-	colaAuxiliar = queue_create();
-	colaAuxiliar = estado->listo;
-	for(;i<(queue_size(estado->listo));i++){
-		t_proceso* proceso = queue_peek(colaAuxiliar);
-		queue_pop(colaAuxiliar);
-		if(((int)proceso->socket_CONSOLA)==socket){
-			list_add(listaFiltrada, proceso);
-		}
-	}
-	queue_destroy(colaAuxiliar);
-
-	colaAuxiliar = queue_create();
-	colaAuxiliar = estado->nuevo;
-	for(;i<(queue_size(estado->nuevo));i++){
-		t_proceso* proceso = queue_peek(colaAuxiliar);
-		queue_pop(colaAuxiliar);
-		if(((int)proceso->socket_CONSOLA)==socket){
-			list_add(listaFiltrada, proceso);
-		}
-	}
-	queue_destroy(colaAuxiliar);
-
-	return listaFiltrada;
-	list_destroy(listaFiltrada);
-}
-
-void verificarProcesos(socketConsola){
-	t_list* listaFiltrada = list_create();
-	listaFiltrada = filtrarLista(socketConsola);
-	int i=0;
-	for(;i<(list_size(listaFiltrada));i++){
-		t_proceso* proceso = list_get(listaFiltrada, i);
-		proceso->pcb->exitCode = -6;
-		t_queue* cola = chequearEstado(proceso->pcb->pid);
-		enviarASalida(cola,proceso->pcb->pid);
-	}
-	list_destroy(listaFiltrada);
-}
-
-void finalizarPrograma(int pid){
-	t_proceso* proceso;
-	if((proceso=chequearListas(pid))!=NULL){
-		proceso->abortado=true;
-		t_queue* cola = chequearEstado(pid);
-		enviarASalida(cola,proceso->pcb->pid);
-		proceso->pcb->exitCode=-7;
-	}
-	else{
-		log_info(loggerKernel,"No se encontro el proceso a finalizar xD");
-	}
-}
-
-void consultarListado(){
-	int tamanio = list_size(tablaKernel);
-	int posicion = 0;
-	for(; posicion<tamanio;posicion++){
-		TablaProceso* tk = list_get(tablaKernel, posicion); //A los gomasos ??
-		printf("%d ", tk->pid);
-	}
-}
-
-t_queue* chequearQueColaEs(char* estadoRecibido){
-	if(string_equals_ignore_case(estadoRecibido, "ready")){
-		return estado->listo;
-	} else if(string_equals_ignore_case(estadoRecibido, "exec")){
-		return estado->ejecutando;
-	} else if(string_equals_ignore_case(estadoRecibido, "new")){
-		return estado->nuevo;
-	} else if(string_equals_ignore_case(estadoRecibido, "exit")){
-		return estado->finalizado;
-	} else {
-		return NULL;
-	}
-}
-
-void consultarEstado(char* estado){
-	t_queue* cola = chequearQueColaEs(estado);
-	int tamanio = list_size(cola->elements);
-	int posicion = 0;
-	if(cola!=NULL){
-		for(; posicion<tamanio;posicion++){
-			t_proceso* tp = list_get(cola->elements, posicion);
-			printf("%d ", tp->pcb->pid);
-		}
-	}
-	else{
-		puts("Ecolecua");
-	}
-}
-
-void modificarGradoMultiprogramacion (){
-	if (!queue_is_empty(estado->nuevo)){
-		grado_Multiprog = queue_size(estado->nuevo);
-	}
-}
-
-void detenerPlanificacion(){
-	estadoPlanificacion=false;
-}
-
-void reanudarPlanificacion(){
-	estadoPlanificacion=true;
-}
-//----------------------------------------FUNCIONES KERNEL------------------------------------------
+//--------------------------------------------CONFIGURACION INICIAL DEL KERNEL---------------------------------
 void imprimirArrayDeChar(char* arrayDeChar[]) {
 	int i = 0;
 	printf("[");
@@ -816,23 +129,23 @@ void imprimirArrayDeInt(int arrayDeInt[]) {
 }
 void crearKernel(t_config *configuracion) {
 	verificarParametrosCrear(configuracion, 14);
-	puerto_Prog = config_get_int_value(configuracion, "PUERTO_PROG");
-	puerto_Cpu = config_get_int_value(configuracion, "PUERTO_CPU");
-	ip_FS.numero = string_new();
-	string_append(&ip_FS.numero, config_get_string_value(configuracion,"IP_FS"));
-	puerto_Memoria = config_get_int_value(configuracion, "PUERTO_MEMORIA");
-	ip_Memoria.numero = string_new();
-	string_append(&ip_Memoria.numero, config_get_string_value(configuracion,"IP_MEMORIA"));
-	puerto_FS = config_get_int_value(configuracion, "PUERTO_FS");
-	quantum = config_get_int_value(configuracion, "QUANTUM");
-	quantum_Sleep = config_get_int_value(configuracion, "QUANTUM_SLEEP");
-	algoritmo = string_new();
-	string_append(&algoritmo, config_get_string_value(configuracion,"ALGORITMO"));
-	grado_Multiprog = config_get_int_value(configuracion,"GRADO_MULTIPROG");
-	sem_Ids = config_get_array_value(configuracion, "SEM_IDS");
-	sem_Init = config_get_array_value(configuracion, "SEM_INIT");
-	shared_Vars = config_get_array_value(configuracion, "SHARED_VARS");
-	stack_Size = config_get_int_value(configuracion, "STACK_SIZE");
+	PUERTO_PROG = config_get_int_value(configuracion, "PUERTO_PROG");
+	PUERTO_CPU = config_get_int_value(configuracion, "PUERTO_CPU");
+	IP_FS = string_new();
+	string_append(&IP_FS, config_get_string_value(configuracion,"IP_FS"));
+	PUERTO_MEMORIA = config_get_int_value(configuracion, "PUERTO_MEMORIA");
+	IP_MEMORIA = string_new();
+	string_append(&IP_MEMORIA, config_get_string_value(configuracion,"IP_MEMORIA"));
+	PUERTO_FS = config_get_int_value(configuracion, "PUERTO_FS");
+	QUANTUM = config_get_int_value(configuracion, "QUANTUM");
+	QUANTUM_SLEEP = config_get_int_value(configuracion, "QUANTUM_SLEEP");
+	ALGORITMO = string_new();
+	string_append(&ALGORITMO, config_get_string_value(configuracion,"ALGORITMO"));
+	GRADO_MULTIPROG = config_get_int_value(configuracion,"GRADO_MULTIPROG");
+	SEM_IDS = config_get_array_value(configuracion, "SEM_IDS");
+	SEM_UNIT = config_get_array_value(configuracion, "SEM_INIT");
+	SHERED_VARS = config_get_array_value(configuracion, "SHARED_VARS");
+	STACK_SIZE = config_get_int_value(configuracion, "STACK_SIZE");
 }
 
 void inicializarKernel(char *path) {
@@ -841,35 +154,26 @@ void inicializarKernel(char *path) {
 	config_destroy(configuracionKernel);
 }
 void mostrarConfiguracionesKernel() {
-	printf("PUERTO_PROG=%d\n", puerto_Prog);
-	printf("PUERTO_CPU=%d\n", puerto_Cpu);
-	printf("IP_FS=%s\n", ip_FS.numero);
-	printf("PUERTO_FS=%d\n", puerto_FS);
-	printf("IP_MEMORIA=%s\n", ip_Memoria.numero);
-	printf("PUERTO_MEMORIA=%d\n", puerto_Memoria);
-	printf("QUANTUM=%d\n", quantum);
-	printf("QUANTUM_SLEEP=%d\n", quantum_Sleep);
-	printf("ALGORITMO=%s\n", algoritmo);
-	printf("GRADO_MULTIPROG=%d\n", grado_Multiprog);
+	printf("PUERTO_PROG=%d\n",PUERTO_PROG);
+	printf("PUERTO_CPU=%d\n",PUERTO_CPU);
+	printf("IP_FS=%s\n", IP_FS);
+	printf("PUERTO_FS=%d\n",PUERTO_FS);
+	printf("IP_MEMORIA=%s\n",IP_MEMORIA);
+	printf("PUERTO_MEMORIA=%d\n",PUERTO_MEMORIA);
+	printf("QUANTUM=%d\n", QUANTUM);
+	printf("QUANTUM_SLEEP=%d\n", QUANTUM_SLEEP);
+	printf("ALGORITMO=%s\n", ALGORITMO);
+	printf("GRADO_MULTIPROG=%d\n", GRADO_MULTIPROG);
 	printf("SEM_IDS=");
-	imprimirArrayDeChar(sem_Ids);
+	imprimirArrayDeChar(SEM_IDS);
 	printf("SEM_INIT=");
-	imprimirArrayDeInt(sem_Init);
+	imprimirArrayDeInt(SEM_UNIT);
 	printf("SHARED_VARS=");
-	imprimirArrayDeChar(shared_Vars);
-	printf("STACK_SIZE=%d\n", stack_Size);
+	imprimirArrayDeChar(SHERED_VARS);
+	printf("STACK_SIZE=%d\n", STACK_SIZE);
 }
 
-int aumentarPID() {
-	pid_actual = pid_actual + 1;
-	return pid_actual;
-}
-
-int disminuirPID() {
-	pid_actual = pid_actual - 1;
-	return pid_actual;
-}
-
+//------------------------------------------ FUNCIONES AUXILIARES PARA PCB------------------------------------
 t_intructions* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
 	t_intructions* code = malloc((sizeof(int)*2)*metadata_program->instrucciones_size);
 	int i = 0;
@@ -883,112 +187,87 @@ t_intructions* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program
 	return code;
 }
 
-char* cargarEtiquetasIndex(t_metadata_program* metadata_program,int sizeEtiquetasIndex) {
+void inicializarStack(PCB *unPCB){
+	unPCB->contextos = list_create();
+	unPCB->contextos->args = list_create();
+	unPCB->contextos->vars = list_create();
+	unPCB->contextos->pos = 0;
+	//HACE FALTA INICIALIZAR EL RETVAR?
+}
+
+char* cargarEtiquetas(t_metadata_program* metadata_program,int sizeEtiquetasIndex) {
 	char* etiquetas = malloc(sizeEtiquetasIndex * sizeof(char));
 	memcpy(etiquetas, metadata_program->etiquetas,sizeEtiquetasIndex * sizeof(char));
 	return etiquetas;
 }
 
-t_list* inicializarStack() {
-	Stack* stack = malloc(sizeof(Stack));
-	t_list* contexto = list_create();
-	//t_list *contextocero;
-	//contextocero = list_create();
+//----------------------------------------PCB----------------------------------------------//
 
-	stack->args = list_create();
-	stack->vars = list_create();
-	stack->pos = 0;
 
-	list_add(contexto, stack);
 
-	return contexto;
 
-	//return contextocero;
-}
-
-PCB* crearPCB(char* buffer,int tamanioBuffer,int cantPag) {
-	t_metadata_program* metadata_program = metadata_desde_literal(buffer);
+PCB* crearPCB(char* codigo,int tamanioCodigo,int cantPag, int socketConsola) {
+	t_metadata_program* metadata_program = metadata_desde_literal(codigo);
 	PCB* unPCB = malloc(sizeof(PCB));
 
-	unPCB->pid = aumentarPID();
-	unPCB->programCounter = 0;
-	unPCB->cantidadPaginasCodigo = (int)ceil((double)tamanioBuffer / (double)cantPag);
-	unPCB->cod = cargarCodeIndex(buffer, metadata_program);
-	unPCB->tamEtiquetas = metadata_program->etiquetas_size;
-	unPCB->etiquetas = cargarEtiquetasIndex(metadata_program,unPCB->tamEtiquetas);
-	unPCB->contextos = inicializarStack();
-	unPCB->tamContextos= 1;
+	unPCB->pid=pidActual;
+	unPCB->programCounter=0;
+	unPCB->estaAbortado=false;
+	unPCB->exitCode=0;
+	unPCB->indiceCodigo=cargarCodeIndex(codigo,metadata_program);
+	unPCB->cantidadPaginasCodigo=ceil((double)tamanioCodigo/(double)cantPag);
+	inicializarStack(unPCB);
+	unPCB->tamanioEtiquetas=metadata_program->instrucciones_size;
+	unPCB->indice_etiquetas=cargarEtiquetas(metadata_program,unPCB->tamanioEtiquetas);
+	unPCB->tablaHeap=malloc(sizeof(tablaHeap));
+	unPCB->socket=socketConsola;
+	unPCB->estado="NUEVO";
 
+	pidActual++;
+
+	log_debug(loggerKernel, "PCB creada para el pid: %i ",unPCB->pid);
 	metadata_destruir(metadata_program);
+
+	queue_push(colaNuevo,unPCB);
+	log_debug(loggerKernel, "El pid: %i ha ingresado a la cola de nuevo.",unPCB->pid);
 
 	return unPCB;
 }
 
-void realizarHandshakeMemoria(int socket) {
-	sendDeNotificacion(socket, SOY_KERNEL_MEMORIA);
-	paquete* paqueteConPaginas = recvRemasterizado(socket);
-	if(paqueteConPaginas->tipoMsj == TAMANIO_PAGINA){
-		TAM_PAGINA = *(int*)paqueteConPaginas->mensaje;
-	}else{
-		log_info(loggerKernel, "Error al recibir el tamanio de pagina de memoria.");
-		exit(-1);
+
+//--------------ADMINISTRACION DE PROGRAMAS---------------//
+void enviarCodigoDeProgramaAMemoria(char* codigo){
+	void *codigoParaMemoria;
+	int i;
+	int tamanioDeCodigoRestante = string_length(codigo);
+	int cantidadDePaginasQueOcupa = tamanioDeCodigoRestante/TAMANIO_PAGINA;
+	if((tamanioDeCodigoRestante % TAMANIO_PAGINA) != 0){
+		cantidadDePaginasQueOcupa++;
 	}
-	free(paqueteConPaginas);
-}
-
-void handshakeCPU(int socket){
-	void *buffer = malloc(string_length(algoritmo)+sizeof(int));
-	memcpy(buffer, algoritmo, string_length(algoritmo));
-	if(string_equals_ignore_case(algoritmo, "RR")){
-		memcpy(buffer+string_length(algoritmo), &quantum, sizeof(int));
-	}else{
-		int quantumDeMentira = -1;
-		memcpy(buffer+string_length(algoritmo), &quantumDeMentira, sizeof(int));
+	for(i = 0; i<cantidadDePaginasQueOcupa; i++){
+		int tamanioMensaje;
+		codigoParaMemoria = malloc(tamanioDeCodigoRestante);
+		memcpy(codigoParaMemoria, codigo+(i*TAMANIO_PAGINA), TAMANIO_PAGINA);
+		if(tamanioDeCodigoRestante>TAMANIO_PAGINA){
+			tamanioMensaje = TAMANIO_PAGINA;
+		}else{
+			tamanioMensaje = tamanioDeCodigoRestante;
+		}
+		sendRemasterizado(socketServidorMemoria, GUARDAR_BYTES, tamanioMensaje, codigoParaMemoria);
+		free(codigoParaMemoria);
+		tamanioDeCodigoRestante -= TAMANIO_PAGINA;
 	}
-	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(algoritmo)+sizeof(int), buffer);
-	free(buffer);
 }
 
-int obtenerCantidadPaginas(char* codigo) {
-	int tamanio = string_length(codigo);
-	int cantidad = tamanio/(TAM_PAGINA-sizeof(HeapMetadata)*2) + stack_Size;
-	if (tamanio % TAM_PAGINA != 0) {
-		cantidad++;
-	}
 
-	return cantidad;
+
+//--------------------------------------HILOS-----------------------------------//
+
+
+//CONSOLA KERNEL
+void modificarGradoMultiprogramacion(int grado){
+	GRADO_MULTIPROG=grado;
 }
-
-void verificarEspacioMemoria(int cantPag) {
-	void* mensaje = malloc(sizeof(int) * 2);
-	memcpy(mensaje, &pid_actual, sizeof(int));
-	memcpy(mensaje + sizeof(int), &cantPag, sizeof(int));
-	sendRemasterizado(socket, INICIALIZAR_PROGRAMA, sizeof(int)*2, mensaje);
-	free(mensaje);
-}
-
-//void recibirPCB(void* mensaje){
-//	memcpy(&nuevoPCB->PID,mensaje, sizeof(int));
-//	memcpy(&nuevoPCB->ProgramCounter,mensaje, sizeof(int));
-//	memcpy(&nuevoPCB->paginas_Codigo,mensaje+(sizeof(int)*2), sizeof(int));
-//	memcpy(&nuevoPCB->cod,(codeIndex*)(mensaje+(sizeof(int)*3)), sizeof(codeIndex));
-//	memcpy(&nuevoPCB->exitCode,mensaje+(sizeof(int)*3)+sizeof(codeIndex), sizeof(int));
-//	memcpy(&nuevoPCB->tamContextoActual,mensaje+(sizeof(int)*4)+sizeof(codeIndex), sizeof(int));
-//	memcpy(&nuevoPCB->contextoActual,mensaje+(sizeof(int)*5)+sizeof(codeIndex), nuevoPCB->tamContextoActual);
-//	memcpy(&nuevoPCB->tamEtiquetas,mensaje+(sizeof(int)*5)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, sizeof(int));
-//	memcpy(nuevoPCB->etiquetas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual, nuevoPCB->tamEtiquetas);
-//	memcpy(&nuevoPCB->tablaKernel.paginas, mensaje+(sizeof(int)*6)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-//	memcpy(&nuevoPCB->tablaKernel.pid,mensaje+(sizeof(int)*7)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-//	memcpy(&nuevoPCB->tablaKernel.tamaniosPaginas,mensaje+(sizeof(int)*8)+sizeof(codeIndex)+nuevoPCB->tamContextoActual+nuevoPCB->tamEtiquetas, sizeof(int));
-//
-//	free(mensaje);
-//}
-
-//--------------------------------------FUNCIONES DE ARRAY----------------------------------------
-
-
-
-//-----------------------------------MANEJADOR KERNEL----------------------------------
 
 void *manejadorTeclado(){
 	char* comando = malloc(50*sizeof(char));
@@ -1007,302 +286,290 @@ void *manejadorTeclado(){
 		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
 			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
 			finalizarPrograma((int)valorPid);
-		}else if(string_equals_ignore_case(comando, "consultarListado")){
-			consultarListado();
-		}else if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
-			char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
-			consultarEstado(estado);
-		}else if(string_equals_ignore_case(comando, "detenerPlanificacion")){
-			detenerPlanificacion();
-		}else if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
-			reanudarPlanificacion();
-		}else{ puts("Error de comando");
-		}
-		comando = realloc(comando,50*sizeof(char));
-	}
-
-	free(comando);
-}
-
-void asignarCPU(int socketDeConsola, PCB* unPCB){
-
-	t_proceso* procesoActual = malloc(sizeof(t_proceso));
-
-	if(!queue_is_empty(cola_CPU_libres)){
-		int socketCPU = (int)queue_pop(cola_CPU_libres);
-		procesoActual->abortado=false;
-		procesoActual->pcb = unPCB;
-		procesoActual->socket_CPU = socketCPU;
-		procesoActual->socket_CONSOLA = socketDeConsola;
-		queue_push(estado->ejecutando,procesoActual);
-	}
-	else{
-		procesoActual->abortado=true;
-		procesoActual->pcb = unPCB;
-		procesoActual->socket_CONSOLA = socketDeConsola;
-		queue_push(estado->listo,procesoActual);
-	}
-
-	free(procesoActual);
-}
-
-int calcularCantidadPaginas(int valor){
-	int cantidad = (valor) % (TAM_PAGINA);
-	if (valor % TAM_PAGINA != 0) {
-		cantidad++;
-	}
-	return cantidad;
-}
-
-int obtenerNumeroPagina(int pid,int* offset){
-	int i = 0;
-	int cantidad;
-	for(;i<=(list_size(tablaKernel));i++){
-		TablaProceso* tablaProceso = list_get(tablaKernel,i);
-		if(tablaProceso->pid==pid){
-			t_proceso* proceso = dameProceso(estado->listo,pid);
-			(*offset) = proceso->pcb->cod[i].start;
-			int valor =((TAM_PAGINA*(tablaProceso->paginas))-(proceso->pcb->cod[i].start));
-			cantidad = calcularCantidadPaginas(valor);
-		}
-	}
-	return cantidad;
-}
-
-void enviarDatosAMemoria(char* datos, int pid){
-	int tamanio = strlen(datos);
-	int cantidad = calcularCantidadPaginas(tamanio);
-	int i = 0;
-
-	for(;i<cantidad;i++){
-		int resto = tamanio-TAM_PAGINA*i;
-		if(resto>TAM_PAGINA){
-			void* mensaje = malloc((sizeof(int)*4)+TAM_PAGINA);
-			int* offset;
-			int numPagina = obtenerNumeroPagina(pid,offset);
-			memcpy(mensaje,&pid,sizeof(int));
-			memcpy(mensaje+sizeof(int),&numPagina, sizeof(int));
-			memcpy(mensaje+(sizeof(int)*2), &offset,sizeof(int));
-			memcpy(mensaje+(sizeof(int)*3), &TAM_PAGINA,sizeof(int));
-			memcpy(mensaje+(sizeof(int)*4), datos,TAM_PAGINA);
-			free(mensaje);
-			free(offset);
-		}
-		else{
-			void* mensaje = malloc((sizeof(int)*4)+resto);
-			int* offset;
-			int numPagina = obtenerNumeroPagina(pid,offset);
-			memcpy(mensaje,&pid,sizeof(int));
-			memcpy(mensaje+sizeof(int),&numPagina, sizeof(int));
-			memcpy(mensaje+(sizeof(int)*2), &offset,sizeof(int));
-			memcpy(mensaje+(sizeof(int)*3), &resto,sizeof(int));
-			memcpy(mensaje+(sizeof(int)*4), datos,resto);
-			free(mensaje);
-			free(offset);
-		}
-	}
-}
-
-
-void analizarEstadoProceso(int socketDeConsola, int cantPag, PCB* unPCB, char* codigo){
-	int inicio = recvDeNotificacion(socketParaMemoria);
-	if(inicio==INICIO_EXITOSO){
-		log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
-		TablaProceso *procesoAAgregar;
-		procesoAAgregar = malloc(sizeof(TablaProceso));
-		procesoAAgregar->pid = pid_actual;
-		procesoAAgregar->tamaniosPaginas = TAM_PAGINA;
-		procesoAAgregar->paginas = cantPag;
-		list_add(tablaKernel, procesoAAgregar);
-		enviarDatosAMemoria(codigo,unPCB->pid);
-		asignarCPU(socketDeConsola,unPCB);
-		sendRemasterizado(socketDeConsola, MENSAJE_PID, sizeof(int), &pid_actual);
-	}
-	else{
-		  char* espacioInsuficiente = malloc(sizeof(char)*60);
-		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
-		  sendRemasterizado((int)socketDeConsola,ESPACIO_INSUFICIENTE, sizeof(int), &espacioInsuficiente);
-		  disminuirPID();
-	}
-}
-
-void* manejadorConexionConsola (void* socket){
-  while(1){
-	  paquete* paqueteRecibidoDeConsola;
-	  int socketDeConsola = *(int*)socket;
-	  paqueteRecibidoDeConsola = recvRemasterizado(socketDeConsola);
-	     paquete* mensajeAux;
-	      switch (paqueteRecibidoDeConsola->tipoMsj) {
-			  case MENSAJE_CODIGO:
-				  log_info(loggerKernel,"Archivo recibido correctamente...\n");
-				  int cantPag = obtenerCantidadPaginas((char*)paqueteRecibidoDeConsola->mensaje);
-				  PCB* unPCB = crearPCB(paqueteRecibidoDeConsola->mensaje,paqueteRecibidoDeConsola->tamMsj,cantPag);
-				  verificarEspacioMemoria(cantPag);
-				  analizarEstadoProceso(socketDeConsola, cantPag, unPCB,(char*)paqueteRecibidoDeConsola->Mensaje);
-				  free(paqueteRecibidoDeConsola);
-				  break;
-			  case CORTO:
-				  printf("El socket %d corto la conexion\n",socketDeConsola);
-				  verificarProcesos(socketDeConsola);
-				  close(socketDeConsola);
-				  puts("Te la comes igual que ivan el trolazo xD");
-				  break;
-			  case FINALIZAR_PROGRAMA:
-				  mensajeAux = recvRemasterizado(socketDeConsola);
-				  finalizarPrograma(*(int*)mensajeAux->mensaje);
-				  break;
-			  default:
-					perror("No se reconoce el mensaje enviado por Consola");
-			  }
-	  }
-  }
-
-//-----------------------------------MANEJADOR MEMORIA----------------------------------
-//void *manejadorConexionMemoria (void* socketMemoria){
-//  while(1){
-//	  paquete* paqueteRecibidoDeMemoria;
-//	  paqueteRecibidoDeMemoria = recvRemasterizado(*(int*)socketMemoria);
-//	  paquete* mensajeAux;
-//	      switch (paqueteRecibidoDeMemoria->tipoMsj) {
-//	      	  case ESPACIO_INSUFICIENTE: ;
-//	      		  char* espacioInsuficiente = malloc(sizeof(char)*60);
-//	      		  espacioInsuficiente = "No hay espacio suficiente para ejecutar el programa";
-//	      		  sendRemasterizado(socketConsola, pid_actual, sizeof(int), &espacioInsuficiente);
-//	      		  disminuirPID();
-//	      		  free(espacioInsuficiente);
-//	      		  break;
-//	      	  case INICIO_EXITOSO: ;
-//	      	  	  TablaKernel *proceso;
-//	      	  	  t_proceso* t_proceso;
-//	      	  	  t_proceso = malloc(sizeof(t_proceso));
-//	      	  	  proceso->pid = pid_actual;
-//	      	  	  proceso->tamaniosPaginas = TAM_PAGINA;
-//	      	  	  proceso->paginas = cantPag;
-//	      	  	  list_add(tablaKernel, proceso);
-//	      	  	  log_info(loggerKernel,"Paginas disponibles para el proceso...\n");
-//	      	  	  prepararProgramaEnMemoria(*(int*)socketMemoria,INICIAR_PROGRAMA);
-//	      	  	  enviarPCB(socketCPU);
-//	      	  	  t_proceso->abortado=false;
-//	      	  	  t_proceso->pcb = nuevoPCB;
-//	      	  	  t_proceso->socket_CPU = socketCPU;
-//	      	  	  t_proceso->socket_CONSOLA = socketConsola;
-//	      	  	  queue_push(estado->listo,t_proceso);
-//	      	  	  sendRemasterizado(socketConsola, MENSAJE_PID, sizeof(int), t_proceso->pcb->PID);
-//	      	  	  break;
-//	      	  case LEER_DATOS: ;
-//	      		mensajeAux = recvRemasterizado(*(int*)socketMemoria);
-//	      		sendRemasterizado(socketCPU, LEER_DATOS, mensajeAux->tamMsj, &(mensajeAux->mensaje));
-//	      		free(mensajeAux);
-//	      		break;
-//	      	  default:
-//	      		  perror("No se reconoce el mensaje enviado por Memoria");
-//	      	  }
-//	  }
-//  }
-
-void crearEstados(){
-	estado = malloc(sizeof(Estados));
-	estado->bloqueado = queue_create();
-	estado->ejecutando = queue_create();
-	estado->finalizado = queue_create();
-	estado->listo = queue_create();
-	estado->nuevo = queue_create();
-}
-
-//-----------------------------------MAIN-----------------------------------------------
-
-int main(int argc, char *argv[]) {
-	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
-	tablaKernel = list_create();
-	verificarParametrosInicio(argc);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
-	inicializarKernel(argv[1]);
-	cola_CPU_libres = queue_create();
-	crearEstados();
-	pid_actual = 1;
-	int socketCPU;
-	int socketConsola;
-	int* socketDeConsola;
-	int* socketCPUAAgregar;
-	sem_init(&sem_ready, 0, 0);
-	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU;
-	int socketParaFileSystem, socketMaxCliente, socketMaxMaster, socketAChequear, socketQueAcepta;
-	fd_set socketsCliente, socketsConPeticion, socketsMaster;
-	FD_ZERO(&socketsCliente);
-	FD_ZERO(&socketsConPeticion);
-	FD_ZERO(&socketsMaster);
-	mostrarConfiguracionesKernel();
-	socketCPU = ponerseAEscucharClientes(puerto_Cpu, 0);
-	socketConsola = ponerseAEscucharClientes(puerto_Prog, 0);
-	socketParaMemoria = conectarAServer(ip_Memoria.numero, puerto_Memoria);
-	socketParaFileSystem = conectarAServer(ip_FS.numero, puerto_FS);
-	FD_SET(socketCPU, &socketsCliente);
-	FD_SET(socketConsola, &socketsCliente);
-	FD_SET(socketParaMemoria, &socketsMaster);
-	FD_SET(socketParaFileSystem, &socketsMaster);
-	socketMaxCliente = calcularSocketMaximo(socketCPU,socketConsola);
-	socketMaxMaster = calcularSocketMaximo(socketParaMemoria,socketParaFileSystem);
-	realizarHandshakeMemoria(socketParaMemoria);
-	//realizarHandshake(socketParaFileSystem,FILESYSTEM);
-
-	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL);
-
-	while (1) {
-		socketsConPeticion = socketsCliente;
-		if (select(socketMaxCliente + 1, &socketsConPeticion, NULL, NULL,NULL) == -1) {
-			perror("Error de select");
-			exit(-1);
-		}
-		for (socketAChequear = 0; socketAChequear <= socketMaxCliente;socketAChequear++) {
-			if (FD_ISSET(socketAChequear, &socketsConPeticion)) {
-				if (socketAChequear == socketConsola) {
-					socketQueAcepta = aceptarConexionDeCliente(socketConsola);
-					FD_SET(socketQueAcepta, &socketsMaster);
-					FD_SET(socketQueAcepta, &socketsCliente);
-					socketMaxCliente = calcularSocketMaximo(socketQueAcepta,socketMaxCliente);
-					socketMaxMaster = calcularSocketMaximo(socketQueAcepta,socketMaxMaster);
-				}
-				else if(socketAChequear == socketCPU){
-					socketQueAcepta = aceptarConexionDeCliente(socketCPU);
-					FD_SET(socketQueAcepta, &socketsMaster);
-					FD_SET(socketQueAcepta, &socketsCliente);
-					socketMaxCliente = calcularSocketMaximo(socketQueAcepta,socketMaxCliente);
-					socketMaxMaster = calcularSocketMaximo(socketQueAcepta,socketMaxMaster);
-				}
-				else {
-					int tipoMsj = recvDeNotificacion(socketAChequear);
-					switch (tipoMsj) {
-						case CONSOLA:
-							socketDeConsola = malloc(sizeof(int));
-							*socketDeConsola = socketAChequear;
-							log_info(loggerKernel,"Se conecto nueva consola...\n");
-							pthread_create(&hiloManejadorConsola,NULL,manejadorConexionConsola,(void*)socketDeConsola);
-							FD_CLR(socketAChequear,&socketsCliente);
-							break;
-						case CPU:
-							socketCPUAAgregar = malloc(sizeof(int));
-							*socketCPUAAgregar = socketAChequear;
-							queue_push(cola_CPU_libres,socketCPUAAgregar);
-							handshakeCPU(socketAChequear);
-							log_info(loggerKernel,"Se registro nueva CPU...\n");
-							FD_CLR(socketAChequear,&socketsCliente);
-							break;
-						case ERROR:
-							perror("Error de recv");
-							close(socketAChequear);
-							FD_CLR(socketAChequear, &socketsMaster);
-							FD_CLR(socketAChequear, &socketsCliente);
-							exit(-1);
-						default:
-							puts("Conexion erronea");
-							FD_CLR(socketAChequear, &socketsMaster);
-							FD_CLR(socketAChequear, &socketsCliente);
-							close(socketAChequear);
+		}else{
+			if(string_equals_ignore_case(comando, "consultarListado")){
+				consultarListado();
+			}else{
+				if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
+					char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
+					consultarEstado(estado);
+				}else{
+					if(string_equals_ignore_case(comando, "detenerPlanificacion")){
+						detenerPlanificacion();
+					}else{
+						if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
+							reanudarPlanificacion();
+						}else{
+							if(string_equals_ignore_case(comando, "modificarGradoDeMultiprogramacion")){
+								modificarGradoMultiprogramacion(grado);
+							}else{
+								puts("Error de comando");
+							}
+							comando = realloc(comando,50*sizeof(char));
 						}
 					}
 				}
 			}
 		}
-		return EXIT_SUCCESS;
+	}
+
+	free(comando);
+}
+
+
+
+//PLANIFICACION DEL SISTEMA
+
+void manejarColaNueva(){
+	if(queue_size(colaNuevo)<GRADO_MULTIPROG){
+		PCB* pcbNueva=malloc(sizeof(PCB));
+		pcbNueva=queue_pop(colaNuevo);
+		queue_push(colaListo,pcbNueva);
+		log_info(loggerKernel,"Se ha agregado la PCB del proceso %d a la cola de Listo", pcbNueva->pid);
+	}else{
+		log_info(loggerKernel,"No se ha podido agregar ningun proceso a la cola de listo por grado de multiprogramacion.");
+	}
+
+}
+
+
+void planificarSistema(){
+	while(1){
+		while(estadoPlanificacionesSistema){
+			if(!queue_is_empty(colaNuevo)){
+				manejarColaNueva();
+			}
+
+		}
+	}
+}
+
+//CPU
+bool mismoPath(tablaGlobalFS* entradaGFS){
+	return string_equals_ignore_case(entradaGFS->file,);
+}
+
+
+void agregarEntradaTG(char* path){
+	tablaGlobalFS entradaGFS;
+	if(list_find(tablaAdminGlobal,(void*)mismoPath){
+
+	}
+}
+
+
+void abrirArchivo(pid,path,flags){
+	if(validarArchivo(path)){
+		agregarEntradaTG(path);
+	}
+}
+
+void *manejadorCPU(void* socket){
+  int socketCPU = *(int*)socket;
+  bool estaOcupadaCPU = false;
+  PCB* procesoParaCPU;
+  while(!estaOcupadaCPU && estadoPlanificacionesSistema){
+    if(!queue_is_empty(colaListo)){
+      //SEMAFOROS
+        procesoParaCPU = queue_pop(colaListo);
+        queue_push(colaEjecutando,procesoParaCPU);
+        estaOcupadaCPU = true;
+      //SEMAFOROS
+    }
+  }
+  enviarPCB(socketCPU, procesoParaCPU);
+  //VARIABLES
+  PCB* pcbAfectado;
+  int pid=0;
+  char* path=string_new();
+  int tamanioPath;
+  t_banderas* flags=malloc(sizeof(t_banderas));
+
+
+  while(estaOcupadaCPU){
+    paquete *paqueteRecibidoDeCPU;
+    paqueteRecibidoDeCPU = recvRemasterizado(socketCPU);
+    switch (paqueteRecibidoDeCPU->tipoMsj) {
+      case WAIT_SEMAFORO:
+
+        break;
+      case SIGNAL_SEMAFORO:
+        signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
+        break;
+      case RESERVAR_HEAP:
+
+        break;
+      case LIBERAR_HEAP:
+
+        break;
+      case LEER_DATOS_ARCHIVO:
+        leerDatos(procesoParaCPU->pcb->pid, paqueteRecibidoDeCPU->mensaje);
+        break;
+      case ESCRIBIR_DATOS_ARCHIVO:
+
+        break;
+      case PROCESO_ABORTADO:
+        pcbAfectado = desserializarPCB(paqueteRecibidoDeCPU);
+        pcbAfectado->estaAbortado=true;
+        pcbAfectado->exitCode=-10;//DEFINIR EXIT CODE
+        queue_push(colaFinalizado, pcbAfectado);
+        sendRemasterizado(socketMemoria, FINALIZAR_PROCESO_MEMORIA, sizeof(int), &pcbAfectado->pid);// PROBAR SI FUNCIONA
+        estaOcupadaCPU = false;
+        break;
+      case PROCESO_FINALIZADO:
+    	pcbAfectado= desserializarPCB(paqueteRecibidoDeCPU);
+    	pcbAfectado->estado=false;
+    	pcbAfectado->exitCode=0;
+        queue_push(colaFinalizado, pcbAfectado);
+        estaOcupadaCPU = false;
+        break;
+      case PROCESO_BLOQUEADO:
+    	pcbAfectado = desserializarPCB(paqueteRecibidoDeCPU);
+    	pcbAfectado->estaAbortado=false;
+        queue_push(colaBloqueado, pcbAfectado);
+        estaOcupadaCPU = false;
+        break;
+      case ABRIR_ARCHIVO:
+    	  paquete* paqueteAbrirArchivo;
+    	  paqueteAbrirArchivo=recvRemasterizado(socketCPU);
+    	  memcpy(pid,paqueteAbrirArchivo->mensaje+sizeof(int),sizeof(int));
+    	  tamanioPath=paqueteAbrirArchivo->tamMsj-sizeof(int)-sizeof(t_banderas);
+    	  memcpy(path,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath,tamanioPath);
+    	  memcpy(flags,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath,sizeof(t_banderas),sizeof(t_banderas));
+    	  abrirArchivo(pid,path,flags);
+    	  break;
+      case BORRAR_ARCHIVO:
+        break;
+      case CERRAR_ARCHIVO:
+        break;
+      case MOVER_CURSOR:
+        break;
+      case OBTENER_ARCHIVO:
+        break;
+      case GUARDAR_DATOS_ARCHIVO:
+        break;
+    }
+  }
+}
+
+
+
+//--------------------------------------HANDSHAKES-----------------------------------//
+void realizarHandshakeMemoria(int socket) {
+	sendDeNotificacion(socket, SOY_KERNEL_MEMORIA);
+	paquete* paqueteConPaginas = recvRemasterizado(socket);
+	if(paqueteConPaginas->tipoMsj == TAMANIO_PAGINA){
+		TAMANIO_PAGINA = *(int*)paqueteConPaginas->mensaje;
+	}else{
+		log_info(loggerKernel, "Error al recibir el tamanio de pagina de memoria.");
+		exit(-1);
+	}
+	free(paqueteConPaginas);
+}
+
+void realizarhandshakeCPU(int socket){
+	void *buffer = malloc(string_length(ALGORITMO)+sizeof(int)*2);
+	memcpy(buffer, ALGORITMO, string_length(ALGORITMO));
+	if(string_equals_ignore_case(ALGORITMO, "RR")){
+		memcpy(buffer+string_length(ALGORITMO), &QUANTUM, sizeof(int));
+	}else{
+		int quantumDeMentira = -1;
+		memcpy(buffer+string_length(ALGORITMO), &quantumDeMentira, sizeof(int));
+	}
+	memcpy(buffer+string_length(ALGORITMO)+sizeof(int), &QUANTUM_SLEEP, sizeof(int));
+	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(ALGORITMO)+sizeof(int)*2, buffer);
+	free(buffer);
+}
+
+//--------------------------------------MAIN-----------------------------------//
+
+int main (int argc, char *argv[]){
+	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
+	//PUESTA EN MARCHA
+	verificarParametrosInicio(argc);
+	inicilizarKernel(argv[1]);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
+
+	//INICIALIZANDO VARIABLES
+	pidActual = 0;
+	int socketEscuchaCPU, socketEscuchaConsolas, socketMaxCliente, socketAChequear, socketQueAceptaClientes;
+	int *socketConsola, socketCPU;
+	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU, hiloManejadorPlanificacion;
+	fd_set socketsCliente, socketsAuxiliaresCliente;
+	FD_ZERO(&socketsCliente);
+	FD_ZERO(&socketsAuxiliaresCliente);
+	mostrarConfiguracionesKernel();
+	estadoPlanificacionesSistema=true;
+
+	//INICIALIZANDO LISTAS FS
+	tablaAdminArchivos=list_create();
+	tablaAdminGlobal=list_create();
+
+	//INICIALIZANDO COLAS
+	colaBloqueado = queue_create();
+	colaEjecutando = queue_create();
+	colaFinalizado = queue_create();
+	colaListo = queue_create();
+	colaNuevo = queue_create();
+	listaDeCPULibres=queue_create();
+
+	//CONEXIONES
+	socketEscuchaCPU = ponerseAEscucharClientes(PUERTO_CPU, 0);
+	socketEscuchaConsolas = ponerseAEscucharClientes(PUERTO_CONSOLA, 0);
+	socketMemoria = conectarAServer(IP_MEMORIA, PUERTO_MEMORIA);
+	socketFS = conectarAServer(IP_FS, PUERTO_FS);
+	FD_SET(socketEscuchaCPU, &socketsCliente);
+	FD_SET(socketEscuchaConsolas, &socketsCliente);
+	socketMaxCliente = calcularSocketMaximo(socketEscuchaConsolas, socketEscuchaCPU);
+	realizarHandshakeMemoria(socketMemoria);
+	realizarHandshakeFS(socketFS);
+
+	//ADMINISTRACION DE CONEXIONES
+	pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
+	pthread_create(&hiloManejadorPlanificacion, NULL, planificarSistema, NULL);
+
+	while(1){
+		socketsAuxiliaresCliente = socketsCliente;
+		if(select(socketMaxCliente + 1, &socketsAuxiliaresCliente, NULL, NULL, NULL) == -1){
+			perror("Error de select...");
+			exit(-1);
+		}
+		for(socketAChequear = 0; socketAChequear <= socketMaxCliente; socketAChequear++){
+			if(FD_ISSET(socketAChequear, &socketsAuxiliaresCliente)){
+				if(socketAChequear == socketEscuchaConsolas){
+					socketQueAceptaClientes = aceptarConexionDeCliente(socketEscuchaConsolas);
+					FD_SET(socketQueAceptaClientes, &socketsCliente);
+					socketMaxCliente = calcularSocketMaximo(socketQueAceptaClientes, socketMaxCliente);
+				}else if(socketAChequear == socketEscuchaCPU){
+					socketQueAceptaClientes = aceptarConexionDeCliente(socketEscuchaCPU);
+					FD_SET(socketQueAceptaClientes, &socketsCliente);
+					socketMaxCliente = calcularSocketMaximo(socketQueAceptaClientes, socketMaxCliente);
+				}else{
+					int tipoMsjRecibido = recvDeNotificacion(socketAChequear);
+					switch(tipoMsjRecibido){
+						case CONSOLA:
+							socketConsola = malloc(sizeof(int));
+							*socketConsola = socketAChequear;
+							log_info(loggerKernel, "Se conecto una nueva consola con el socket %d...", socketAChequear);
+							pthread_create(&hiloManejadorConsola, NULL, manejadorConexionConsola, (void*)socketConsola);
+							FD_CLR(socketAChequear, &socketsCliente);
+							break;
+						case CPU:
+							socketCPU = malloc(sizeof(int));
+							*socketCPU = socketAChequear;
+							log_info(loggerKernel, "Se conecto una nueva CPU con el socket %d...", socketAChequear);
+							pthread_create(&hiloManejadorCPU, NULL, manejadorCPU, (void*)socketCPU);
+							break;
+						default:
+							log_info(loggerKernel, "Se recibio una conexion erronea...");
+							log_info(loggerKernel, "Cerrando socket recibido...");
+							FD_CLR(socketAChequear, &socketsCliente);
+							close(socketAChequear);
+					}
+				}
+			}
+		}
+	}
+	return EXIT_SUCCESS;
 }
