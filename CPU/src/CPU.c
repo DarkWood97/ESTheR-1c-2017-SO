@@ -66,11 +66,12 @@ void chequeameLaSignal(int senial){
 //--------HANDSHAKES--------//
 void armarDatosDeKernel(paquete *paqueteDeArmado){
 	datosParaEjecucion = malloc(sizeof(datosDeKernel));
-	int tamanioDeNombreAlgori = paqueteDeArmado->tamMsj - sizeof(int);
+	int tamanioDeNombreAlgori = paqueteDeArmado->tamMsj - sizeof(int)*2;
 	datosParaEjecucion->algoritmo = string_new();
 	char *nombreAlgoritmo = string_substring_until((char*)paqueteDeArmado->mensaje, tamanioDeNombreAlgori);
 	string_append(&datosParaEjecucion->algoritmo, nombreAlgoritmo);
 	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje+ string_length(nombreAlgoritmo), sizeof(int));
+	memcpy(&datosParaEjecucion->quantumSleep, paqueteDeArmado->mensaje+string_length(nombreAlgoritmo)+sizeof(int), sizeof(int));
 }
 
 void realizarHandshakeConKernel(){
@@ -151,10 +152,11 @@ char* pedirLineaAMemoria(){
 	if(paqueteConSentencia->tipoMsj==DATOS_DE_PAGINA){
 		memcpy(lineaDeInstruccion, paqueteConSentencia->mensaje, cuantoLeer);
 		free(paqueteConSentencia);
-		string_append(&lineaDeInstruccion, "/n");
+		string_append(&lineaDeInstruccion, "/0");
 		return lineaDeInstruccion;
 	}
 	else{
+		free(paqueteConSentencia);
 		programaEnEjecucionAbortado = true;
 		return NULL;
 	}
@@ -242,6 +244,7 @@ int main(int argc, char *argv[]) {
 			analizadorLinea(lineaDeEjecucion, &primitivas, &primitivasDeKernel);
 			modificarQuantum();
 			avanzarEnEjecucion();
+			usleep(datosParaEjecucion->quantumSleep);
 		}
 		chequearEstaAbortado();
 		chequearEstaFinalizado();
