@@ -23,11 +23,6 @@
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 
-typedef struct __attribute__((__packed__)){
-	int tipoMsj;
-	int tamMsj;
-	void* mensaje;
-}paquete;
 
 #define backlog 10 //cantidad de conexiones en la cola
 

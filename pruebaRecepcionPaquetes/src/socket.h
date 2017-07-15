@@ -8,10 +8,16 @@
 #ifndef SRC_SOCKET_H_
 #define SRC_SOCKET_H_
 
+typedef struct __attribute__((__packed__)){
+	int tipoMsj;
+	int tamMsj;
+	void* mensaje;
+}paquete;
+
 int ponerseAEscuchar(int, int);
 int aceptarConexion(int);
 void seleccionarYAceptarSockets(int);
-bool enviarMensaje(int, char*);
+bool enviarMensaje(int, void*);
 int conectarServer(char *, int);
 void verificarErrorAccept(int, struct sockaddr_in);
 void verificarErrorConexion(int, int );
