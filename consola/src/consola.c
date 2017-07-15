@@ -183,10 +183,9 @@ void finalizarHilo(programa* programaAFinalizar)
 
 void finalizarPrograma(int pid)
 {
-	sendRemasterizado(socketKernel, FINALIZAR_PROGRAMA, sizeof(int), &pid);
-
 	programa* unPrograma = buscarPrograma(pid);
 	if(unPrograma != NULL){
+		sendRemasterizado(socketKernel, FINALIZAR_PROGRAMA, sizeof(int), &pid);
 		finalizarHilo(unPrograma);
 		char* final = malloc(1000);
 		final = temporal_get_string_time();

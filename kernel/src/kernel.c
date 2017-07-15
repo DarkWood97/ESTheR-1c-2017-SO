@@ -9,14 +9,21 @@
 
 
 #define NUEVO 1
-#define LISTO 1
-#define EJECUTANDO 1
-#define BLOQUEADO 1
-#define FINALIZADO 1
-
+#define LISTO 2
+#define EJECUTANDO 3
+#define BLOQUEADO 4
+#define FINALIZADO 5
+#define CONSOLA 1005
+#define MENSAJE_CODIGO 103
+#define ENVIAR_PID 105
+#define FINALIZAR_PROGRAMA 503
+#define INICIAR_PROGRAMA 501
+#define ESCRIBIR_DATOS 505
 #define SOY_KERNEL 1002
 #define FINALIZAR_PROGRAMA_MEMORIA 503
 #define TAMANIO_PAGINA 102
+#define OPERACION_CON_MEMORIA_EXITOSA 1
+#define ESPACIO_INSUFICIENTE -2
 
 //------------------------------------------------ESTRUCTURAS--------------------------------------//
 typedef struct __attribute__((__packed__)) {
@@ -60,9 +67,10 @@ typedef struct __attribute__((__packed_)) {
 	int pid;
 	int estado;
 	int programCounter;
+	int posicionStackActual;
 	t_intructions *indiceCodigo;
 	int cantidadTIntructions;
-	int cantidadPaginasCodigo; //Lo usa CPU?
+	int cantidadPaginasCodigo;
 	t_list* indiceStack;
 	char* indiceEtiquetas;
 	tablaHeap* tablaHeap;
@@ -101,6 +109,7 @@ t_log* loggerKernel;
 int pidActual;
 int socketMemoria;
 int socketFS;
+int tamanioPagina;
 bool estadoPlanificacionesSistema;
 
 //COLAS
@@ -110,6 +119,7 @@ t_queue* colaFinalizado;
 t_queue* colaListo;
 t_queue* colaNuevo;
 t_queue* listaDeCPULibres;
+t_queue* finalizadosPorConsola;
 
 //TABLAS FS
 t_list* tablaAdminArchivos;
@@ -131,7 +141,7 @@ int GRADO_MULTIPROG;
 char** SEM_IDS;
 char** SEM_UNIT;
 char** SHERED_VARS;
-char** STACK_SIZE;
+int STACK_SIZE;
 
 //--------------------------------------------CONFIGURACION INICIAL DEL KERNEL---------------------------------
 void imprimirArrayDeChar(char* arrayDeChar[]) {
@@ -222,57 +232,45 @@ void inicializarStack(PCB *pcbNuevo){
 
 char* cargarEtiquetas(t_metadata_program* metadata_program,int sizeEtiquetasIndex) {
 	char* etiquetas = malloc(sizeEtiquetasIndex * sizeof(char));
-	memcpy(etiquetas, metadata_program->etiquetas,sizeEtiquetasIndex * sizeof(char));
-	return etiquetas;
+	if(metadata_program->cantidad_de_etiquetas>0 || metadata_program->cantidad_de_funciones>0){
+		memcpy(etiquetas, metadata_program->etiquetas,sizeEtiquetasIndex * sizeof(char));
+		return etiquetas;
+	}
+	return NULL;
+}
+
+int obtenerCantidadPaginas(char* codigoDePrograma){
+  long int tamanioCodigo = string_length(codigoDePrograma);
+  int cantidadPaginas = tamanioCodigo/(tamanioPagina-sizeof(heap)*2)+STACK_SIZE;
+  //int cantidadPaginas = tamanioCodigo / tamanioPagina;
+  if((tamanioCodigo % tamanioPagina) != 0){
+    cantidadPaginas++;
+  }
+  return cantidadPaginas;
+}
+
+int mandarInicioAMemoria(void* inicioDePrograma){
+  sendRemasterizado(socketMemoria, INICIAR_PROGRAMA, sizeof(int), inicioDePrograma);
+  return recvDeNotificacion(socketMemoria);
 }
 
 //----------------------------------------PCB----------------------------------------------//
-
-
-
-
-PCB* crearPCB(char* codigo,int tamanioCodigo,int cantPag, int socketConsola) {
-	t_metadata_program* metadata_program = metadata_desde_literal(codigo);
-	PCB* unPCB = malloc(sizeof(PCB));
-
-	unPCB->pid=pidActual;
-	unPCB->programCounter=0;
-	unPCB->estaAbortado=false;
-	unPCB->exitCode=0;
-	unPCB->indiceCodigo=cargarCodeIndex(codigo,metadata_program);
-	unPCB->cantidadPaginasCodigo=ceil((double)tamanioCodigo/(double)cantPag);
-	inicializarStack(unPCB);
-	unPCB->tamanioEtiquetas=metadata_program->instrucciones_size;
-	unPCB->indiceEtiquetas=cargarEtiquetas(metadata_program,unPCB->tamanioEtiquetas);
-	unPCB->tablaHeap=malloc(sizeof(tablaHeap));
-	unPCB->socket=socketConsola;
-	unPCB->estado="NUEVO";
-
-	pidActual++;
-
-	log_debug(loggerKernel, "PCB creada para el pid: %i ",unPCB->pid);
-	metadata_destruir(metadata_program);
-
-	queue_push(colaNuevo,unPCB);
-	log_debug(loggerKernel, "El pid: %i ha ingresado a la cola de nuevo.",unPCB->pid);
-
-	return unPCB;
-}
-
-PCB *iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
+PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
+	long int tamanioCodigo = string_length(codigoDePrograma);
 	int cantidadPaginasCodigo = obtenerCantidadPaginas(codigoDePrograma);
 	void *inicioDePrograma = malloc(sizeof(int)*2);
-	memcpy(inicioDePrograma, &contadorDePids, sizeof(int));
+	memcpy(inicioDePrograma, &pidActual, sizeof(int));
 	memcpy(inicioDePrograma+sizeof(int), &cantidadPaginasCodigo, sizeof(int));
 	int sePudo = mandarInicioAMemoria(inicioDePrograma);
+	PCB *pcbNuevo = malloc(sizeof(PCB));
 	if(sePudo == OPERACION_CON_MEMORIA_EXITOSA){
 		t_metadata_program *metadataDelPrograma = metadata_desde_literal(codigoDePrograma);
-		PCB *pcbNuevo = malloc(sizeof(PCB));
 		pcbNuevo->pid = pidActual;
 		pcbNuevo->estado = NUEVO;
-		pcbNuevo->programCounter = 0;
+		pcbNuevo->programCounter = metadataDelPrograma->instruccion_inicio;
 		pcbNuevo->rafagas = 0;
-		pcbNuevo->cantidadPaginasCodigo = cantidadPaginasCodigo;
+		pcbNuevo->exitCode = 0;
+		pcbNuevo->cantidadPaginasCodigo = ceil((double)tamanioCodigo/(double)cantidadPaginasCodigo);
 		pcbNuevo->cantidadTIntructions = metadataDelPrograma->instrucciones_size;
 		pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
 		pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
@@ -286,11 +284,16 @@ PCB *iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		metadata_destruir(metadataDelPrograma);
 		free(codigoDePrograma);
 		pidActual++;
-    	return pcbNuevo;
+
+		log_debug(loggerKernel, "PCB creada para el pid: %i ",pcbNuevo->pid);
+
+		queue_push(colaNuevo,pcbNuevo);
+		log_debug(loggerKernel, "El pid: %i ha ingresado a la cola de nuevo.",pcbNuevo->pid);
 	}else{
 		free(codigoDePrograma);
-		return NULL;
+		pcbNuevo = NULL;
 	}
+	return pcbNuevo;
 }
 
 //-----------------------------------DESERIALIZAR PCB------------------------------------//
@@ -336,12 +339,12 @@ int desserializarTIntructions(PCB* pcbDesserializada, paquete *paqueteConPCB){
     memcpy(&pcbDesserializada->cantidadTIntructions, paqueteConPCB->mensaje+(sizeof(int)*3), sizeof(int));
     pcbDesserializada->indiceCodigo = malloc(pcbDesserializada->cantidadTIntructions*sizeof(t_intructions));
     for(i = 0; i<pcbDesserializada->cantidadTIntructions; i++){
-        memcpy(&pcbDesserializada->indiceCodigo[auxiliar].start, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
+        memcpy(&pcbDesserializada->indiceCodigo[i].start, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
         auxiliar++;
-        memcpy(&pcbDesserializada->indiceCodigo[auxiliar].offset, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
+        memcpy(&pcbDesserializada->indiceCodigo[i].offset, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
         auxiliar++;
     }
-    int retorno = sizeof(int)*(4+auxiliar);
+    int retorno = sizeof(int)*(3+auxiliar);
     return retorno;
 }
 
@@ -349,12 +352,17 @@ PCB* deserializarPCB(paquete* paqueteConPCB){
     PCB* pcbDesserializada = malloc(paqueteConPCB->tamMsj);
     memcpy(&pcbDesserializada->pid, paqueteConPCB->mensaje, sizeof(int));
     memcpy(&pcbDesserializada->programCounter, paqueteConPCB->mensaje+sizeof(int), sizeof(int));
+    memcpy(&pcbDesserializada->cantidadPaginasCodigo, paqueteConPCB->mensaje+sizeof(int)*2, sizeof(int));
     int dondeEstoy = desserializarTIntructions(pcbDesserializada, paqueteConPCB);
     memcpy(&pcbDesserializada->tamanioEtiquetas, paqueteConPCB->mensaje+dondeEstoy, sizeof(int));
     pcbDesserializada->indiceEtiquetas = string_new();//etiquetas
-    memcpy(pcbDesserializada->indiceEtiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy, pcbDesserializada->tamanioEtiquetas);
-    memcpy(&pcbDesserializada->tamanioEtiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamanioEtiquetas, sizeof(int));
-    dondeEstoy +=sizeof(int)*2+pcbDesserializada->tamanioEtiquetas;
+    if(pcbDesserializada->tamanioEtiquetas!=0){
+    	 memcpy(pcbDesserializada->indiceEtiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy, pcbDesserializada->tamanioEtiquetas);
+    }
+    memcpy(&pcbDesserializada->rafagas,paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamanioEtiquetas,sizeof(int));
+    memcpy(&pcbDesserializada->tamanioContexto, paqueteConPCB->mensaje+sizeof(int)*2+dondeEstoy+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    memcpy(&pcbDesserializada->posicionStackActual, paqueteConPCB->mensaje+dondeEstoy+sizeof(int)*3+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    dondeEstoy +=sizeof(int)*4+pcbDesserializada->tamanioEtiquetas;
     pcbDesserializada->indiceStack = list_create();
     desserializarContexto(pcbDesserializada, paqueteConPCB, dondeEstoy);
     return pcbDesserializada;
@@ -390,7 +398,6 @@ int sacarTamanioDeLista(t_list* contexto){
     for(i = 0; i<list_size(contexto); i++){
         stack *contextoAObtener = list_get(contexto, i);
         tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
-        //free(contextoAObtener);
     }
     return tamanioDeContexto;
 }
@@ -412,24 +419,28 @@ void *serializarStack(PCB* pcbConContextos){
 
 int sacarTamanioPCB(PCB* pcbASerializar){
     int tamaniosDeContexto = sacarTamanioDeLista(pcbASerializar->indiceStack);
-    int tamanio= sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+tamaniosDeContexto+pcbASerializar->tamanioEtiquetas;
+    int tamanio= sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+tamaniosDeContexto+pcbASerializar->tamanioEtiquetas;
     return tamanio;
 }
 
-void *serializarPCB(PCB* pcbASerializar){
+void* serializarPCB(PCB* pcbASerializar){
     int tamanioPCB = sacarTamanioPCB(pcbASerializar);
     void* pcbSerializada = malloc(tamanioPCB);
     memcpy(pcbSerializada, &pcbASerializar->pid, sizeof(int));
     memcpy(pcbSerializada+sizeof(int), &pcbASerializar->programCounter, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadPaginasCodigo, sizeof(int));
     void* indiceDeCodigoSerializado = serializarT_Intructions(pcbASerializar);
-    memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadTIntructions, sizeof(int));
-    memcpy(pcbSerializada+sizeof(int)*3, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadTIntructions);
-    memcpy(pcbSerializada+sizeof(int)*3+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, &pcbASerializar->tamanioEtiquetas, sizeof(int));
-    memcpy(pcbSerializada+ sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, pcbASerializar->indiceEtiquetas, pcbASerializar->tamanioEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
-    memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->rafagas, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*3, &pcbASerializar->cantidadTIntructions, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*4, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadTIntructions);
+    memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, &pcbASerializar->tamanioEtiquetas, sizeof(int));
+    if(pcbASerializar->tamanioEtiquetas!=0){
+    	memcpy(pcbSerializada+ sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, pcbASerializar->indiceEtiquetas, pcbASerializar->tamanioEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
+    }
+    memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->rafagas, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->posicionStackActual, sizeof(int));
     void* stackSerializado = serializarStack(pcbASerializar);
-    memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
-    memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas+sacarTamanioDeLista(pcbASerializar->indiceStack), stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
+    memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas+sacarTamanioDeLista(pcbASerializar->indiceStack), stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
     return pcbSerializada;
 }
 
@@ -453,18 +464,136 @@ void enviarCodigoDeProgramaAMemoria(char* codigo){
 		}else{
 			tamanioMensaje = tamanioDeCodigoRestante;
 		}
-		sendRemasterizado(socketServidorMemoria, GUARDAR_BYTES, tamanioMensaje, codigoParaMemoria);
+		sendRemasterizado(socketMemoria, ESCRIBIR_DATOS, tamanioMensaje, codigoParaMemoria);
 		free(codigoParaMemoria);
 		tamanioDeCodigoRestante -= TAMANIO_PAGINA;
 	}
 }
 
+void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
+	if(pcbInicializado!=NULL){
+		enviarCodigoDeProgramaAMemoria(codigo);
+		sendRemasterizado(socketDeConsola, ENVIAR_PID, sizeof(int), &pcbInicializado->pid);
+	}
+	else{
+		char* espacioInsuficiente = string_new();
+		string_append(&espacioInsuficiente,"No hay espacio suficiente para ejecutar el programa");
+		sendRemasterizado(socketDeConsola,ESPACIO_INSUFICIENTE, strlen(espacioInsuficiente)*sizeof(char), &espacioInsuficiente);
+		free(pcbInicializado);
+		free(espacioInsuficiente);
+	}
+}
 
+void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
+  char* codigo = string_new();
+  string_append(&codigo, (char*)paqueteConCodigo->mensaje);
+  PCB* pcbInicializado = iniciarPCB(codigo, socketConsola);
+  enviarDatos(pcbInicializado,codigo,socketConsola);
+}
+
+t_list* obtenerListaConTodosLosProcesos(){
+	t_list* listaConProcesos = list_create();
+	list_add_all(listaConProcesos,colaBloqueado);
+	list_add_all(listaConProcesos,colaEjecutando);
+	list_add_all(listaConProcesos,colaFinalizado);
+	list_add_all(listaConProcesos,colaListo);
+	list_add_all(listaConProcesos,colaNuevo);
+	return listaConProcesos;
+}
+
+bool finalizarProceso(int pid){
+  bool esPCBProceso(PCB *pcbABuscar){
+    return pcbABuscar->pid == pid;
+  }
+  t_list* listaDeProcesos = obtenerListaConTodosLosProcesos();
+  PCB *pcbAFinalizar = list_find(listaDeProcesos, (void*)esPCBProceso);
+  if(pcbAFinalizar != NULL){
+    switch (pcbAFinalizar->estado) {
+      case NUEVO:
+        list_remove_and_destroy_by_condition(colaNuevo->elements, esPCBProceso, free);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de nuevos...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de nuevos...", pid);
+        break;
+      case LISTO:
+        list_remove_and_destroy_by_condition(colaListo->elements, esPCBProceso, free);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de listos...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de listos...", pid);
+        break;
+      case EJECUTANDO:
+         //ACA HABRIA QUE ESPERAR A QUE CPU LO DEVUELVA
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de bloqueados...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
+        break;
+      case BLOQUEADO:
+        list_remove_and_destroy_by_condition(colaBloqueado->elements, esPCBProceso, free);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de bloqueados...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
+        break;
+      default:
+        log_info(loggerKernel, "El proceso %d no se encuentra en ninguna de las colas activas, el proceso ya ha sido finalizado...", pid);
+        break;
+    }
+    pcbAFinalizar->estado = FINALIZADO;
+    pcbAFinalizar->exitCode = -7;
+    list_add(finalizadosPorConsola, pid);
+    list_destroy(listaDeProcesos);
+    return true;
+  }else{
+    puts("El proceso %d no existe, por lo tanto no se puede finalizar...");
+    log_info(loggerKernel, "Se pidio la finalizacion de un proceso que no existe...");
+    return false;
+  }
+
+}
+
+void recibirPCBDeCPU(paquete *paqueteConPCB){
+  PCB *pcbRecibida = desserializarPCB(paqueteConPCB);
+  if(list_any_satisfy(finalizadosPorConsola, ==pcbRecibida->pid)){
+    list_remove_and_destroy_by_condition(colaNuevo->elements, ==pcbRecibida->pid, free); //EN CASO DE NO FUNCIONAR LA FUNCION, AGREGAR ESDEPROCESO
+    pcbRecibida->estado = FINALIZADO;
+    pcbRecibida->exitCode = -7;
+  }
+}
+
+int cantidadDeRafagasDe(int pid){
+  bool esPCBProceso(PCB *pcbABuscar){
+    return pcbABuscar->pid == pid;
+  }
+  PCB *pcbConRafagas = list_find(pcbs, (void*)esPCBProceso); //REVISAR SI HACE FALTA LIBERARLO
+  if(pcbConRafagas != NULL){
+      log_info(loggerKernel, "Se encontro el proceso %d en la lista de PCBs activas...", pid);
+  }
+  else if(pcbConRafagas == NULL){
+    pcbConRafagas = list_find(finalizados, (void*)esPCBProceso);
+    log_info(loggerKernel, "Se encontro el proceso %d en la lista de PCBs finalizadas...", pid);
+  }else{
+    log_info(loggerKernel, "No se encontro el proceso %d en ninguna de las listas...", pid);
+    return -1;
+  }
+  return pcbConRafagas->rafagas;
+}
 
 //--------------------------------------HILOS-----------------------------------//
 //------------------------------------MANEJADOR CONSOLA-------------------------------------------------/////////
-void* manejadorConexionConsola(void* socketConsola){
-	int socketDeConsola = *(int*)socketConsola;
+void* manejadorConexionConsola(void* socketAceptado){
+	while(1){
+		paquete* paqueteRecibidoDeConsola;
+		int socketDeConsola = *(int*)socketAceptado;
+		paqueteRecibidoDeConsola = recvRemasterizado(socketDeConsola);
+		switch(paqueteRecibidoDeConsola->tipoMsj){
+		case MENSAJE_CODIGO:
+			iniciarProceso(paqueteRecibidoDeConsola, socketDeConsola);
+			break;
+		case FINALIZAR_PROGRAMA:
+			finalizarProceso((int)paqueteRecibidoDeConsola->mensaje);
+			//FALTA INFORMARLE A LA CONSOLA
+			break;
+		default:
+			perror("No se recibio correctamente el mensaje");
+			log_error(loggerKernel, "No se reconoce la peticion hecha por el kernel...");
+		}
+		free(paqueteRecibidoDeConsola);
+	}
 }
 //CONSOLA KERNEL
 void modificarGradoMultiprogramacion(int grado){
