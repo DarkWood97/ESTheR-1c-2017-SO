@@ -268,7 +268,7 @@ PCB *iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->programCounter = 0;
 		pcbNuevo->rafagas = 0;
 		pcbNuevo->cantidadPaginasCodigo = cantidadPaginasCodigo;
-		pcbNuevo->cantidadDeIntructions = metadataDelPrograma->;
+		pcbNuevo->cantidadTIntructions = metadataDelPrograma->instrucciones_size;
 		pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
 		pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
 		pcbNuevo->indiceEtiquetas = cargarEtiquetas(metadataDelPrograma, pcbNuevo->tamanioEtiquetas);
