@@ -168,13 +168,26 @@ void imprimirInformacion(int pid,int impresiones,tiempo inicio,tiempo final){
 	log_info(loggerConsola,">>el tiempo total del programa con pid:%i es %i:%i:%i\n", pid,tiempoDuracion.hora, tiempoDuracion.minuto,tiempoDuracion.segundo);
 }
 
+void finalizarHilo(programa* programaAFinalizar)
+{
+	if(pthread_cancel(programaAFinalizar->hilo) == 0)
+	{
+		log_debug(loggerConsola,"Se finalizo correctamente el hilo programa con PID= %d", programaAFinalizar->pid);
+		pthread_join(programaAFinalizar->hilo, (void**) NULL);
+	}else{
+		log_error(loggerConsola,"No se pudo matar el hilo con PID= %d", programaAFinalizar->pid);
+	}
+}
+
+
+
 void finalizarPrograma(int pid)
 {
 	sendRemasterizado(socketKernel, FINALIZAR_PROGRAMA, sizeof(int), &pid);
 
 	programa* unPrograma = buscarPrograma(pid);
 	if(unPrograma != NULL){
-		pthread_join(unPrograma->hilo, NULL);
+		finalizarHilo(unPrograma);
 		char* final = malloc(1000);
 		final = temporal_get_string_time();
 		tiempo tiempoF = obtenerTiempo(final);
@@ -418,13 +431,13 @@ int main(int argc, char *argv[])
 	pthread_t interfazUsuario;
 	pthread_create(&interfazUsuario, NULL, manejadorInterfaz,NULL);
 
-	pthread_join(interfazUsuario,NULL);
+	pthread_join(interfazUsuario,(void**) NULL);
 
-//	pthread_mutex_destroy(&mutexImpresiones);
-//	pthread_mutex_destroy(&mutexPaquete);
-//	list_destroy(listaProcesos);
-//	log_destroy(loggerConsola);
-//	close(socketKernel);
+	pthread_mutex_destroy(&mutexImpresiones);
+	pthread_mutex_destroy(&mutexPaquete);
+	list_destroy(listaProcesos);
+	log_destroy(loggerConsola);
+	close(socketKernel);
 
 	return EXIT_SUCCESS;
 }
