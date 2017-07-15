@@ -67,6 +67,7 @@ typedef struct __attribute__((__packed_)) {
 	bool estaAbortado;
 	int rafagas;
 	int tamanioContexto;
+	int posicionStackActual;
 }PCB;
 
 
@@ -109,7 +110,7 @@ void desserializarContexto(PCB* pcbConContexto, paquete* paqueteConContexto, int
 
 int desserializarTIntructions(PCB* pcbDesserializada, paquete *paqueteConPCB){
     int i, auxiliar = 0;
-    memcpy(&pcbDesserializada->cantidadTIntructions, paqueteConPCB->mensaje+(sizeof(int)*2), sizeof(int));
+    memcpy(&pcbDesserializada->cantidadTIntructions, paqueteConPCB->mensaje+(sizeof(int)*3), sizeof(int));
     pcbDesserializada->indiceCodigo = malloc(pcbDesserializada->cantidadTIntructions*sizeof(t_intructions));
     for(i = 0; i<pcbDesserializada->cantidadTIntructions; i++){
         memcpy(&pcbDesserializada->indiceCodigo[i].start, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
@@ -125,6 +126,7 @@ PCB* deserializarPCB(paquete* paqueteConPCB){
     PCB* pcbDesserializada = malloc(paqueteConPCB->tamMsj);
     memcpy(&pcbDesserializada->pid, paqueteConPCB->mensaje, sizeof(int));
     memcpy(&pcbDesserializada->programCounter, paqueteConPCB->mensaje+sizeof(int), sizeof(int));
+    memcpy(&pcbDesserializada->cantidadPaginasCodigo, paqueteConPCB->mensaje+sizeof(int)*2, sizeof(int));
     int dondeEstoy = desserializarTIntructions(pcbDesserializada, paqueteConPCB);
     memcpy(&pcbDesserializada->tamanioEtiquetas, paqueteConPCB->mensaje+dondeEstoy, sizeof(int));
     pcbDesserializada->indiceEtiquetas = string_new();//etiquetas
@@ -133,7 +135,8 @@ PCB* deserializarPCB(paquete* paqueteConPCB){
     }
     memcpy(&pcbDesserializada->rafagas,paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamanioEtiquetas,sizeof(int));
     memcpy(&pcbDesserializada->tamanioContexto, paqueteConPCB->mensaje+sizeof(int)*2+dondeEstoy+pcbDesserializada->tamanioEtiquetas, sizeof(int));
-    dondeEstoy +=sizeof(int)*3+pcbDesserializada->tamanioEtiquetas;
+    memcpy(&pcbDesserializada->posicionStackActual, paqueteConPCB->mensaje+dondeEstoy+sizeof(int)*3+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    dondeEstoy +=sizeof(int)*4+pcbDesserializada->tamanioEtiquetas;
     pcbDesserializada->indiceStack = list_create();
     desserializarContexto(pcbDesserializada, paqueteConPCB, dondeEstoy);
     return pcbDesserializada;

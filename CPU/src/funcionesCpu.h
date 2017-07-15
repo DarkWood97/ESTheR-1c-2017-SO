@@ -103,21 +103,28 @@ typedef struct {
 	t_list* vars;
 	int retPos;
 	direccion retVar;
-} Stack;
+}stack;
 
-typedef struct __attribute__((packed)) {
+
+typedef struct __attribute__((__packed_)) {
 	int pid;
+	//int estado;
 	int programCounter;
+	t_intructions *indiceCodigo;
+	int cantidadTIntructions;
 	int cantidadPaginasCodigo;
-	int cantidadDeT_Intructions;
-	t_intructions* cod;
-	int tamEtiquetas;
-	char* etiquetas;
-	int tamContextos;
+	int posicionStackActual;
+	t_list* indiceStack;
+	char* indiceEtiquetas;
+	//tablaHeap* tablaHeap;
 	int exitCode;
-	t_list *contextos;
-	//TablaKernel tablaKernel;
-} PCB;
+	//int socket;
+	int tamanioEtiquetas;
+	//bool estaAbortado;
+	int rafagas;
+	int tamanioContexto;
+	//LO COMENTADO NO LO UTILIZA CPU
+}PCB;
 
 
 

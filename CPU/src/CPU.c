@@ -136,13 +136,13 @@ void modificarQuantum(){
 }
 
 char* pedirLineaAMemoria(){
-	int cuantoLeer = pcbEnProceso->cod[pcbEnProceso->programCounter].offset;
+	int cuantoLeer = pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].offset;
 	char* lineaDeInstruccion = malloc(cuantoLeer+1);
 	void* mensajeParaMemoria = malloc(sizeof(int)*4);
 	memcpy(mensajeParaMemoria, &pcbEnProceso->pid, sizeof(int));
-	int numeroDePagina = (pcbEnProceso->cod[pcbEnProceso->programCounter].start)/tamPaginasMemoria;
+	int numeroDePagina = (pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].start)/tamPaginasMemoria;
 	memcpy(mensajeParaMemoria+sizeof(int), &numeroDePagina, sizeof(int));
-	int offset = pcbEnProceso->cod[pcbEnProceso->programCounter].start%tamPaginasMemoria;
+	int offset = pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].start%tamPaginasMemoria;
 	memcpy(mensajeParaMemoria+sizeof(int)*2, &offset, sizeof(int));
 	memcpy(mensajeParaMemoria+sizeof(int)*3, &cuantoLeer, sizeof(int));
 	sendRemasterizado(socketMemoria, LEER_DATOS, cuantoLeer, mensajeParaMemoria);
@@ -152,7 +152,7 @@ char* pedirLineaAMemoria(){
 	if(paqueteConSentencia->tipoMsj==DATOS_DE_PAGINA){
 		memcpy(lineaDeInstruccion, paqueteConSentencia->mensaje, cuantoLeer);
 		free(paqueteConSentencia);
-		string_append(&lineaDeInstruccion, "/0");
+		string_append(&lineaDeInstruccion, "\0");
 		return lineaDeInstruccion;
 	}
 	else{
@@ -162,7 +162,7 @@ char* pedirLineaAMemoria(){
 	}
 }
 
-void limpiarContexto(Stack* contextoALimpiar){
+void limpiarContexto(stack* contextoALimpiar){
 	list_destroy_and_destroy_elements(contextoALimpiar->args, free);
 	list_destroy_and_destroy_elements(contextoALimpiar->vars, free);
 	free(contextoALimpiar);
@@ -170,9 +170,9 @@ void limpiarContexto(Stack* contextoALimpiar){
 
 void destruirPCB(){
 	log_info(loggerCPU, "Se prosigue a limpiar la PCB para el proximo proceso...");
-	list_destroy_and_destroy_elements(pcbEnProceso->contextos, (void*)limpiarContexto);
-	free(pcbEnProceso->etiquetas);
-	free(pcbEnProceso->cod);
+	list_destroy_and_destroy_elements(pcbEnProceso->indiceStack, (void*)limpiarContexto);
+	free(pcbEnProceso->indiceEtiquetas);
+	free(pcbEnProceso->indiceCodigo);
 	free(pcbEnProceso);
 	log_info(loggerCPU, "PCB limpiada exitosamente...");
 }
@@ -240,10 +240,11 @@ int main(int argc, char *argv[]) {
 		preparandoParaEjecutar();
 		while(datosParaEjecucion->quantum != 0 && programaSigueEjecutando()){ //programaSigueEjecutando compara si esta bloqueado finalizado, etc
 			char* lineaDeEjecucion;
-			lineaDeEjecucion = pedirLineaAMemoria();//Aca adentro voy a tener que ponerle el /0 y chequear si esta abortado
+			lineaDeEjecucion = pedirLineaAMemoria();//Aca adentro voy a tener que ponerle el \0 y chequear si esta abortado
 			analizadorLinea(lineaDeEjecucion, &primitivas, &primitivasDeKernel);
 			modificarQuantum();
 			avanzarEnEjecucion();
+			pcbEnProceso->rafagas++;
 			usleep(datosParaEjecucion->quantumSleep);
 		}
 		chequearEstaAbortado();

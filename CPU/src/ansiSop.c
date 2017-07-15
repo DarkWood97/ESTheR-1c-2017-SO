@@ -116,8 +116,8 @@ void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variabl
 //}
 
 int obtenerPCAnterior(PCB *pcb){
-	Stack* contextoAEvaluar;
-	contextoAEvaluar = list_get(pcb->contextos, list_size(pcb->contextos)-1);
+	stack* contextoAEvaluar;
+	contextoAEvaluar = list_get(pcb->indiceStack, list_size(pcb->indiceStack)-1);
 	return contextoAEvaluar->retPos;
 }
 
@@ -126,22 +126,22 @@ int obtenerPCAnterior(PCB *pcb){
  }
 
  int obtenerPosicionDeStackAnterior(){
- 	Stack *contextoQueNecesito;
- 	contextoQueNecesito = list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-1);
+ 	stack *contextoQueNecesito;
+ 	contextoQueNecesito = list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-1);
  	int posicionARetornar = contextoQueNecesito->pos;
  	free(contextoQueNecesito);
  	return posicionARetornar;
  }
 
- void generarContexto(Stack *contextoAGenerar){
+ void generarContexto(stack *contextoAGenerar){
    contextoAGenerar->args = list_create();
    contextoAGenerar->vars = list_create();
    contextoAGenerar->retPos = pcbEnProceso->programCounter;
    contextoAGenerar->pos = obtenerPosicionDeStackAnterior()+1;
  }
 
- Stack* obtenerContextoAnterior(){
-   return list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-2);
+ stack* obtenerContextoAnterior(){
+   return list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-2);
  }
 
  t_puntero convertirDeDireccionAPuntero(direccion *direccionAConvertir){
@@ -156,11 +156,11 @@ int obtenerPCAnterior(PCB *pcb){
    return direccionDeVariable;
  }
 
- int obtenerCantidadDeVars(Stack *contextoACalcular){
+ int obtenerCantidadDeVars(stack *contextoACalcular){
    return list_size(contextoACalcular->vars);
  }
 
- int obtenerCantidadDeArgs(Stack *contextoACalcular){
+ int obtenerCantidadDeArgs(stack *contextoACalcular){
    return list_size(contextoACalcular->args);
  }
 
@@ -173,12 +173,12 @@ int obtenerPCAnterior(PCB *pcb){
  direccion* generarDireccionParaArgumento(int cantidadDeContextos){
    direccion *direccionAnterior;
    direccionAnterior = malloc(sizeof(direccion));
-   Stack *contextoActual = list_get(pcbEnProceso->contextos, cantidadDeContextos-1);
+   stack *contextoActual = list_get(pcbEnProceso->indiceStack, cantidadDeContextos-1);
    int cantidadDeArgumentos = list_size(contextoActual->args);
    if(cantidadDeContextos == 1 && cantidadDeArgumentos == 0){
 	   generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeArgs(contextoActual) == 0){
-     Stack *contextoAnterior = obtenerContextoAnterior();
+     stack *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->args, list_size(contextoAnterior->args)-1));
      direccionAnterior->offset +=4;
    }else{
@@ -191,12 +191,12 @@ int obtenerPCAnterior(PCB *pcb){
  direccion* generarDireccionParaVariable(int cantidadDeContextos){
    direccion *direccionAnterior;
    direccionAnterior = malloc(sizeof(direccion));
-   Stack *contextoActual = list_get(pcbEnProceso->contextos, cantidadDeContextos-1);
+   stack *contextoActual = list_get(pcbEnProceso->indiceStack, cantidadDeContextos-1);
    int cantidadDeVars = list_size(contextoActual->vars);
    if(cantidadDeContextos == 1 && cantidadDeVars == 0){
      //generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeVars(contextoActual) == 0){
-     Stack *contextoAnterior = obtenerContextoAnterior();
+     stack *contextoAnterior = obtenerContextoAnterior();
      direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->vars, list_size(contextoAnterior->vars)-1));
      direccionAnterior->offset += 4;
    }else{
@@ -211,7 +211,7 @@ void agregarVariableAVars(direccion *direccionDeVariable, t_nombre_variable iden
    variable = malloc(sizeof(variable));
    variable->direccionDeVariable = direccionDeVariable;
    variable->nombreVariable = identificador_variable;
-   Stack *contextoParaAgregar = list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-1);
+   stack *contextoParaAgregar = list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-1);
    list_add(contextoParaAgregar->vars, variable);
    /*
     * La otra opcion seria:
@@ -226,7 +226,7 @@ void agregarVariableAVars(direccion *direccionDeVariable, t_nombre_variable iden
  	variable = malloc(sizeof(variable));
  	variable->direccionDeVariable = direccionDeVariable;
  	variable->nombreVariable = identificador_variable;
- 	Stack* contextoParaAgregar = list_get(pcbEnProceso->contextos, list_size(pcbEnProceso->contextos)-1);
+ 	stack* contextoParaAgregar = list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-1);
  	list_add(contextoParaAgregar->args, variable);
 
  	//list_add((list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1))->args, variable);

@@ -21,16 +21,16 @@ void finalizarProceso(PCB *);
 int obtenerPCAnterior(PCB *);
 void liberarElemento(void*);
 int obtenerPosicionDeStackAnterior();
-void generarContexto(Stack *);
+void generarContexto(stack *);
 void agregarVariableAArgs(direccion *, t_nombre_variable);
 void agregarVariableAVars(direccion *, t_nombre_variable);
 direccion* generarDireccionParaVariable(int);
 direccion* generarDireccionParaArgumento(int);
-int obtenerCantidadDeArgs(Stack *);
-int obtenerCantidadDeVars(Stack *);
+int obtenerCantidadDeArgs(stack *);
+int obtenerCantidadDeVars(stack *);
 direccion *obtenerDireccionDeVariable(variable*);
 t_puntero convertirDeDireccionAPuntero(direccion*);
-Stack* obtenerContextoAnterior();
+stack* obtenerContextoAnterior();
 void mandarAGuardarDatosDeArchivo(paquete *, t_puntero);
 
 #endif /* ANSISOP_H_ */

@@ -66,6 +66,7 @@ typedef struct __attribute__((__packed_)) {
 	int pid;
 	int estado;
 	int programCounter;
+	int posicionStackActual;
 	t_intructions *indiceCodigo;
 	int cantidadTIntructions;
 	int cantidadPaginasCodigo; //Lo usa CPU?
@@ -153,7 +154,7 @@ void *serializarStack(PCB* pcbConContextos){
 
 int sacarTamanioPCB(PCB* pcbASerializar){
     int tamaniosDeContexto = sacarTamanioDeLista(pcbASerializar->indiceStack);
-    int tamanio= sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+tamaniosDeContexto+pcbASerializar->tamanioEtiquetas;
+    int tamanio= sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+tamaniosDeContexto+pcbASerializar->tamanioEtiquetas;
     return tamanio;
 }
 
@@ -162,17 +163,19 @@ void* serializarPCB(PCB* pcbASerializar){
     void* pcbSerializada = malloc(tamanioPCB);
     memcpy(pcbSerializada, &pcbASerializar->pid, sizeof(int));
     memcpy(pcbSerializada+sizeof(int), &pcbASerializar->programCounter, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadPaginasCodigo, sizeof(int));
     void* indiceDeCodigoSerializado = serializarT_Intructions(pcbASerializar);
-    memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadTIntructions, sizeof(int));
-    memcpy(pcbSerializada+sizeof(int)*3, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadTIntructions);
-    memcpy(pcbSerializada+sizeof(int)*3+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, &pcbASerializar->tamanioEtiquetas, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*3, &pcbASerializar->cantidadTIntructions, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*4, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadTIntructions);
+    memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, &pcbASerializar->tamanioEtiquetas, sizeof(int));
     if(pcbASerializar->tamanioEtiquetas!=0){
-    	memcpy(pcbSerializada+ sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, pcbASerializar->indiceEtiquetas, pcbASerializar->tamanioEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
+    	memcpy(pcbSerializada+ sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, pcbASerializar->indiceEtiquetas, pcbASerializar->tamanioEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
     }
-    memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->rafagas, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->rafagas, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->posicionStackActual, sizeof(int));
     void* stackSerializado = serializarStack(pcbASerializar);
-    memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
-    memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas+sacarTamanioDeLista(pcbASerializar->indiceStack), stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
+    memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas+sacarTamanioDeLista(pcbASerializar->indiceStack), stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
     return pcbSerializada;
 }
 
