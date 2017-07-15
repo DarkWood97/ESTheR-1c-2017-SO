@@ -31,7 +31,7 @@ void asignar(t_puntero direccion_variable, t_valor_variable valor){
 //----------------OBTENER VALOR COMPARTIDA------------//
 
 t_valor_variable obtenerValorCompartida(t_nombre_compartida variable){
-  char* nombreDeLaVariable = malloc(string_length(variable)+1);
+  char* nombreDeLaVariable = string_new();//malloc(string_length(variable)+1);
   log_info(loggerProgramas, "El proceso %d pidio el valor de la variable compartida %s...", pcbEnProceso->pid, variable);
   string_append(&nombreDeLaVariable,"\0");
   free(nombreDeLaVariable);
@@ -55,14 +55,14 @@ t_valor_variable asignarValorCompartida(t_nombre_compartida variable, t_valor_va
 
 
 t_puntero definirVariable(t_nombre_variable identificador_variable){
-  int cantidadDeContextos = list_size(pcbEnProceso->indiceStack);
+  //int cantidadDeContextos = list_size(pcbEnProceso->indiceStack);
   direccion *direccionDeVariable;
   direccionDeVariable = malloc(sizeof(direccion));
   if((identificador_variable>='0')&&(identificador_variable<='9')){
-    direccionDeVariable = generarDireccionParaArgumento(cantidadDeContextos);
+    direccionDeVariable = generarDireccionParaArgumento(pcbEnProceso->posicionStackActual);
     agregarVariableAArgs(direccionDeVariable, identificador_variable);
   }else{
-    direccionDeVariable = generarDireccionParaVariable(cantidadDeContextos);
+    direccionDeVariable = generarDireccionParaVariable(pcbEnProceso->posicionStackActual);
     agregarVariableAVars(direccionDeVariable, identificador_variable);
   }
   return convertirDeDireccionAPuntero(direccionDeVariable);
@@ -77,9 +77,9 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
 	}
   int posicionDeRetorno;
   direccion *direccionAConvertir;
-  Stack *ultimoContexto;
-  ultimoContexto = list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-1); //La lista empieza de 0?
-  if(identificador_variable>='0' && identificador_variable<='9'){ //ME PUEDE LLEGAR UNA VARIABLE QUE NO EXISTE
+  stack *ultimoContexto;
+  ultimoContexto = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
+  if(identificador_variable>='0' && identificador_variable<='9'){ //ME PUEDE LLEGAR UNA VARIABLE QUE NO EXISTE?
     direccionAConvertir = obtenerDireccionDeVariable(list_get(ultimoContexto->args, atoi(&identificador_variable)-1));
     posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
     return posicionDeRetorno;
@@ -113,8 +113,8 @@ void irAlLabel(t_nombre_etiqueta nombreDeLaEtiqueta){
 
 //---------------------LLAMAR SIN RETORNO----------//
 void llamarSinRetorno(t_nombre_etiqueta etiqueta){
-  Stack *contextoAAgregar;
-  contextoAAgregar = malloc(sizeof(Stack));
+  stack *contextoAAgregar;
+  contextoAAgregar = malloc(sizeof(stack));
   generarContexto(contextoAAgregar);
   list_add(pcbEnProceso->indiceStack, contextoAAgregar);
   irAlLabel(etiqueta);
@@ -122,9 +122,9 @@ void llamarSinRetorno(t_nombre_etiqueta etiqueta){
 
 //--------------------LLAMAR CON RETORNO-------------//
 void llamarConRetorno(t_nombre_etiqueta etiqueta, t_puntero donde_retornar){
-  Stack *contextoAAgregar;
+  stack *contextoAAgregar;
   direccion* direccionParaNuevoContexto;
-  contextoAAgregar = malloc(sizeof(Stack));
+  contextoAAgregar = malloc(sizeof(stack));
   generarContexto(contextoAAgregar);
   direccionParaNuevoContexto = obtenerDireccionDePuntero(donde_retornar);
   contextoAAgregar->retVar = *direccionParaNuevoContexto;
@@ -138,9 +138,9 @@ void llamarConRetorno(t_nombre_etiqueta etiqueta, t_puntero donde_retornar){
 
 //--------------------FINALIZAR-------------//
 void finalizar(){
-	Stack *contextoAFinalizar;
+	stack *contextoAFinalizar;
 	//contextoAFinalizar = malloc(sizeof(t_contexto)); //Es necesario hacer el malloc aca
-	contextoAFinalizar = list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-1);
+	contextoAFinalizar = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
 	if(list_size(pcbEnProceso->indiceStack)-1 == 0){
 		//finalizarProceso(pcbEnProceso);
 		programaEnEjecucionFinalizado = true;
@@ -154,9 +154,9 @@ void finalizar(){
 
 //---------------------RETORNAR------------------//
 void retornar(t_valor_variable retorno){
-	Stack *contextoAFinalizar;
-	contextoAFinalizar = malloc(sizeof(Stack));
-	contextoAFinalizar = list_get(pcbEnProceso->indiceStack, list_size(pcbEnProceso->indiceStack)-1);
+	stack *contextoAFinalizar;
+	//contextoAFinalizar = malloc(sizeof(stack));
+	contextoAFinalizar = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
 	pcbEnProceso->programCounter = contextoAFinalizar->retPos;
 	t_puntero punteroARetVar = convertirDeDireccionAPuntero(&contextoAFinalizar->retVar);
 	asignar(punteroARetVar, retorno);
