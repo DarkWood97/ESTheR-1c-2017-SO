@@ -20,6 +20,12 @@
 #include <commons/collections/dictionary.h>
 #include <commons/collections/list.h>
 
+typedef struct __attribute__((__packed__)){
+	int tipoMsj;
+	int tamMsj;
+	void* mensaje;
+}paquete;
+
 #ifndef FUNCIONESGENERICAS_H_
 #define FUNCIONESGENERICAS_H_
 

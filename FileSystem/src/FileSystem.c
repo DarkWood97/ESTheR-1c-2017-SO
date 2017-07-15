@@ -14,6 +14,11 @@
 #define BORRAR_ARCHIVO 7
 #define VALIDAR_ARCHIVO 8
 #define HANDSHAKE_ACEPTADO 9
+#define OPERACION_FINALIZADA_CORRECTAMENTE 10
+#define OPERACION_FALLIDA 11
+#define EXISTE_ARCHIVO 12
+#define NO_EXISTE_ARCHIVO 13
+#define DATOS_DE_LECTURA 14
 //--TYPEDEF--------------------------------------------------------------
 
 typedef struct __attribute__((packed)) {
@@ -42,6 +47,15 @@ t_config *generarT_Config(char *path) {
 }
 
 //------CONFIGURACION FILESYSTEM-----------------------------------------------
+char* concatenarPath(char* path, char* carpeta){
+	char* cadenaAux=malloc(string_length(punto_Montaje)+string_length(path)+string_length(carpeta));
+	string_append(&cadenaAux, punto_Montaje);
+	string_append(&cadenaAux,carpeta);
+	string_append(&cadenaAux,path);
+	return cadenaAux;
+}
+
+
 int abrirBitmap(){
 	log_debug(loggerFS,"Se procede abrir el archivo Bitmap.bin");
 	char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
@@ -135,13 +149,7 @@ long int obtenerTamanioArchivo(FILE* archivo){
 }
 
 //-------------------------------------------OPERACIONES CON RUTAS-------------------------------------
-char* concatenarPath(char* path, char* carpeta){
-	char* cadenaAux=malloc(string_length(punto_Montaje)+string_length(path)+string_length(carpeta));
-	string_append(&cadenaAux, punto_Montaje);
-	string_append(&cadenaAux,carpeta);
-	string_append(&cadenaAux,path);
-	return cadenaAux;
-}
+
 
 char* armarNombreArchivo(int bloque){
 	char* bloqueAux=malloc(sizeof(int)+string_length(".bin"));
@@ -191,7 +199,7 @@ bool seBorroArchivoDeFS(char* pathDeArchivo){
 	  char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	  cadena=concatenarPath(pathDeArchivo,"/Archivos");
 	  t_config* archivo=generarT_Config(cadena);
-	  int tamanio=config_get_int_value(archivo,"TAMANIO");
+	  int tamanio = config_get_int_value(archivo,"TAMANIO");
 	  char** bloques= config_get_array_value(archivo,"BLOQUES");
 	  config_destroy(archivo);
 	  if(remove(cadena)>=0){
@@ -217,8 +225,8 @@ int obtenerBloque(){
 }
 
 void crearPathBloque(int nuevoBloque){
-	char* cadenaBloque=armarNombreArchivo(nuevoBloque);
-	char* path=concatenarPath(cadenaBloque,"/Bloques/");
+	char* cadenaBloque = armarNombreArchivo(nuevoBloque);
+	char* path = concatenarPath(cadenaBloque,"/Bloques/");
 	//VER COMO CREAR DIRECTORIOS
 
 }
@@ -246,12 +254,12 @@ void asignarBloqueArchivo(int nuevoBloque,char* cadena){
 	fputc('\n',archivo);
 }
 
-void crearArchivo (void* mensaje){
+int crearArchivo (void* mensaje){
 	char modoDeArchivo;
 	int tamanioPath=0;
 	char* pathDeArchivo=string_new();
-	memcpy(modoDeArchivo,mensaje,sizeof(char));
-	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
+	memcpy(&modoDeArchivo,mensaje,sizeof(char));
+	memcpy(&tamanioPath,mensaje+sizeof(char),sizeof(int));
 	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
 	int bloque;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
@@ -268,8 +276,10 @@ void crearArchivo (void* mensaje){
 			asignarBloqueArchivo(bloque,cadena);
 			log_info(loggerFS,"Se asigna a %s correctamente el bloque %d",cadena,bloque);
 			log_info(loggerFS, "Se creo el archivo %s exitosamente.",cadena);
+			return OPERACION_FINALIZADA_CORRECTAMENTE;
 		}else{
 			log_info(loggerFS,"No se pudo crear el archivo %s por falta de bloques disponibles",cadena);
+			return OPERACION_FALLIDA;
 		}
 //		fputc(']',archivo);
 //		fputc('\n',archivo);
@@ -280,7 +290,7 @@ void crearArchivo (void* mensaje){
 
 
 // OBTENER DATOS
-void leerBloques(int tamanioArchivo, char** bloques, int size, int offset){
+char *leerBloques(int tamanioArchivo, char** bloques, int size, int offset){
 	char* datosDelBloque=string_new();
 	int primerBloqueALeer=offset/tamanio_bloque;
 
@@ -330,21 +340,22 @@ void leerBloques(int tamanioArchivo, char** bloques, int size, int offset){
 				primerBloqueALeer++;
 			}
 		}
-		//MANDAR A KERNEL
+		return datosDelBloque;
 
 	}else{
 		log_info(loggerFS,"Lo pedido para leer supera el tamanio del bloque");
+		return NULL;
 	}
 
 }
 
-void obtenerDatosDelArchivo(void* mensaje){
+char* obtenerDatosDelArchivo(void* mensaje){
 	int tamanioPath=0,size=0,offset=0;
 	char* pathDeArchivo=string_new();
-	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
+	memcpy(&tamanioPath,mensaje+sizeof(char),sizeof(int));
 	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
-	memcpy(offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
-	memcpy(size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
+	memcpy(&offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
+	memcpy(&size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
 
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo,"/Archivos/");
@@ -353,7 +364,8 @@ void obtenerDatosDelArchivo(void* mensaje){
 	int tamanio=config_get_int_value(archivo,"TAMANIO");
 	char** bloques= config_get_array_value(archivo,"BLOQUES");
 	log_info(loggerFS,"Se encontro el archivo %s y se procede a leer los datos del mismo",cadena);
-	leerBloques(tamanio,bloques,size,offset);
+	char *datosLeidos = leerBloques(tamanio,bloques,size,offset);
+	return datosLeidos;
 }
 
 // GUARDAR DATOS
@@ -421,14 +433,15 @@ bool guardarBloques(char**bloques,int tamanioArchivo, int size,int offset,char* 
 	return true;
 }
 
-void guardarDatosArchivo(void* mensaje){
+int guardarDatosArchivo(void* mensaje){
 	int tamanioPath,tamanioBuffer,size,offset;
-	char* pathDeArchivo,buffer;
-	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
+	char* pathDeArchivo = string_new();
+	char *buffer = string_new();
+	memcpy(&tamanioPath,mensaje+sizeof(char),sizeof(int));
 	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
-	memcpy(offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
-	memcpy(size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
-	memcpy(tamanioBuffer,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int),sizeof(int));
+	memcpy(&offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
+	memcpy(&size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
+	memcpy(&tamanioBuffer,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int),sizeof(int));
 	memcpy(buffer,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int)+sizeof(int),tamanioBuffer);
 
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
@@ -440,8 +453,10 @@ void guardarDatosArchivo(void* mensaje){
 	log_info(loggerFS,"Se encontro el archivo %s y se procede a guardar los datos %s en el mismo",cadena,buffer);
 	if(guardarBloques(bloques,tamanioArchivo,size,offset,buffer,cadena)){
 		log_info(loggerFS,"Se guardo correctamente el %s en la cadena",buffer,cadena);
+		return OPERACION_FINALIZADA_CORRECTAMENTE;
 	}else{
 		log_info(loggerFS,"No se pudo guardar correctamente el %s en la cadena",buffer,cadena);
+		return OPERACION_FALLIDA;
 	}
 
 }
@@ -477,33 +492,25 @@ void guardarDatosArchivo(void* mensaje){
 
 
 int recibirEntero(){
-  int enteroRecibido;
-  if(recv(socketKernel,&enteroRecibido, sizeof(int), 0)==-1){
-    log_info(loggerFS, "Error al recibir mensaje desde kernel.");
-    exit(-1);
-  }
-  return enteroRecibido;
+	int enteroRecibido;
+	if(recv(socketKernel,&enteroRecibido, sizeof(int), 0)==-1){
+		log_info(loggerFS, "Error al recibir mensaje desde kernel.");
+		exit(-1);
+	}
+	return enteroRecibido;
 }
 
 //---------------------------------HANDSHAKE-----------------------------------------
 void recibirHandshakeDeKernel(){
-  int quienEs;
-  int handshakeRecibido = HANDSHAKE_ACEPTADO;
-  if(recv(socketKernel, &quienEs, sizeof(int), 0) == -1){
-    log_info(loggerFS, "Error al recibir handshake");
-    exit(-1);
-  }
+  int quienEs = recvDeNotificacion(socketKernel);
   switch(quienEs){
     case ES_KERNEL:
-      hayKernelConectado = true;
-      if(send(socketKernel, &handshakeRecibido, sizeof(int),0) == -1){
-        log_info(loggerFS, "Error al enviar aceptacion de handshake");
-        exit(-1);
-      }
-      break;
+    	hayKernelConectado = true;
+    	sendDeNotificacion(socketKernel, HANDSHAKE_ACEPTADO);
+    	break;
     default:
-      log_info(loggerFS, "Se recibio conexion erronea de %d", socketKernel);
-      close(socketKernel);
+    	log_info(loggerFS, "Se recibio conexion erronea de %d", socketKernel);
+    	close(socketKernel);
   }
 }
 
@@ -511,10 +518,11 @@ void recibirHandshakeDeKernel(){
 
 int main(int argc, char *argv[]) {
 	loggerFS = log_create("FileSystem.log", "FileSystem", 0, 0);
-	char *path="Debug/fileSystem.config";
-	inicializarFileSystem(path);
-	//verificarParametrosInicio(argc);
-	//inicializarFileSystem(argv[1]);
+	//char *path="Debug/fileSystem.config";
+	char* datosDeLectura;
+	//inicializarFileSystem(path);
+	verificarParametrosInicio(argc);
+	inicializarFileSystem(argv[1]);
 	mostrarConfiguracionesFileSystem();
 	int socketEscuchaFS;
 	socketEscuchaFS = ponerseAEscucharClientes(puerto, 0);
@@ -522,52 +530,67 @@ int main(int argc, char *argv[]) {
 	mostrarMetadata();
 	inicializarMmap();
 	bool existeArchivo;
-	  while(!hayKernelConectado){
-	    int socketKernel = aceptarConexionDeCliente(socketEscuchaFS);
+	while(!hayKernelConectado){
+		int socketKernel = aceptarConexionDeCliente(socketEscuchaFS);
 	    recibirHandshakeDeKernel(socketKernel);
-	  }
-	  while(1){
-	    paquete paqueteRecibidoDeKernel;
-	    paqueteRecibidoDeKernel.tipoMsj = recibirEntero();
-	    paqueteRecibidoDeKernel.tamMsj = recibirEntero();
-	    paqueteRecibidoDeKernel.mensaje=malloc(paqueteRecibidoDeKernel.tamMsj);
-	    if(recv(socketKernel,&paqueteRecibidoDeKernel.mensaje,paqueteRecibidoDeKernel.tamMsj,0)==-1){
-	        log_info(loggerFS,"Error al recibir el tamanio paquete.");
-	        exit(-1);
-	    }
-	    switch (paqueteRecibidoDeKernel.tipoMsj) {
+	}
+	while(1){
+		paquete* paqueteRecibidoDeKernel;
+	    recvRemasterizado(socketKernel);
+	    switch (paqueteRecibidoDeKernel->tipoMsj) {
 	      case VALIDAR_ARCHIVO:
-	        existeArchivo = validarArchivo(paqueteRecibidoDeKernel.mensaje);
-	        if(send(socketKernel,&existeArchivo,sizeof(bool),0)==-1){
-	          log_info(loggerFS, "Error al enviar existencia de archivo.", paqueteRecibidoDeKernel.mensaje);
-	          exit(-1);
-	        }
+	    	  existeArchivo = validarArchivo(paqueteRecibidoDeKernel->mensaje);
+	    	  if(existeArchivo){
+	    		  log_info(loggerFS, "El archivo %s existe...", (char*)paqueteRecibidoDeKernel->mensaje);
+	    		  sendDeNotificacion(socketKernel, EXISTE_ARCHIVO);
+	    	  }else{
+	    		  log_info(loggerFS, "El archivo %s no existe...", (char*)paqueteRecibidoDeKernel->mensaje);
+	    		  sendDeNotificacion(socketKernel, NO_EXISTE_ARCHIVO);
+	    	  }
 	        break;
 	      case BORRAR_ARCHIVO:
-	        if(seBorroArchivoDeFS(paqueteRecibidoDeKernel.mensaje)){
-	          log_info(loggerFS, "Se borro el archivo %s exitosamente.",paqueteRecibidoDeKernel.mensaje);
-	        }else{
-	          log_info(loggerFS, "No se pudo borrar el archivo %s.", paqueteRecibidoDeKernel.mensaje);
-	        }
-	        break;
+	    	  if(seBorroArchivoDeFS(paqueteRecibidoDeKernel->mensaje)){
+	    		  log_info(loggerFS, "Se borro el archivo %s exitosamente.",(char*)paqueteRecibidoDeKernel->mensaje);
+	    		  sendDeNotificacion(socketKernel, OPERACION_FINALIZADA_CORRECTAMENTE);
+	    	  }else{
+	    		  log_info(loggerFS, "No se pudo borrar el archivo %s.", (char*)paqueteRecibidoDeKernel->mensaje);
+	    		  sendDeNotificacion(socketKernel, OPERACION_FALLIDA);
+	    	  }
+	    	  break;
 	      case CREAR_ARCHIVO:
 //	    	recibirMensajeCrear(paqueteRecibidoDeKernel.mensaje);
-			crearArchivo(paqueteRecibidoDeKernel.mensaje);
-	        break;
+	    	  if(crearArchivo(paqueteRecibidoDeKernel->mensaje) == OPERACION_FINALIZADA_CORRECTAMENTE){
+	    		  sendDeNotificacion(socketKernel, OPERACION_FINALIZADA_CORRECTAMENTE);
+	    	  }else{
+	    		  sendDeNotificacion(socketKernel, OPERACION_FALLIDA);
+	    	  }
+	    	  break;
 	      case OBTENER_DATOS:
 	    	//recibirMensajeObtenerDatos(paqueteRecibidoDeKernel.mensaje);
-			obtenerDatosDelArchivo(paqueteRecibidoDeKernel.mensaje);
-	        break;
+	    	  datosDeLectura = obtenerDatosDelArchivo(paqueteRecibidoDeKernel->mensaje);
+	    	  if(datosDeLectura != NULL){
+	    		  sendRemasterizado(socketKernel, DATOS_DE_LECTURA, string_length(datosDeLectura), datosDeLectura);
+	    	  }else{
+	    		  sendDeNotificacion(socketKernel, OPERACION_FALLIDA);
+	    	  }
+	    	  free(datosDeLectura);
+	    	  break;
 	      case GUARDAR_DATOS:
 //	    	recibirMensajeGuardarDatos(paqueteRecibidoDeKernel.mensaje);
-			guardarDatosArchivo(paqueteRecibidoDeKernel.mensaje);
-	        break;
+	    	  if(guardarDatosArchivo(paqueteRecibidoDeKernel->mensaje) == OPERACION_FINALIZADA_CORRECTAMENTE){
+	    		  sendDeNotificacion(socketKernel, OPERACION_FINALIZADA_CORRECTAMENTE);
+	    	  }else{
+	    		  sendDeNotificacion(socketKernel, OPERACION_FALLIDA);
+	    	  }
+	    	  break;
 	      case CORTO_KERNEL:
-	        close(socketKernel);
-	        break;
+	    	  close(socketEscuchaFS);
+	    	  close(socketKernel);
+	    	  break;
 	      default:
-			log_info(loggerFS, "Error de operacion");
-				}
-
+	    	  log_info(loggerFS, "Error de operacion");
 	    }
+	    free(paqueteRecibidoDeKernel);
+
+	  }
 }
