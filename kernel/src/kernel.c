@@ -24,6 +24,9 @@
 #define TAMANIO_PAGINA 102
 #define OPERACION_CON_MEMORIA_EXITOSA 1
 #define ESPACIO_INSUFICIENTE -2
+#define FINALIZO_CORRECTAMENTE 101
+#define FINALIZO_INCORRECTAMENTE 102
+
 
 //------------------------------------------------ESTRUCTURAS--------------------------------------//
 typedef struct __attribute__((__packed__)) {
@@ -476,11 +479,8 @@ void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
 		sendRemasterizado(socketDeConsola, ENVIAR_PID, sizeof(int), &pcbInicializado->pid);
 	}
 	else{
-		char* espacioInsuficiente = string_new();
-		string_append(&espacioInsuficiente,"No hay espacio suficiente para ejecutar el programa");
-		sendRemasterizado(socketDeConsola,ESPACIO_INSUFICIENTE, strlen(espacioInsuficiente)*sizeof(char), &espacioInsuficiente);
+		sendDeNotificacion(socketDeConsola,ESPACIO_INSUFICIENTE);
 		free(pcbInicializado);
-		free(espacioInsuficiente);
 	}
 }
 
@@ -573,6 +573,15 @@ int cantidadDeRafagasDe(int pid){
   return pcbConRafagas->rafagas;
 }
 
+void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketConsola){
+	if(finalizarProceso((int)paqueteConProceso->mensaje)){
+		sendDeNotificacion(socketConsola,FINALIZO_CORRECTAMENTE);
+	}
+	else{
+		sendDeNotificacion(socketConsola,FINALIZO_INCORRECTAMENTE);
+	}
+}
+
 //--------------------------------------HILOS-----------------------------------//
 //------------------------------------MANEJADOR CONSOLA-------------------------------------------------/////////
 void* manejadorConexionConsola(void* socketAceptado){
@@ -585,8 +594,7 @@ void* manejadorConexionConsola(void* socketAceptado){
 			iniciarProceso(paqueteRecibidoDeConsola, socketDeConsola);
 			break;
 		case FINALIZAR_PROGRAMA:
-			finalizarProceso((int)paqueteRecibidoDeConsola->mensaje);
-			//FALTA INFORMARLE A LA CONSOLA
+			finalizarProcesoEnviadoDeConsola(paqueteRecibidoDeConsola, socketDeConsola);
 			break;
 		default:
 			perror("No se recibio correctamente el mensaje");

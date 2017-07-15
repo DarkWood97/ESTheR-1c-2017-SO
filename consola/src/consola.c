@@ -15,6 +15,8 @@
 #define HANDSHAKE_CONSOLA 1005
 #define FINALIZAR_PROGRAMA 503
 #define ESPACIO_INSUFICIENTE -2
+#define FINALIZO_CORRECTAMENTE 505
+#define FINALIZO_INCORRECTAMENTE 516
 
 typedef struct {
 	_ip ip_Kernel;
@@ -194,6 +196,12 @@ void finalizarPrograma(int pid)
 		free(final);
 		eliminarPrograma(pid);
 		free(unPrograma);
+		if(recvDeNotificacion(socketKernel)==FINALIZO_CORRECTAMENTE){
+			printf("El programa con el PID: %d finalizo correctamente",pid);
+		}
+		else if(recvDeNotificacion(socketKernel)==FINALIZO_INCORRECTAMENTE){
+			printf("El programa con el PID: %d no se pudo finalizar",pid);
+		}
 	}
 	else{
 		printf("PID Ingresado: Incorrecto\n");
