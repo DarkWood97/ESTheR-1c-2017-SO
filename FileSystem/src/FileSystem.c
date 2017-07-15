@@ -163,9 +163,13 @@ char* armarNombreArchivo(int bloque){
 //----------------------------FUNCIONES ARCHIVOS------------------------------------------------
 
 //Validar Archivo
-bool validarArchivo(char* path){
-	char* cadena=malloc(strlen(punto_Montaje)+strlen(path)+strlen("/Archivos/"));
-	cadena=concatenarPath(path,"/Archivos/");
+bool validarArchivo(void* mensaje){
+	int tamanioPath=0;
+	char* pathDeArchivo=string_new();
+	memcpy(&tamanioPath,mensaje,sizeof(int));
+	memcpy(pathDeArchivo,mensaje+sizeof(int),tamanioPath);
+	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
+	cadena=concatenarPath(pathDeArchivo,"/Archivos/");
 	FILE* archivo=fopen(cadena,"r");
 	if (archivo == NULL) {
 		log_info(loggerFS,"No existe el archivo");
@@ -195,9 +199,13 @@ void liberarBloques(char** bloques){
 	}
 }
 
-bool seBorroArchivoDeFS(char* pathDeArchivo){
-	  char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
-	  cadena=concatenarPath(pathDeArchivo,"/Archivos");
+bool seBorroArchivoDeFS(void* mensaje){
+	int tamanioPath=0;
+	char* pathDeArchivo=string_new();
+	memcpy(&tamanioPath,mensaje,sizeof(int));
+	memcpy(pathDeArchivo,mensaje+sizeof(int),tamanioPath);
+	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
+	cadena=concatenarPath(pathDeArchivo,"/Archivos");
 	  t_config* archivo=generarT_Config(cadena);
 	  int tamanio = config_get_int_value(archivo,"TAMANIO");
 	  char** bloques= config_get_array_value(archivo,"BLOQUES");
@@ -255,12 +263,10 @@ void asignarBloqueArchivo(int nuevoBloque,char* cadena){
 }
 
 int crearArchivo (void* mensaje){
-	char modoDeArchivo;
 	int tamanioPath=0;
 	char* pathDeArchivo=string_new();
-	memcpy(&modoDeArchivo,mensaje,sizeof(char));
-	memcpy(&tamanioPath,mensaje+sizeof(char),sizeof(int));
-	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
+	memcpy(&tamanioPath,mensaje,sizeof(int));
+	memcpy(pathDeArchivo,mensaje+sizeof(int),tamanioPath);
 	int bloque;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo,"/Archivos/");

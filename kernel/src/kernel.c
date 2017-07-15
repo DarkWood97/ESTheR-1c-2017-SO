@@ -75,7 +75,6 @@ typedef struct __attribute__((__packed_)) {
 }PCB;
 
 typedef struct __attribute__((__packed__)) {
-	int FD;
 	int globalFD;
 	char* file;
 	int open;
@@ -87,6 +86,11 @@ typedef struct __attribute__((__packed__)) {
 	char* flags;
 	int globalFD;
 }tablaArchivosFS;
+
+typedef struct __attribute__((__packed__)) {
+	int pid;
+	int cantidadSyscall;
+}registroSyscall;
 
 //-------------------------------------------VARAIBLES GLOBALES------------------------------
 
@@ -110,6 +114,7 @@ t_queue* listaDeCPULibres;
 //TABLAS FS
 t_list* tablaAdminArchivos;
 t_list* tablaAdminGlobal;
+t_list* registroDeSyscall;
 
 
 //VARIABLES DE CONFIGURACION DEL KERNEL
@@ -542,23 +547,161 @@ void planificarSistema(){
 }
 
 //CPU
-bool mismoPath(tablaGlobalFS* entradaGFS){
-	return string_equals_ignore_case(entradaGFS->file,);
+bool buscarEnTG(char* path){
+	int i;
+	tablaGlobalFS* entradaATG;
+	for(i=0;i<list_size(tablaAdminGlobal);i++){
+		entradaATG=(tablaGlobalFS*)list_get(tablaAdminGlobal,i);
+		if(string_equals_ignore_case(entradaATG->file,path)){
+			return true;
+		}
+	}
+	return false;
 }
 
+bool ordenarLista(tablaGlobalFS* menorFd, tablaGlobalFS* mayorFd){
+	return menorFd->globalFD<mayorFd->globalFD;
+}
 
-void agregarEntradaTG(char* path){
-	tablaGlobalFS entradaGFS;
-	if(list_find(tablaAdminGlobal,(void*)mismoPath){
+int nuevoGFD(){
+	list_sort(tablaAdminGlobal,(void*)ordenarLista);
+	int i;
+	int FD=0;
+	tablaGlobalFS* entradaATG;
+	for(i=0;i<list_size(tablaAdminGlobal);i++){
+		entradaATG=(tablaGlobalFS*)list_get(tablaAdminGlobal,i);
+		if(FD < entradaATG->globalFD){
+			return FD;
+		}
+		FD++;
+	}
+	return FD;
 
+}
+
+int crearEntradaTG(char* path){
+	tablaGlobalFS* entradaATG;
+	entradaATG=malloc(sizeof(int)*2+string_length(path));
+	entradaATG->globalFD=nuevoGFD();
+	string_append(&entradaATG->file,path);
+	entradaATG->open=1;
+	list_add(tablaAdminGlobal,entradaATG);
+	return entradaATG->globalFD;
+}
+
+bool existePath(tablaGlobalFS* pathActual, tablaGlobalFS* pathBuscado){
+	return string_equals_ignore_case(pathActual->file,pathBuscado->file);
+}
+
+int agregarEntradaTG(char* path){
+	tablaGlobalFS* entradaGFS;
+	if(buscarEnTG(path)){
+		return crearEntradaTG(path);
+	}else{
+		entradaGFS=list_find(tablaAdminGlobal,(void*)existePath);
+		entradaGFS->open++;
+		return entradaGFS->globalFD;
 	}
 }
 
+bool pidIguales(tablaArchivosFS* pidActual, tablaArchivosFS* pidIgual){
+	return pidActual->pid==pidIgual->pid;
+}
 
-void abrirArchivo(pid,path,flags){
+int nuevoFD(int piid){
+	t_list* listaDelPID=list_create();
+	listaDelPID=list_filter(tablaAdminArchivos,(void*)pidIguales);
+	list_sort(listaDelPID,(void*)ordenarLista);
+	int i;
+	int FD=3;
+	tablaGlobalFS* entradaATG;
+	for(i=0;i<list_size(listaDelPID);i++){
+		entradaATG=(tablaGlobalFS*)list_get(listaDelPID,i);
+		if(FD < entradaATG->globalFD){
+			return FD;
+		}
+		FD++;
+	}
+	return FD;
+}
+
+void agregarEntradaTP(int pid, int fd,t_banderas flags,int fdGlobal){
+	tablaArchivosFS* entradaATP=maloc(sizeof(int)*3+sizeof(t_banderas));
+	entradaATP->pid=pid;
+	entradaATP->FD=fd;
+	entradaATP->flags=flags;
+	entradaATP->globalFD=fdGlobal;
+	list_add(tablaAdminArchivos,entradaATP);
+}
+
+bool validarArchivo(char* path){
+	void *buffer=malloc(string_length(path));
+	int tamanioPath=string_length(path);
+	memcpy(buffer,tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, string_length(path));
+	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
+	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+bool crearArchivo(path){
+	void *buffer=malloc(string_length(path));
+	int tamanioPath=string_length(path);
+	memcpy(buffer,tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, string_length(path));
+	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
+	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
+		log_info(loggerKernel,"Se abrio correctamente el archivo %s.",path);
+		return true;
+	}else{
+		log_info(loggerKernel,"No se pudo abrir el archivo %s.",path);
+		return false;
+	}
+}
+
+void agregarRegistoSyscall(pid){
+	registroSyscall* registro=malloc(sizeof(int)*2);
+	int i;
+	for(i=0;i<list_size(registroDeSyscall);i++){
+		registro=(registroSyscall*)list_get(registroDeSyscall,i);
+		if(pid==registro->pid){
+			list_remove(registroDeSyscall,i);
+			registro->cantidadSyscall++;
+			list_add(registroDeSyscall,registro);
+		}
+	}
+}
+
+int abrirArchivo(int pid,char* path,t_banderas flags){
+	int fdGlobal, fd;
 	if(validarArchivo(path)){
-		agregarEntradaTG(path);
+		fdGlobal=agregarEntradaTG(path);
+		fd = nuevoFD(pid);
+		agregarEntradaTP(pid,fd,flags,fdGlobal);
+		log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
+		agregarRegistoSyscall(pid);
+		return fd;
+	}else{
+		if(flags.creacion==true){
+			if(!crearArchivo(path)){
+				return -1;
+			}
+			fdGlobal=agregarEntradaTG(path);
+			fdGlobal=agregarEntradaTG(path);
+			fd = nuevoFD(pid);
+			agregarEntradaTP(pid,fd,flags,fdGlobal);
+			agregarRegistoSyscall(pid);
+			log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
+			return fd;
+		}else{
+			log_info(loggerKernel,"Error al abrir archivo por permiso incorrecto");
+			return -1;
+		}
 	}
+
 }
 
 void *manejadorCPU(void* socket){
@@ -581,7 +724,7 @@ void *manejadorCPU(void* socket){
   char* path=string_new();
   int tamanioPath;
   t_banderas* flags=malloc(sizeof(t_banderas));
-
+  int estadoOperacionArchivo=0;
 
   while(estaOcupadaCPU){
     paquete *paqueteRecibidoDeCPU;
@@ -632,8 +775,8 @@ void *manejadorCPU(void* socket){
     	  memcpy(pid,paqueteAbrirArchivo->mensaje+sizeof(int),sizeof(int));
     	  tamanioPath=paqueteAbrirArchivo->tamMsj-sizeof(int)-sizeof(t_banderas);
     	  memcpy(path,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath,tamanioPath);
-    	  memcpy(flags,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath,sizeof(t_banderas),sizeof(t_banderas));
-    	  abrirArchivo(pid,path,flags);
+    	  memcpy(flags,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
+    	  estadoOperacionArchivo=abrirArchivo(pid,path,flags);
     	  break;
       case BORRAR_ARCHIVO:
         break;
