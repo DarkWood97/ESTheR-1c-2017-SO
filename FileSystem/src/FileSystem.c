@@ -42,18 +42,34 @@ t_config *generarT_Config(char *path) {
 }
 
 //------CONFIGURACION FILESYSTEM-----------------------------------------------
+int abrirBitmap(){
+	log_debug(loggerFS,"Se procede abrir el archivo Bitmap.bin");
+	char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
+	int file= open(cadena,O_RDWR);
+	return file;
+}
 
-void inicializarMmap(){
-	//Crear el bitmap
-	FILE* archivoBitmap=fopen("Debug/Bitmap.bin","w+");
+int crearBitmap(){
+	log_debug(loggerFS,"Se procede a crear el archivo Bitmap.bin");
+	char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
+	int file = open(cadena,O_RDWR);
 	int cantidad = ceil(((double)cantidad_bloque)/8.0);
 	char* contenido=string_repeat('\0',cantidad);
-	fwrite(contenido,1,cantidad_bloque,archivoBitmap);
-	fclose(archivoBitmap);
+	if(file<0){
+		log_info(loggerFS,"No se pudo crear el archivo");
+	}
+	write(file,contenido,cantidad);
+	return file;
+}
 
-	//Inicializo el Mmap
+
+
+void inicializarMmap(){
+	int file=abrirBitmap();
+	if(file<0){
+		file=crearBitmap();
+	}
 	struct stat myStat;
-	int file= open("Debug/Bitmap.bin",O_RDWR);
 	if (fstat(file, &myStat) < 0) {
 	    printf("Error al establecer fstat\n");
 	    close(file);
@@ -93,20 +109,6 @@ void mostrarMetadata(){
 	printf("CANTIDAD_BLOQUES=%d\n", cantidad_bloque);
 }
 
-//void metadataFileSystem(){
-//	//char* cadenaAux=malloc(strlen(punto_Montaje));
-//	//cadenaAux=punto_Montaje;
-//	//string_append(&cadenaAux,"Metadata/Metadata.bin");
-//	void* bufferDeInts;
-//	bufferDeInts = malloc(sizeof(int)*2);
-//	FILE *archivoFileSystem = txt_open_for_append("Metadata.txt");
-//	fread(&bufferDeInts, sizeof(int), 3, archivoFileSystem);
-//	int cantBloques, tamanioBloques;
-//	memcpy(&cantBloques, bufferDeInts, sizeof(int));
-//	memcpy(&tamanioBloques, bufferDeInts+sizeof(int), sizeof(int));
-//	fclose(archivoFileSystem);
-//	free(bufferDeInts);
-//}
 
 void obtenerMetadata (t_config *metadata){
 	//vereficarParametrosCrear(metadata,3);
@@ -214,6 +216,36 @@ int obtenerBloque(){
 	return 0;
 }
 
+void crearPathBloque(int nuevoBloque){
+	char* cadenaBloque=armarNombreArchivo(nuevoBloque);
+	char* path=concatenarPath(cadenaBloque,"/Bloques/");
+	//VER COMO CREAR DIRECTORIOS
+
+}
+
+void asignarBloqueArchivo(int nuevoBloque,char* cadena){
+	t_config* datosArchivo=config_create(cadena);
+	int tamanioArchivo=config_get_int_value(datosArchivo, "TAMANIO");
+	char** bloques=config_get_array_value(datosArchivo,"BLOQUES");
+	FILE* archivo=fopen(cadena,"w+");
+	char* tamanio="TAMANIO";
+	string_append(&tamanio,string_itoa(tamanioArchivo));
+	fputs(tamanio,archivo);
+	fputc('\n',archivo);
+	fputs("BLOQUES=[",archivo);
+	int i=0;
+	while(bloques[i]!=NULL){
+		fputs(bloques[i],archivo);
+		fputc(',',archivo);
+		i++;
+	}
+	bitarray_set_bit(bitarray,nuevoBloque);
+	crearPathBloque(nuevoBloque);
+	fputs(string_itoa(nuevoBloque),archivo);
+	fputc(']',archivo);
+	fputc('\n',archivo);
+}
+
 void crearArchivo (void* mensaje){
 	char modoDeArchivo;
 	int tamanioPath=0;
@@ -224,25 +256,26 @@ void crearArchivo (void* mensaje){
 	int bloque;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo,"/Archivos/");
-	FILE* archivo=fopen(cadena,"w+");
-	if(archivo!=NULL){
-		fputs("TAMANIO=0",archivo);
-		fputc('\n',archivo);
-		fputs("BLOQUES=[",archivo);
+//	FILE* archivo=fopen(cadena,"w+");
+//	if(archivo!=NULL){
+//		fputs("TAMANIO=0",archivo);
+//		fputc('\n',archivo);
+//		fputs("BLOQUES=[",archivo);
 		bloque=obtenerBloque();
 		//NO TENDRIA QUE INICIALIZAR EL PATH BLOQUE
 		if(bloque!=0){
-			fputs(string_itoa(bloque),archivo);
+//			fputs(string_itoa(bloque),archivo);
+			asignarBloqueArchivo(bloque,cadena);
 			log_info(loggerFS,"Se asigna a %s correctamente el bloque %d",cadena,bloque);
 			log_info(loggerFS, "Se creo el archivo %s exitosamente.",cadena);
 		}else{
 			log_info(loggerFS,"No se pudo crear el archivo %s por falta de bloques disponibles",cadena);
 		}
-		fputc(']',archivo);
-		fputc('\n',archivo);
-	}else{
-		log_info(loggerFS, "No se pudo crear el archivo %s.", cadena);
-	}
+//		fputc(']',archivo);
+//		fputc('\n',archivo);
+//	}else{
+//		log_info(loggerFS, "No se pudo crear el archivo %s.", cadena);
+//	}
 }
 
 
@@ -325,33 +358,7 @@ void obtenerDatosDelArchivo(void* mensaje){
 
 // GUARDAR DATOS
 
-void crearPathBloque(int nuevoBloque){
-//	char* cadenaBloque=armarNombreArchivo(nuevoBloque);
-//	char* path=concatenarPath(cadenaBloque,"/Bloques/");
 
-
-}
-
-void asignarBloqueArchivo(int nuevoBloque,char* cadena,char** bloques, int tamanioArchivo){
-	FILE* archivo=fopen(cadena,"w+");
-	char* tamanio="TAMANIO";
-	string_append(&tamanio,string_itoa(tamanioArchivo));
-	fputs(tamanio,archivo);
-	fputc('\n',archivo);
-	fputs("BLOQUES=[",archivo);
-	int i=0;
-	while(bloques[i]!=NULL){
-		fputs(bloques[i],archivo);
-		fputc(',',archivo);
-		i++;
-	}
-	bitarray_set_bit(bitarray,nuevoBloque);
-	crearPathBloque(nuevoBloque);
-	fputs(string_itoa(nuevoBloque),archivo);
-	fputc(']',archivo);
-	fputc('\n',archivo);
-
-}
 
 bool guardarBloques(char**bloques,int tamanioArchivo, int size,int offset,char* buffer,char* cadena){
 	int primerBloqueALeer=offset/tamanio_bloque;
@@ -380,7 +387,7 @@ bool guardarBloques(char**bloques,int tamanioArchivo, int size,int offset,char* 
 			if(bloques[primerBloqueALeer]!= NULL){
 				int nuevoBloque=obtenerBloque();//Le asigno un bloque extra para que pueda seguir grabando
 				if(nuevoBloque!=0){
-					asignarBloqueArchivo(nuevoBloque,cadena,bloques,tamanioArchivo);
+					asignarBloqueArchivo(nuevoBloque,cadena);
 				}else{
 					log_info(loggerFS,"No se encontro bloques disponibles para el archivo");
 					//MANDAR KERNEL ERROR
