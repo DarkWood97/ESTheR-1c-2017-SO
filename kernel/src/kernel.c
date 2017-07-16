@@ -46,14 +46,14 @@ typedef struct __attribute__((__packed__)) {
 	t_list* pagina;
 }tablaHeap;
 
-typedef struct __attribute__((__packed_))
+typedef struct __attribute__((__packed__))
 {
   int pagina;
   int offset;
   int tamanio;
 } direccion;
 
-typedef struct __attribute__((__packed_)){
+typedef struct __attribute__((__packed__)){
   int posicion;
   t_list* args;
   t_list* vars;
@@ -66,7 +66,7 @@ typedef struct{
   direccion *direccionDeVariable;
 }variable;
 
-typedef struct __attribute__((__packed_)) {
+typedef struct __attribute__((__packed__)) {
 	int pid;
 	int estado;
 	int programCounter;
@@ -100,7 +100,7 @@ typedef struct __attribute__((__packed__)) {
 
 typedef struct __attribute__((__packed__)) {
 	int pid;
-	int cantidadSyscall;
+	int cantidadSyscall; //EN CASO DE TENER QUE SABER CUANDO DE CADA UNA OTRA ESTRUCTURA APARTE
 }registroSyscall;
 
 //-------------------------------------------VARAIBLES GLOBALES------------------------------
@@ -122,7 +122,7 @@ t_queue* colaFinalizado;
 t_queue* colaListo;
 t_queue* colaNuevo;
 t_queue* listaDeCPULibres;
-t_queue* finalizadosPorConsola;
+t_queue* finalizadosPorConsola; //MEJOR T_LIST
 
 //TABLAS FS
 t_list* tablaAdminArchivos;
@@ -278,6 +278,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
 		pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
 		pcbNuevo->indiceEtiquetas = cargarEtiquetas(metadataDelPrograma, pcbNuevo->tamanioEtiquetas);
+		pcbNuevo->posicionStackActual = 0;
 		inicializarStack(pcbNuevo);
 		pcbNuevo->tamanioContexto = 1;
 		pcbNuevo->socket = socketConsolaDuenio;
@@ -535,7 +536,7 @@ bool finalizarProceso(int pid){
     }
     pcbAFinalizar->estado = FINALIZADO;
     pcbAFinalizar->exitCode = -7;
-    list_add(finalizadosPorConsola, pid);
+    list_add(finalizadosPorConsola, &pid);
     list_destroy(listaDeProcesos);
     return true;
   }else{
@@ -547,9 +548,12 @@ bool finalizarProceso(int pid){
 }
 
 void recibirPCBDeCPU(paquete *paqueteConPCB){
-  PCB *pcbRecibida = desserializarPCB(paqueteConPCB);
-  if(list_any_satisfy(finalizadosPorConsola, ==pcbRecibida->pid)){
-    list_remove_and_destroy_by_condition(colaNuevo->elements, ==pcbRecibida->pid, free); //EN CASO DE NO FUNCIONAR LA FUNCION, AGREGAR ESDEPROCESO
+  PCB *pcbRecibida = deserializarPCB(paqueteConPCB);
+  bool esDelProceso(int pid){
+	  return pid == pcbRecibida->pid;
+  }
+  if(list_any_satisfy(finalizadosPorConsola, (void*)esDelProceso)){
+    list_remove_and_destroy_by_condition(colaListo->elements, (void*)esDelProceso, free); //EN CASO DE NO FUNCIONAR LA FUNCION, AGREGAR ESDEPROCESO
     pcbRecibida->estado = FINALIZADO;
     pcbRecibida->exitCode = -7;
   }
@@ -564,7 +568,7 @@ int cantidadDeRafagasDe(int pid){
       log_info(loggerKernel, "Se encontro el proceso %d en la lista de PCBs activas...", pid);
   }
   else if(pcbConRafagas == NULL){
-    pcbConRafagas = list_find(finalizados, (void*)esPCBProceso);
+    pcbConRafagas = list_find(colaFinalizado->elements, (void*)esPCBProceso);
     log_info(loggerKernel, "Se encontro el proceso %d en la lista de PCBs finalizadas...", pid);
   }else{
     log_info(loggerKernel, "No se encontro el proceso %d en ninguna de las listas...", pid);
@@ -745,9 +749,9 @@ bool pidIguales(tablaArchivosFS* pidActual, tablaArchivosFS* pidIgual){
 	return pidActual->pid==pidIgual->pid;
 }
 
-int nuevoFD(int piid){
+int nuevoFD(int pid){
 	t_list* listaDelPID=list_create();
-	listaDelPID=list_filter(tablaAdminArchivos,(void*)pidIguales);
+	listaDelPID=list_filter(tablaAdminArchivos,(void*)pidIguales); //LA FUNCION NO PUEDE RECIBIR DOS PARAMETROS, HAY QUE DECLARARLA ADENTRO
 	list_sort(listaDelPID,(void*)ordenarLista);
 	int i;
 	int FD=3;
@@ -763,7 +767,7 @@ int nuevoFD(int piid){
 }
 
 void agregarEntradaTP(int pid, int fd,t_banderas flags,int fdGlobal){
-	tablaArchivosFS* entradaATP=maloc(sizeof(int)*3+sizeof(t_banderas));
+	tablaArchivosFS* entradaATP=malloc(sizeof(int)*3+sizeof(t_banderas));
 	entradaATP->pid=pid;
 	entradaATP->FD=fd;
 	entradaATP->flags=flags;
@@ -784,10 +788,10 @@ bool validarArchivo(char* path){
 	}
 }
 
-bool crearArchivo(path){
+bool crearArchivo(char* path){
 	void *buffer=malloc(string_length(path));
 	int tamanioPath=string_length(path);
-	memcpy(buffer,tamanioPath, sizeof(int));
+	memcpy(buffer,&tamanioPath, sizeof(int));
 	memcpy(buffer+sizeof(int),path, string_length(path));
 	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
 	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
@@ -799,7 +803,7 @@ bool crearArchivo(path){
 	}
 }
 
-void agregarRegistoSyscall(pid){
+void agregarRegistoSyscall(int pid){
 	registroSyscall* registro=malloc(sizeof(int)*2);
 	int i;
 	for(i=0;i<list_size(registroDeSyscall);i++){
