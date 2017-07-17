@@ -106,7 +106,7 @@ void realizarHandshakeConMemoria(){
 void recibirPCBDeKernel(){
 	paquete *paqueteConPCB;
 	paqueteConPCB = recvRemasterizado(socketKernel);
-	deserializarPCB(paqueteConPCB->mensaje);
+	deserializarPCB(paqueteConPCB);
 	free(paqueteConPCB);
 }
 

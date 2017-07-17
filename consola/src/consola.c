@@ -101,7 +101,6 @@ int obtenerPosicionHilo(){
 	for(;i<list_size(listaProcesos);i++){
 		programa* unPrograma = list_get(listaProcesos, i);
 		if((unPrograma->hilo)==(pthread_self())){
-			free(unPrograma);
 			return i;
 		}
 	}
@@ -119,17 +118,18 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 
 void eliminarPrograma(int pid){
 	int i = 0;
-	pthread_mutex_lock(&mutexProcesos);
 	if(!(list_is_empty(listaProcesos))){
-		for(;i<list_size(listaProcesos);i++){
+		int tamanio = list_size(listaProcesos);
+		for(;i<tamanio;i++){
 			programa* unPrograma = list_get(listaProcesos,i);
 			if(unPrograma->pid==pid){
 				list_remove(listaProcesos, i);
 			}
 			free(unPrograma);
+			tamanio = list_size(listaProcesos);
+			i--;
 		}
 	}
-	pthread_mutex_unlock(&mutexProcesos);
 }
 
 programa* buscarPrograma(int pid){
@@ -141,10 +141,8 @@ programa* buscarPrograma(int pid){
 		return false;
 	}
 
-	pthread_mutex_lock(&mutexProcesos);
 	if(list_any_satisfy(listaProcesos, (void*)chequearProgramaCorrecto)){
 		programa* programaEncontrado = list_find(listaProcesos, (void*)chequearProgramaCorrecto);
-		pthread_mutex_unlock(&mutexProcesos);
 		return programaEncontrado;
 	}else{
 		log_info(loggerConsola, "El proceso %d no se ha encontrado.", pid);
@@ -190,7 +188,6 @@ void finalizarPrograma(int pid)
 		imprimirInformacion(pid,unPrograma->impresiones,unPrograma->inicio,tiempoF);
 		free(final);
 		eliminarPrograma(pid);
-		free(unPrograma);
 	}
 	else{
 		printf("PID Ingresado: Incorrecto\n");
@@ -334,23 +331,26 @@ void* manejadorPaquetes(){
 		int i;
 		pthread_mutex_lock(&mutexHilosCorrectos);
 		if(!list_is_empty(listaHilosCorrectos)){
-			for(i=0;i<list_size(listaHilosCorrectos);i++){
+			int tamanio = list_size(listaHilosCorrectos);
+			for(i=0;i<tamanio;i++){
 				paquete* paqueteHiloAdecuado = list_get(listaHilosCorrectos, i);
 					if((MENSAJE_PID==paqueteHiloAdecuado->tipoMsj)){
 						crearPrograma(paqueteHiloAdecuado);
-						list_remove(listaHilosCorrectos, 0);
+						list_remove(listaHilosCorrectos, i);
 						destruirPaquete(paqueteHiloAdecuado);
+						tamanio = list_size(listaHilosCorrectos);
 						i--;
 					}
 					else if(ESPACIO_INSUFICIENTE==paqueteHiloAdecuado->tipoMsj){
 						imprimirMensajeEspacioInsuficiente();
-						list_remove(listaHilosCorrectos, 0);
+						list_remove(listaHilosCorrectos, i);
 						destruirPaquete(paqueteHiloAdecuado);
+						tamanio = list_size(listaHilosCorrectos);
 						i--;
 					}
 			}
-		pthread_mutex_unlock(&mutexHilosCorrectos);
 		}
+		pthread_mutex_unlock(&mutexHilosCorrectos);
 	}
 }
 
@@ -360,6 +360,7 @@ void recibirPID(long int tamanio,char* mensaje)
 	string_append(&mensajeAEnviar,mensaje);
 
 	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, mensajeAEnviar);
+	free(mensaje);
 	free(mensajeAEnviar);
 
 	paquete* paqueteRecibido = recvRemasterizado(socketKernel);
@@ -386,7 +387,6 @@ void prepararPrograma(char* path){
 	fclose(archivoRecibido);
 
 	recibirPID(tamanio,mensaje);
-	free(mensaje);
 }
 
 void desconectarConsola()
@@ -396,10 +396,11 @@ void desconectarConsola()
 	if(!(list_is_empty(listaProcesos))){
 		int tamanio = list_size(listaProcesos);
 		for(;i<tamanio;i++){
-			programa* unPrograma  = list_get(listaProcesos, 0);
+			programa* unPrograma  = list_get(listaProcesos, i);
 			int pid = unPrograma->pid;
 			finalizarPrograma(pid);
-			free(unPrograma);
+			tamanio = list_size(listaProcesos);
+			i--;
 		}
 	}
 	pthread_mutex_unlock(&mutexProcesos);
@@ -470,7 +471,9 @@ void* manejadorInterfaz()
 			int tamanioPidRecibido = strlen(comando);
 			comando[tamanioPidRecibido-1] = '\0';
 			int pid = atoi(comando);
+			pthread_mutex_lock(&mutexProcesos);
 			finalizarPrograma(pid);
+			pthread_mutex_unlock(&mutexProcesos);
 			programaIniciado = !(list_is_empty(listaProcesos));
 		}else if((string_equals_ignore_case(comando, "Desconectar Consola"))&&(programaIniciado)){
 			desconectarConsola();

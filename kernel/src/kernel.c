@@ -524,11 +524,21 @@ void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
 
 t_list* obtenerListaConTodosLosProcesos(){
 	t_list* listaConProcesos = list_create();
-	list_add_all(listaConProcesos,colaBloqueado);
-	list_add_all(listaConProcesos,colaEjecutando);
-	list_add_all(listaConProcesos,colaFinalizado);
-	list_add_all(listaConProcesos,colaListo);
-	list_add_all(listaConProcesos,colaNuevo);
+	if(!list_is_empty(colaBloqueado)){
+		list_add_all(listaConProcesos,colaBloqueado);
+	}
+	if(!list_is_empty(colaEjecutando)){
+		list_add_all(listaConProcesos,colaEjecutando);
+	}
+	if(!list_is_empty(colaFinalizado)){
+		list_add_all(listaConProcesos,colaFinalizado);
+	}
+	if(!list_is_empty(colaListo)){
+		list_add_all(listaConProcesos,colaListo);
+	}
+	if(!list_is_empty(colaListo)){
+		list_add_all(listaConProcesos,colaNuevo);
+	}
 	return listaConProcesos;
 }
 
