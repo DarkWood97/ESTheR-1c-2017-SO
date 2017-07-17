@@ -1,10 +1,3 @@
-/*
- * consola.c
- *
- *  Created on: 14/6/2017
- *      Author: utnso
- */
-
 #include <pthread.h>
 #include "funcionesGenericas.h"
 #include "socket.h"
@@ -15,8 +8,7 @@
 #define HANDSHAKE_CONSOLA 1005
 #define FINALIZAR_PROGRAMA 503
 #define ESPACIO_INSUFICIENTE -2
-#define FINALIZO_CORRECTAMENTE 505
-#define FINALIZO_INCORRECTAMENTE 516
+#define IMPRIMIR_INFO 605
 
 typedef struct {
 	_ip ip_Kernel;
@@ -39,10 +31,9 @@ typedef struct
 
 t_log* loggerConsola;
 t_list* listaProcesos;
-paquete* paqueteHiloCorrecto;
-pthread_mutex_t mutexImpresiones;
-pthread_mutex_t mutexPaquete;
-bool paqueteNoUsado;
+t_list* listaHilosCorrectos;
+pthread_mutex_t mutexProcesos;
+pthread_mutex_t mutexHilosCorrectos;
 int socketKernel;
 
 //----FUNCIONES CONSOLA-------------------------------------------------------
@@ -128,6 +119,7 @@ char* leerArchivo(FILE *archivo, long int tamanio)
 
 void eliminarPrograma(int pid){
 	int i = 0;
+	pthread_mutex_lock(&mutexProcesos);
 	if(!(list_is_empty(listaProcesos))){
 		for(;i<list_size(listaProcesos);i++){
 			programa* unPrograma = list_get(listaProcesos,i);
@@ -137,6 +129,7 @@ void eliminarPrograma(int pid){
 			free(unPrograma);
 		}
 	}
+	pthread_mutex_unlock(&mutexProcesos);
 }
 
 programa* buscarPrograma(int pid){
@@ -148,8 +141,10 @@ programa* buscarPrograma(int pid){
 		return false;
 	}
 
+	pthread_mutex_lock(&mutexProcesos);
 	if(list_any_satisfy(listaProcesos, (void*)chequearProgramaCorrecto)){
 		programa* programaEncontrado = list_find(listaProcesos, (void*)chequearProgramaCorrecto);
+		pthread_mutex_unlock(&mutexProcesos);
 		return programaEncontrado;
 	}else{
 		log_info(loggerConsola, "El proceso %d no se ha encontrado.", pid);
@@ -196,67 +191,166 @@ void finalizarPrograma(int pid)
 		free(final);
 		eliminarPrograma(pid);
 		free(unPrograma);
-		if(recvDeNotificacion(socketKernel)==FINALIZO_CORRECTAMENTE){
-			printf("El programa con el PID: %d finalizo correctamente",pid);
-		}
-		else if(recvDeNotificacion(socketKernel)==FINALIZO_INCORRECTAMENTE){
-			printf("El programa con el PID: %d no se pudo finalizar",pid);
-		}
 	}
 	else{
 		printf("PID Ingresado: Incorrecto\n");
 	}
 }
 
-void* iniciarPrograma(void* unPrograma)
-{
-	while(1){
-		if(paqueteNoUsado){
-			if((((programa*)unPrograma)->pid==paqueteHiloCorrecto->tipoMsj)){
-				pthread_mutex_lock(&mutexPaquete);
-				printf("Mensaje recibido: %p",paqueteHiloCorrecto->mensaje);
-				((programa*)unPrograma)->impresiones++;
-				list_replace(listaProcesos, obtenerPosicionHilo(), unPrograma);
-				paqueteNoUsado = false;
-				free(paqueteHiloCorrecto);
-				pthread_mutex_unlock(&mutexPaquete);
+void aniadirPaqueteALaLista(paquete* unPaqueteRecibido){
+	paquete* unPaqueteAAniadir = malloc(sizeof(int)*2+unPaqueteRecibido->tamMsj);
+	int tipoDeMsj = unPaqueteRecibido->tipoMsj;
+	int tamanioDeMsj = unPaqueteRecibido->tamMsj;
+	void* mensaje = malloc(tamanioDeMsj);
+	memcpy(mensaje,unPaqueteRecibido->mensaje,tamanioDeMsj);
+	unPaqueteAAniadir->tipoMsj = tipoDeMsj;
+	unPaqueteAAniadir->tamMsj = tamanioDeMsj;
+	unPaqueteAAniadir->mensaje = mensaje;
+	list_add(listaHilosCorrectos,unPaqueteAAniadir);
+}
+
+void imprimirMensajeEspacioInsuficiente(){
+	log_error(loggerConsola, "No hay espacio suficiente...");
+	printf("No hay espacio suficiente para iniciar el programa\n");
+}
+
+bool imprimirInformacionPaquete(paquete* paqueteRecibido, programa* unPrograma){
+	int pidPrograma = ((programa*)unPrograma)->pid;
+	int pidImpresion;
+	memcpy(&pidImpresion,paqueteRecibido->mensaje,sizeof(int));
+	if(pidImpresion==pidPrograma){
+		int tamanioInfo;
+		memcpy(&tamanioInfo,paqueteRecibido->mensaje+sizeof(int),sizeof(int));
+		char* infoAImprimir = malloc(tamanioInfo);
+		memcpy(infoAImprimir,paqueteRecibido->mensaje+(sizeof(int)*2),tamanioInfo);
+		printf("Mensaje recibido: %s",infoAImprimir);
+		free(infoAImprimir);
+		pthread_mutex_lock(&mutexProcesos);
+		((programa*)unPrograma)->impresiones++;
+		list_replace(listaProcesos, obtenerPosicionHilo(), unPrograma);
+		pthread_mutex_unlock(&mutexProcesos);
+		return true;
+	}
+	else{
+		return false;
+	}
+}
+
+void manejarHiloCorrespondiente(programa* unPrograma){
+	while(!list_is_empty(listaHilosCorrectos)){
+		paquete* paqueteHiloAdecuado = list_get(listaHilosCorrectos, 0);
+		if(IMPRIMIR_INFO==paqueteHiloAdecuado->tipoMsj){
+			if(imprimirInformacionPaquete(paqueteHiloAdecuado,unPrograma)){
+				list_remove(listaHilosCorrectos, 0);
+				destruirPaquete(paqueteHiloAdecuado);
 			}
 		}
+		else if(FINALIZAR_PROGRAMA==paqueteHiloAdecuado->tipoMsj){
+			int pidAFinalizar;
+			int pidPrograma = ((programa*)unPrograma)->pid;
+			memcpy(&pidAFinalizar,paqueteHiloAdecuado->mensaje,sizeof(int));
+			if(pidPrograma==pidAFinalizar){
+				int tamanioInfo;
+				memcpy(&tamanioInfo,paqueteHiloAdecuado->mensaje+sizeof(int),sizeof(int));
+				char* infoAImprimir = malloc(tamanioInfo);
+				memcpy(infoAImprimir,paqueteHiloAdecuado->mensaje+(sizeof(int)*2),tamanioInfo);
+				printf("Mensaje recibido: %s",infoAImprimir);
+				free(infoAImprimir);
+				list_remove(listaHilosCorrectos, 0);
+				destruirPaquete(paqueteHiloAdecuado);
+				pthread_mutex_lock(&mutexProcesos);
+				((programa*)unPrograma)->impresiones++;
+				list_replace(listaProcesos, obtenerPosicionHilo(), unPrograma);
+				pthread_mutex_unlock(&mutexProcesos);
+				finalizarPrograma(pidAFinalizar);
+				pthread_exit(NULL);
+			}
+		}
+	}
+}
+
+void* administrarPrograma(void* unPrograma)
+{
+	while(1){
+
+		manejarHiloCorrespondiente(unPrograma);
 
 		paquete* paqueteRecibido = recvRemasterizado(socketKernel);
 
-		if(((programa*)unPrograma)->pid==paqueteRecibido->tipoMsj){
-			pthread_mutex_lock(&mutexImpresiones);
-			printf("Mensaje recibido: %p",paqueteRecibido->mensaje);
-			((programa*)unPrograma)->impresiones++;
-			list_replace(listaProcesos, obtenerPosicionHilo(), unPrograma);
-			pthread_mutex_unlock(&mutexImpresiones);
+		if(IMPRIMIR_INFO==paqueteRecibido->tipoMsj){
+			if(!imprimirInformacionPaquete(paqueteRecibido, unPrograma)){
+				aniadirPaqueteALaLista(paqueteRecibido);
+			}
 		} else if(FINALIZAR_PROGRAMA==paqueteRecibido->tipoMsj){
-			int pidAFinalizar, tamanio;
-			memcpy(&pidAFinalizar, paqueteRecibido->mensaje, sizeof(int));
-			memcpy(&tamanio,paqueteRecibido->mensaje+sizeof(int),sizeof(int));
-			char* mensaje = malloc(tamanio);
-			memcpy(&mensaje,paqueteRecibido->mensaje+(sizeof(int)*2),tamanio);
-			printf("Mensaje recibido: %p",mensaje);
-			finalizarPrograma(pidAFinalizar);
-			free(mensaje);
-			pthread_exit(NULL);
+			int pidAFinalizar;
+			int pidPrograma = ((programa*)unPrograma)->pid;
+			memcpy(&pidAFinalizar,paqueteRecibido->mensaje,sizeof(int));
+				if(pidPrograma==pidAFinalizar){
+					int tamanioInfo;
+					memcpy(&tamanioInfo,paqueteRecibido->mensaje+sizeof(int),sizeof(int));
+					char* infoAImprimir = malloc(tamanioInfo);
+					memcpy(infoAImprimir,paqueteRecibido->mensaje+(sizeof(int)*2),tamanioInfo);
+					printf("Mensaje recibido: %s",infoAImprimir);
+					free(infoAImprimir);
+					pthread_mutex_lock(&mutexProcesos);
+					((programa*)unPrograma)->impresiones++;
+					list_replace(listaProcesos, obtenerPosicionHilo(), unPrograma);
+					pthread_mutex_unlock(&mutexProcesos);
+					finalizarPrograma(pidAFinalizar);
+					pthread_exit(NULL);
+				}
+				else{
+					aniadirPaqueteALaLista(paqueteRecibido);
+				}
 		}
 		else{
-			pthread_mutex_lock(&mutexPaquete);
-			paqueteHiloCorrecto = malloc(sizeof(paqueteRecibido->tamMsj)+(sizeof(int)*2));
-			int tamMsj = paqueteRecibido->tamMsj;
-			int tipoMsj = paqueteRecibido->tipoMsj;
-			char* mensaje = string_new();
-			string_append(&mensaje,(char*)paqueteRecibido->mensaje);
-			paqueteHiloCorrecto->tamMsj = tamMsj;
-			paqueteHiloCorrecto->tipoMsj = tipoMsj;
-			paqueteHiloCorrecto->mensaje = mensaje;
-			paqueteNoUsado = true;
-			pthread_mutex_unlock(&mutexPaquete);
+			aniadirPaqueteALaLista(paqueteRecibido);
 		}
 
-		free(paqueteRecibido);
+		destruirPaquete(paqueteRecibido);
+	}
+}
+
+void crearPrograma(paquete* unPaqueteRecibido){
+	programa* unPrograma = malloc(sizeof(programa));
+	char* tiempo=malloc(1000);
+	tiempo = temporal_get_string_time();
+	pthread_t hiloPrograma;
+	int pid =*(int*)unPaqueteRecibido->mensaje;
+	unPrograma->pid = pid;
+	unPrograma->hilo = hiloPrograma;
+	unPrograma->impresiones = 0;
+	unPrograma->inicio = obtenerTiempo(tiempo);
+	pthread_mutex_lock(&mutexProcesos);
+	list_add(listaProcesos,unPrograma);
+	pthread_mutex_unlock(&mutexProcesos);
+	pthread_create(&hiloPrograma,NULL,administrarPrograma,(void*)unPrograma);
+	free(tiempo);
+	log_info(loggerConsola, "Se recibio correctamente el pid %d de kernel...", pid);
+}
+
+void* manejadorPaquetes(){
+	while(1){
+		int i;
+		pthread_mutex_lock(&mutexHilosCorrectos);
+		if(!list_is_empty(listaHilosCorrectos)){
+			for(i=0;i<list_size(listaHilosCorrectos);i++){
+				paquete* paqueteHiloAdecuado = list_get(listaHilosCorrectos, i);
+					if((MENSAJE_PID==paqueteHiloAdecuado->tipoMsj)){
+						crearPrograma(paqueteHiloAdecuado);
+						list_remove(listaHilosCorrectos, 0);
+						destruirPaquete(paqueteHiloAdecuado);
+						i--;
+					}
+					else if(ESPACIO_INSUFICIENTE==paqueteHiloAdecuado->tipoMsj){
+						imprimirMensajeEspacioInsuficiente();
+						list_remove(listaHilosCorrectos, 0);
+						destruirPaquete(paqueteHiloAdecuado);
+						i--;
+					}
+			}
+		pthread_mutex_unlock(&mutexHilosCorrectos);
+		}
 	}
 }
 
@@ -266,54 +360,23 @@ void recibirPID(long int tamanio,char* mensaje)
 	string_append(&mensajeAEnviar,mensaje);
 
 	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, mensajeAEnviar);
-	programa* unPrograma = malloc(sizeof(programa));
-	bool PIDNoRecibido = true;
+	free(mensajeAEnviar);
 
-	while(PIDNoRecibido){
-		paquete* paqueteRecibido = recvRemasterizado(socketKernel);
-		if(paqueteRecibido->tipoMsj==MENSAJE_PID){
-			pthread_mutex_unlock(&mutexImpresiones);
-			char* tiempo=malloc(1000);
-			tiempo = temporal_get_string_time();
-			pthread_t hiloPrograma;
-			int pid = *(int*)paqueteRecibido->mensaje;
-			unPrograma->pid = pid;
-			unPrograma->hilo = hiloPrograma;
-			unPrograma->impresiones = 0;
-			unPrograma->inicio = obtenerTiempo(tiempo);
-			list_add(listaProcesos,unPrograma);
-			pthread_create(&hiloPrograma,NULL,iniciarPrograma,(void*)unPrograma);
-			PIDNoRecibido = false;
-			free(tiempo);
-			log_info(loggerConsola, "Se recibio correctamente el pid %d de kernel...", *(int*)paqueteRecibido->mensaje);
-		} else if(paqueteRecibido->tipoMsj==ESPACIO_INSUFICIENTE){
-			pthread_mutex_unlock(&mutexImpresiones);
-			log_error(loggerConsola, "No hay espacio suficiente...");
-			printf("No hay espacio suficiente para iniciar el programa\n");
-			PIDNoRecibido = false;
-		}
-		else{
-			pthread_mutex_lock(&mutexPaquete);
-			paqueteHiloCorrecto = malloc(sizeof(paqueteRecibido->tamMsj)+(sizeof(int)*2));
-			int tamMsj = paqueteRecibido->tamMsj;
-			int tipoMsj = paqueteRecibido->tipoMsj;
-			char* mensaje = string_new();
-			string_append(&mensaje,(char*)paqueteRecibido->mensaje);
-			paqueteHiloCorrecto->tamMsj = tamMsj;
-			paqueteHiloCorrecto->tipoMsj = tipoMsj;
-			paqueteHiloCorrecto->mensaje = mensaje;
-			paqueteNoUsado = true;
-			pthread_mutex_unlock(&mutexPaquete);
-		}
+	paquete* paqueteRecibido = recvRemasterizado(socketKernel);
 
-	free(paqueteRecibido);
+	if(paqueteRecibido->tipoMsj==MENSAJE_PID){
+		crearPrograma(paqueteRecibido);
+	} else if(paqueteRecibido->tipoMsj==ESPACIO_INSUFICIENTE){
+		imprimirMensajeEspacioInsuficiente();
+	}
+	else{
+		aniadirPaqueteALaLista(paqueteRecibido);
 	}
 
-	free(mensajeAEnviar);
+	destruirPaquete(paqueteRecibido);
 }
 
 void prepararPrograma(char* path){
-	pthread_mutex_lock(&mutexImpresiones);
 	FILE *archivoRecibido = fopen(path, "r");
 	log_info(loggerConsola,"Archivo recibido correctamente...\n");
 
@@ -329,6 +392,7 @@ void prepararPrograma(char* path){
 void desconectarConsola()
 {
 	int i = 0;
+	pthread_mutex_lock(&mutexProcesos);
 	if(!(list_is_empty(listaProcesos))){
 		int tamanio = list_size(listaProcesos);
 		for(;i<tamanio;i++){
@@ -338,6 +402,7 @@ void desconectarConsola()
 			free(unPrograma);
 		}
 	}
+	pthread_mutex_unlock(&mutexProcesos);
 	puts("Se desconecto la consola \n");
 	puts("Se abortaron todos los programas");
 }
@@ -357,6 +422,7 @@ void mostrarAyuda(bool programaIniciado)
 
 void mostrarProgramasIniciados(){
 	int i = 0;
+	pthread_mutex_lock(&mutexProcesos);
 	if(!(list_is_empty(listaProcesos))){
 		for(;i<list_size(listaProcesos);i++){
 			programa* unPrograma = list_get(listaProcesos,i);
@@ -365,6 +431,7 @@ void mostrarProgramasIniciados(){
 			free(unPrograma);
 		}
 	}
+	pthread_mutex_unlock(&mutexProcesos);
 }
 
 void* manejadorInterfaz()
@@ -372,7 +439,6 @@ void* manejadorInterfaz()
 	char* comando = malloc(50*sizeof(char));
 	size_t tamanioMaximo = 50;
 	bool programaIniciado = false;
-	paqueteNoUsado = false;
 
 	while(1)
 	{
@@ -427,22 +493,27 @@ int main(int argc, char *argv[])
 	//consola nuevaConsola = inicializarPrograma("Debug/consola.config");
 	mostrar_consola(nuevaConsola);
 	loggerConsola = log_create("consola.log", "consola", 0, 0);
-	pthread_mutex_init(&mutexImpresiones,NULL);
-	pthread_mutex_init(&mutexPaquete,NULL);
+	pthread_mutex_init(&mutexProcesos,NULL);
+	pthread_mutex_init(&mutexHilosCorrectos,NULL);
 	listaProcesos = list_create();
+	listaHilosCorrectos = list_create();
 
 	socketKernel = conectarAServer(nuevaConsola.ip_Kernel.numero, nuevaConsola.puerto_kernel);
 	realizarHandshake();
 	log_info(loggerConsola,"Se conecto con el kernel...\n");
 
 	pthread_t interfazUsuario;
+	pthread_t hiloManejadorPaquetes;
+
+	pthread_create(&hiloManejadorPaquetes,NULL,manejadorPaquetes,NULL);
 	pthread_create(&interfazUsuario, NULL, manejadorInterfaz,NULL);
 
 	pthread_join(interfazUsuario,(void**) NULL);
 
-	pthread_mutex_destroy(&mutexImpresiones);
-	pthread_mutex_destroy(&mutexPaquete);
-	list_destroy(listaProcesos);
+	pthread_mutex_destroy(&mutexProcesos);
+	pthread_mutex_destroy(&mutexHilosCorrectos);
+	list_destroy_and_destroy_elements(listaHilosCorrectos,(void*)destruirPaquete);
+	list_destroy_and_destroy_elements(listaProcesos,free);
 	log_destroy(loggerConsola);
 	close(socketKernel);
 

@@ -47,6 +47,7 @@
 #define FINALIZAR_PROGRAMA 503
 #define INICIAR_PROGRAMA 501
 #define ESCRIBIR_DATOS 505
+#define MENSAJE_PCB 2000
 /*#define SOY_KERNEL 1002*/
 #define FINALIZAR_PROCESO_MEMORIA 503
 
@@ -315,7 +316,6 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->tablaHeap = malloc(sizeof(tablaHeap));
 
 		metadata_destruir(metadataDelPrograma);
-		free(codigoDePrograma);
 		pidActual++;
 
 		log_debug(loggerKernel, "PCB creada para el pid: %i ",pcbNuevo->pid);
@@ -484,22 +484,22 @@ void enviarCodigoDeProgramaAMemoria(char* codigo){
 	void *codigoParaMemoria;
 	int i;
 	int tamanioDeCodigoRestante = string_length(codigo);
-	int cantidadDePaginasQueOcupa = tamanioDeCodigoRestante/TAMANIO_PAGINA;
-	if((tamanioDeCodigoRestante % TAMANIO_PAGINA) != 0){
+	int cantidadDePaginasQueOcupa = tamanioDeCodigoRestante/tamanioPagina;
+	if((tamanioDeCodigoRestante % tamanioPagina) != 0){
 		cantidadDePaginasQueOcupa++;
 	}
 	for(i = 0; i<cantidadDePaginasQueOcupa; i++){
 		int tamanioMensaje;
 		codigoParaMemoria = malloc(tamanioDeCodigoRestante);
-		memcpy(codigoParaMemoria, codigo+(i*TAMANIO_PAGINA), TAMANIO_PAGINA);
-		if(tamanioDeCodigoRestante>TAMANIO_PAGINA){
-			tamanioMensaje = TAMANIO_PAGINA;
+		if(tamanioDeCodigoRestante>tamanioPagina){
+			tamanioMensaje = tamanioPagina;
 		}else{
 			tamanioMensaje = tamanioDeCodigoRestante;
 		}
+		memcpy(codigoParaMemoria, codigo+(i*tamanioPagina), tamanioDeCodigoRestante);
 		sendRemasterizado(socketMemoria, ESCRIBIR_DATOS, tamanioMensaje, codigoParaMemoria);
 		free(codigoParaMemoria);
-		tamanioDeCodigoRestante -= TAMANIO_PAGINA;
+		tamanioDeCodigoRestante -= tamanioPagina;
 	}
 }
 
@@ -516,7 +516,7 @@ void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
 
 void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   char* codigo = string_new();
-  string_append(&codigo, (char*)paqueteConCodigo->mensaje);
+  string_append(&codigo, paqueteConCodigo->mensaje);
   PCB* pcbInicializado = iniciarPCB(codigo, socketConsola);
   enviarDatos(pcbInicializado,codigo,socketConsola);
 }
@@ -607,12 +607,20 @@ int cantidadDeRafagasDe(int pid){
 }
 
 void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketConsola){
-	if(finalizarProceso((int)paqueteConProceso->mensaje)){
-		sendDeNotificacion(socketConsola,FINALIZO_CORRECTAMENTE);
+	int pidFinalizado = *(int*)paqueteConProceso->mensaje;
+	if(finalizarProceso(pidFinalizado)){
+		char* mensajeFinalizado = string_new();
+		string_append(&mensajeFinalizado,"Se finalizo correctamente el proceso");
+		int tamanio = sizeof(char)*strlen(mensajeFinalizado);
+		void* mensaje = malloc(sizeof(int)*2+tamanio);
+		memcpy(mensaje,&pidFinalizado,sizeof(int));
+		memcpy(mensaje+sizeof(int),&tamanio,sizeof(int));
+		memcpy(mensaje+sizeof(int)*2,mensajeFinalizado,tamanio);
+		sendRemasterizado(socketConsola,FINALIZO_CORRECTAMENTE,sizeof(int)*2+tamanio,mensaje);
+		free(mensajeFinalizado);
+		free(mensaje);
 	}
-	else{
-		sendDeNotificacion(socketConsola,FINALIZO_INCORRECTAMENTE);
-	}
+	//Caso Finalizo INCORRECTAMENTE
 }
 
 //--------------------------------------HILOS-----------------------------------//
@@ -641,60 +649,60 @@ void modificarGradoMultiprogramacion(int grado){
 	GRADO_MULTIPROG=grado;
 }
 
-void *manejadorTeclado(){
-	char* comando = malloc(50*sizeof(char));
-	size_t tamanioMaximo = 50;
-
-	while(1){
-		puts("Esperando comando...");
-
-		getline(&comando, &tamanioMaximo, stdin);
-
-		int tamanioRecibido = strlen(comando);
-		comando[tamanioRecibido-1] = '\0';
-		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
-		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
-
-		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
-			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
-			finalizarPrograma((int)valorPid);
-		}else{
-			if(string_equals_ignore_case(comando, "consultarListado")){
-				consultarListado();
-			}else{
-				if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
-					char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
-					consultarEstado(estado);
-				}else{
-					if(string_equals_ignore_case(comando, "detenerPlanificacion")){
-						detenerPlanificacion();
-					}else{
-						if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
-							reanudarPlanificacion();
-						}else{
-							if(string_equals_ignore_case(comando, "modificarGradoDeMultiprogramacion")){
-								modificarGradoMultiprogramacion(grado);
-							}else{
-								puts("Error de comando");
-							}
-							comando = realloc(comando,50*sizeof(char));
-						}
-					}
-				}
-			}
-		}
-	}
-
-	free(comando);
-}
+//void *manejadorTeclado(){
+//	char* comando = malloc(50*sizeof(char));
+//	size_t tamanioMaximo = 50;
+//
+//	while(1){
+//		puts("Esperando comando...");
+//
+//		getline(&comando, &tamanioMaximo, stdin);
+//
+//		int tamanioRecibido = strlen(comando);
+//		comando[tamanioRecibido-1] = '\0';
+//		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
+//		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
+//
+//		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
+//			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
+//			finalizarPrograma((int)valorPid);
+//		}else{
+//			if(string_equals_ignore_case(comando, "consultarListado")){
+//				consultarListado();
+//			}else{
+//				if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
+//					char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
+//					consultarEstado(estado);
+//				}else{
+//					if(string_equals_ignore_case(comando, "detenerPlanificacion")){
+//						detenerPlanificacion();
+//					}else{
+//						if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
+//							reanudarPlanificacion();
+//						}else{
+//							if(string_equals_ignore_case(comando, "modificarGradoDeMultiprogramacion")){
+//								//modificarGradoMultiprogramacion(grado);
+//							}else{
+//								puts("Error de comando");
+//							}
+//							comando = realloc(comando,50*sizeof(char));
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
+//
+//	free(comando);
+//}
 
 
 
 //PLANIFICACION DEL SISTEMA
 
 void manejarColaNueva(){
-	if(queue_size(colaNuevo)<GRADO_MULTIPROG){
-		PCB* pcbNueva=malloc(sizeof(PCB));
+	if(queue_size(colaListo)<GRADO_MULTIPROG){
+		PCB* pcbNueva;
 		pcbNueva=queue_pop(colaNuevo);
 		queue_push(colaListo,pcbNueva);
 		log_info(loggerKernel,"Se ha agregado la PCB del proceso %d a la cola de Listo", pcbNueva->pid);
@@ -804,33 +812,33 @@ void agregarEntradaTP(int pid, int fd,t_banderas* flags,int fdGlobal){
 	list_add(tablaAdminArchivos,entradaATP);
 }
 
-bool validarArchivo(char* path){
-	void *buffer=malloc(string_length(path));
-	int tamanioPath=string_length(path);
-	memcpy(buffer,&tamanioPath, sizeof(int));
-	memcpy(buffer+sizeof(int),path, string_length(path));
-	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
-	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
-		return true;
-	}else{
-		return false;
-	}
-}
-
-bool crearArchivo(char* path){
-	void *buffer=malloc(string_length(path));
-	int tamanioPath=string_length(path);
-	memcpy(buffer,&tamanioPath, sizeof(int));
-	memcpy(buffer+sizeof(int),path, string_length(path));
-	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
-	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
-		log_info(loggerKernel,"Se abrio correctamente el archivo %s.",path);
-		return true;
-	}else{
-		log_info(loggerKernel,"No se pudo abrir el archivo %s.",path);
-		return false;
-	}
-}
+//bool validarArchivo(char* path){
+//	void *buffer=malloc(string_length(path));
+//	int tamanioPath=string_length(path);
+//	memcpy(buffer,&tamanioPath, sizeof(int));
+//	memcpy(buffer+sizeof(int),path, string_length(path));
+//	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
+//	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
+//		return true;
+//	}else{
+//		return false;
+//	}
+//}
+//
+//bool crearArchivo(char* path){
+//	void *buffer=malloc(string_length(path));
+//	int tamanioPath=string_length(path);
+//	memcpy(buffer,&tamanioPath, sizeof(int));
+//	memcpy(buffer+sizeof(int),path, string_length(path));
+//	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
+//	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
+//		log_info(loggerKernel,"Se abrio correctamente el archivo %s.",path);
+//		return true;
+//	}else{
+//		log_info(loggerKernel,"No se pudo abrir el archivo %s.",path);
+//		return false;
+//	}
+//}
 
 void agregarRegistoSyscall(int pid){
 	registroSyscall* registro=malloc(sizeof(int)*2);
@@ -845,33 +853,39 @@ void agregarRegistoSyscall(int pid){
 	}
 }
 
-int abrirArchivo(int pid,char* path,t_banderas* flags){
-	int fdGlobal, fd;
-	if(validarArchivo(path)){
-		fdGlobal=agregarEntradaTG(path);
-		fd = nuevoFD(pid);
-		agregarEntradaTP(pid,fd,flags,fdGlobal);
-		log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
-		agregarRegistoSyscall(pid);
-		return fd;
-	}else{
-		if(flags->creacion==true){
-			if(!crearArchivo(path)){
-				return -1;
-			}
-			fdGlobal=agregarEntradaTG(path);
-			fdGlobal=agregarEntradaTG(path);
-			fd = nuevoFD(pid);
-			agregarEntradaTP(pid,fd,flags,fdGlobal);
-			agregarRegistoSyscall(pid);
-			log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
-			return fd;
-		}else{
-			log_info(loggerKernel,"Error al abrir archivo por permiso incorrecto");
-			return -1;
-		}
-	}
+//int abrirArchivo(int pid,char* path,t_banderas* flags){
+//	int fdGlobal, fd;
+//	if(validarArchivo(path)){
+//		fdGlobal=agregarEntradaTG(path);
+//		fd = nuevoFD(pid);
+//		agregarEntradaTP(pid,fd,flags,fdGlobal);
+//		log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
+//		agregarRegistoSyscall(pid);
+//		return fd;
+//	}else{
+//		if(flags->creacion==true){
+//			if(!crearArchivo(path)){
+//				return -1;
+//			}
+//			fdGlobal=agregarEntradaTG(path);
+//			fdGlobal=agregarEntradaTG(path);
+//			fd = nuevoFD(pid);
+//			agregarEntradaTP(pid,fd,flags,fdGlobal);
+//			agregarRegistoSyscall(pid);
+//			log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
+//			return fd;
+//		}else{
+//			log_info(loggerKernel,"Error al abrir archivo por permiso incorrecto");
+//			return -1;
+//		}
+//	}
+//
+//}
 
+void enviarPCB(int socketCPU, PCB* unProcesoParaCPU){
+	void* pcbSerializada = serializarPCB(unProcesoParaCPU);
+	sendRemasterizado(socketCPU,MENSAJE_PCB,sacarTamanioPCB(unProcesoParaCPU),pcbSerializada);
+	free(pcbSerializada);
 }
 
 void *manejadorCPU(void* socket){
@@ -904,7 +918,7 @@ void *manejadorCPU(void* socket){
 
         break;
       case SIGNAL_SEMAFORO:
-        signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
+        //signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
         break;
       case RESERVAR_HEAP:
 
@@ -913,7 +927,7 @@ void *manejadorCPU(void* socket){
 
         break;
       case LEER_DATOS_ARCHIVO:
-        leerDatos(procesoParaCPU->pid, paqueteRecibidoDeCPU->mensaje);
+        //leerDatos(procesoParaCPU->pid, paqueteRecibidoDeCPU->mensaje);
         break;
       case ESCRIBIR_DATOS_ARCHIVO:
 
@@ -944,7 +958,7 @@ void *manejadorCPU(void* socket){
     	  tamanioPath=paqueteRecibidoDeCPU->tamMsj-sizeof(int)-sizeof(t_banderas);
     	  memcpy(path,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath,tamanioPath);
     	  memcpy(flags,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
-    	  estadoOperacionArchivo=abrirArchivo(pid,path,flags);
+    	  //estadoOperacionArchivo=abrirArchivo(pid,path,flags);
     	  break;
       case BORRAR_ARCHIVO:
         break;
@@ -996,8 +1010,8 @@ int main (int argc, char *argv[]){
 	//PUESTA EN MARCHA
 	verificarParametrosInicio(argc);
 	inicializarKernel(argv[1]);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 0;
@@ -1032,10 +1046,10 @@ int main (int argc, char *argv[]){
 	FD_SET(socketEscuchaConsolas, &socketsCliente);
 	socketMaxCliente = calcularSocketMaximo(socketEscuchaConsolas, socketEscuchaCPU);
 	realizarHandshakeMemoria(socketMemoria);
-	realizarHandshakeFS(socketFS);
+	//realizarHandshakeFS(socketFS);
 
 	//ADMINISTRACION DE CONEXIONES
-	pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
+	//pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
 	pthread_create(&hiloManejadorPlanificacion, NULL, planificarSistema, NULL);
 
 	while(1){
