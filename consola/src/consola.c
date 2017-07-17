@@ -318,11 +318,11 @@ void crearPrograma(paquete* unPaqueteRecibido){
 	unPrograma->hilo = hiloPrograma;
 	unPrograma->impresiones = 0;
 	unPrograma->inicio = obtenerTiempo(tiempo);
+	free(tiempo);
 	pthread_mutex_lock(&mutexProcesos);
 	list_add(listaProcesos,unPrograma);
 	pthread_mutex_unlock(&mutexProcesos);
 	pthread_create(&hiloPrograma,NULL,administrarPrograma,(void*)unPrograma);
-	free(tiempo);
 	log_info(loggerConsola, "Se recibio correctamente el pid %d de kernel...", pid);
 }
 
@@ -361,9 +361,9 @@ void recibirPID(long int tamanio,char* mensaje)
 
 	sendRemasterizado(socketKernel, MENSAJE_CODIGO, tamanio, mensajeAEnviar);
 	free(mensaje);
-	free(mensajeAEnviar);
 
 	paquete* paqueteRecibido = recvRemasterizado(socketKernel);
+	free(mensajeAEnviar);
 
 	if(paqueteRecibido->tipoMsj==MENSAJE_PID){
 		crearPrograma(paqueteRecibido);
@@ -429,7 +429,6 @@ void mostrarProgramasIniciados(){
 			programa* unPrograma = list_get(listaProcesos,i);
 			printf("Los programas son: \n");
 			printf("PID-PROGRAMA: %d \n", unPrograma->pid);
-			free(unPrograma);
 		}
 	}
 	pthread_mutex_unlock(&mutexProcesos);
