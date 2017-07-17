@@ -8,20 +8,48 @@
 #include <semaphore.h>
 
 
+//HANDSHAKES
+#define CPU 1003
+#define HANDSHAKE_CPU 1013
+#define CONSOLA 1005
+#define SOY_KERNEL_MEMORIA 1002
+#define TAMANIO_PAGINA 1020
+#define SOY_KERNEL_FS
+
+//OPERACIONES CPU
+#define RESERVAR_HEAP 103
+#define LIBERAR_HEAP 104
+#define WAIT_SEMAFORO 105
+#define SIGNAL_SEMAFORO 106
+
+#define ABRIR_ARCHIVO 300
+#define NO_SE_PUDO_ABRIR_ARCHIVO 301
+#define BORRAR_ARCHIVO 302
+#define CERRAR_ARCHIVO 303
+#define MOVER_CURSOR 304
+#define ESCRIBIR_DATOS_ARCHIVO 305
+#define LEER_DATOS_ARCHIVO 306
+#define DATOS_LEIDOS_ARCHIVO 307
+#define GUARDAR_DATOS_ARCHIVO 308
+#define PROCESO_BLOQUEADO 2003
+#define PROCESO_FINALIZADO 2002
+#define PROCESO_ABORTADO 2001
+
+//ESTADOS PROCESOS
 #define NUEVO 1
 #define LISTO 2
 #define EJECUTANDO 3
 #define BLOQUEADO 4
 #define FINALIZADO 5
-#define CONSOLA 1005
+
 #define MENSAJE_CODIGO 103
 #define ENVIAR_PID 105
 #define FINALIZAR_PROGRAMA 503
 #define INICIAR_PROGRAMA 501
 #define ESCRIBIR_DATOS 505
-#define SOY_KERNEL 1002
-#define FINALIZAR_PROGRAMA_MEMORIA 503
-#define TAMANIO_PAGINA 102
+/*#define SOY_KERNEL 1002*/
+#define FINALIZAR_PROCESO_MEMORIA 503
+
 #define OPERACION_CON_MEMORIA_EXITOSA 1
 #define ESPACIO_INSUFICIENTE -2
 #define FINALIZO_CORRECTAMENTE 101
@@ -94,7 +122,7 @@ typedef struct __attribute__((__packed__)) {
 typedef struct __attribute__((__packed__)) {
 	int pid;
 	int FD;
-	char* flags;
+	t_banderas* flags;
 	int globalFD;
 }tablaArchivosFS;
 
@@ -114,6 +142,7 @@ int socketMemoria;
 int socketFS;
 int tamanioPagina;
 bool estadoPlanificacionesSistema;
+t_list *pcbs; //ACA ALMACENO TODAS LAS PCBS PARANO TENER QUE RECORRER LAS COLAS EN ACCIONES SIMPLES
 
 //COLAS
 t_queue* colaBloqueado;
@@ -676,7 +705,7 @@ void manejarColaNueva(){
 }
 
 
-void planificarSistema(){
+void *planificarSistema(){
 	while(1){
 		while(estadoPlanificacionesSistema){
 			if(!queue_is_empty(colaNuevo)){
@@ -766,7 +795,7 @@ int nuevoFD(int pid){
 	return FD;
 }
 
-void agregarEntradaTP(int pid, int fd,t_banderas flags,int fdGlobal){
+void agregarEntradaTP(int pid, int fd,t_banderas* flags,int fdGlobal){
 	tablaArchivosFS* entradaATP=malloc(sizeof(int)*3+sizeof(t_banderas));
 	entradaATP->pid=pid;
 	entradaATP->FD=fd;
@@ -778,7 +807,7 @@ void agregarEntradaTP(int pid, int fd,t_banderas flags,int fdGlobal){
 bool validarArchivo(char* path){
 	void *buffer=malloc(string_length(path));
 	int tamanioPath=string_length(path);
-	memcpy(buffer,tamanioPath, sizeof(int));
+	memcpy(buffer,&tamanioPath, sizeof(int));
 	memcpy(buffer+sizeof(int),path, string_length(path));
 	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
 	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
@@ -816,7 +845,7 @@ void agregarRegistoSyscall(int pid){
 	}
 }
 
-int abrirArchivo(int pid,char* path,t_banderas flags){
+int abrirArchivo(int pid,char* path,t_banderas* flags){
 	int fdGlobal, fd;
 	if(validarArchivo(path)){
 		fdGlobal=agregarEntradaTG(path);
@@ -826,7 +855,7 @@ int abrirArchivo(int pid,char* path,t_banderas flags){
 		agregarRegistoSyscall(pid);
 		return fd;
 	}else{
-		if(flags.creacion==true){
+		if(flags->creacion==true){
 			if(!crearArchivo(path)){
 				return -1;
 			}
@@ -865,7 +894,7 @@ void *manejadorCPU(void* socket){
   char* path=string_new();
   int tamanioPath;
   t_banderas* flags=malloc(sizeof(t_banderas));
-  int estadoOperacionArchivo=0;
+  //int estadoOperacionArchivo=0;
 
   while(estaOcupadaCPU){
     paquete *paqueteRecibidoDeCPU;
@@ -884,13 +913,13 @@ void *manejadorCPU(void* socket){
 
         break;
       case LEER_DATOS_ARCHIVO:
-        leerDatos(procesoParaCPU->pcb->pid, paqueteRecibidoDeCPU->mensaje);
+        leerDatos(procesoParaCPU->pid, paqueteRecibidoDeCPU->mensaje);
         break;
       case ESCRIBIR_DATOS_ARCHIVO:
 
         break;
       case PROCESO_ABORTADO:
-        pcbAfectado = desserializarPCB(paqueteRecibidoDeCPU);
+        pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
         pcbAfectado->estaAbortado=true;
         pcbAfectado->exitCode=-10;//DEFINIR EXIT CODE
         queue_push(colaFinalizado, pcbAfectado);
@@ -898,25 +927,23 @@ void *manejadorCPU(void* socket){
         estaOcupadaCPU = false;
         break;
       case PROCESO_FINALIZADO:
-    	pcbAfectado= desserializarPCB(paqueteRecibidoDeCPU);
+    	pcbAfectado= deserializarPCB(paqueteRecibidoDeCPU);
     	pcbAfectado->estado=false;
     	pcbAfectado->exitCode=0;
         queue_push(colaFinalizado, pcbAfectado);
         estaOcupadaCPU = false;
         break;
       case PROCESO_BLOQUEADO:
-    	pcbAfectado = desserializarPCB(paqueteRecibidoDeCPU);
+    	pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
     	pcbAfectado->estaAbortado=false;
         queue_push(colaBloqueado, pcbAfectado);
         estaOcupadaCPU = false;
         break;
       case ABRIR_ARCHIVO:
-    	  paquete* paqueteAbrirArchivo;
-    	  paqueteAbrirArchivo=recvRemasterizado(socketCPU);
-    	  memcpy(pid,paqueteAbrirArchivo->mensaje+sizeof(int),sizeof(int));
-    	  tamanioPath=paqueteAbrirArchivo->tamMsj-sizeof(int)-sizeof(t_banderas);
-    	  memcpy(path,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath,tamanioPath);
-    	  memcpy(flags,paqueteAbrirArchivo->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
+    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+    	  tamanioPath=paqueteRecibidoDeCPU->tamMsj-sizeof(int)-sizeof(t_banderas);
+    	  memcpy(path,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath,tamanioPath);
+    	  memcpy(flags,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
     	  estadoOperacionArchivo=abrirArchivo(pid,path,flags);
     	  break;
       case BORRAR_ARCHIVO:
@@ -925,8 +952,8 @@ void *manejadorCPU(void* socket){
         break;
       case MOVER_CURSOR:
         break;
-      case OBTENER_ARCHIVO:
-        break;
+    /*  case OBTENER_ARCHIVO:
+        break;*/
       case GUARDAR_DATOS_ARCHIVO:
         break;
     }
@@ -940,7 +967,7 @@ void realizarHandshakeMemoria(int socket) {
 	sendDeNotificacion(socket, SOY_KERNEL_MEMORIA);
 	paquete* paqueteConPaginas = recvRemasterizado(socket);
 	if(paqueteConPaginas->tipoMsj == TAMANIO_PAGINA){
-		TAMANIO_PAGINA = *(int*)paqueteConPaginas->mensaje;
+		tamanioPagina = *(int*)paqueteConPaginas->mensaje;
 	}else{
 		log_info(loggerKernel, "Error al recibir el tamanio de pagina de memoria.");
 		exit(-1);
@@ -968,14 +995,15 @@ int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
 	verificarParametrosInicio(argc);
-	inicilizarKernel(argv[1]);
+	inicializarKernel(argv[1]);
 	char *path = "Debug/kernel.config";
 	inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 0;
 	int socketEscuchaCPU, socketEscuchaConsolas, socketMaxCliente, socketAChequear, socketQueAceptaClientes;
-	int *socketConsola, socketCPU;
+	int *socketConsola;
+	int *socketCPU;
 	pthread_t hiloManejadorTeclado, hiloManejadorConsola, hiloManejadorCPU, hiloManejadorPlanificacion;
 	fd_set socketsCliente, socketsAuxiliaresCliente;
 	FD_ZERO(&socketsCliente);
@@ -997,7 +1025,7 @@ int main (int argc, char *argv[]){
 
 	//CONEXIONES
 	socketEscuchaCPU = ponerseAEscucharClientes(PUERTO_CPU, 0);
-	socketEscuchaConsolas = ponerseAEscucharClientes(PUERTO_CONSOLA, 0);
+	socketEscuchaConsolas = ponerseAEscucharClientes(PUERTO_PROG, 0);
 	socketMemoria = conectarAServer(IP_MEMORIA, PUERTO_MEMORIA);
 	socketFS = conectarAServer(IP_FS, PUERTO_FS);
 	FD_SET(socketEscuchaCPU, &socketsCliente);
@@ -1040,6 +1068,7 @@ int main (int argc, char *argv[]){
 							socketCPU = malloc(sizeof(int));
 							*socketCPU = socketAChequear;
 							log_info(loggerKernel, "Se conecto una nueva CPU con el socket %d...", socketAChequear);
+							realizarhandshakeCPU(socketAChequear);
 							pthread_create(&hiloManejadorCPU, NULL, manejadorCPU, (void*)socketCPU);
 							break;
 						default:

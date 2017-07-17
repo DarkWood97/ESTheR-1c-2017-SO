@@ -77,7 +77,13 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 void realizarHandshakeConKernel(){
 	sendDeNotificacion(socketKernel, HANDSHAKE_KERNEL);
 	paquete *paqueteConConfigsDeKernel = recvRemasterizado(socketKernel);
-	armarDatosDeKernel(paqueteConConfigsDeKernel);
+	if(paqueteConConfigsDeKernel->tipoMsj == DATOS_CONFIG_KERNEL){
+		armarDatosDeKernel(paqueteConConfigsDeKernel);
+	}else{
+		log_error(loggerCPU, "Error al recibir los datos de ejecucion de kernel...");
+		exit(-1);
+	}
+
 }
 
 
@@ -86,9 +92,14 @@ void realizarHandshakeConMemoria(){
 	sendDeNotificacion(socketMemoria, HANDSHAKE_MEMORIA);
 	paquete *paqueteConTamPagina;
 	paqueteConTamPagina = recvRemasterizado(socketMemoria);
-	tamPaginasMemoria = *(int*)paqueteConTamPagina->mensaje;
+	if(paqueteConTamPagina->tipoMsj == TAMANIO_PAGINA_MEMORIA){
+		tamPaginasMemoria = *(int*)paqueteConTamPagina->mensaje;
+		log_info(loggerCPU, "Handshake con memoria realizado.");
+	}else{
+		log_error(loggerCPU, "Error al recibir el tamanio de pagina de memoria...");
+		exit(-1);
+	}
 	free(paqueteConTamPagina);
-	log_info(loggerCPU, "Handshake con memoria realizado.");
 }
 
 //-------------RECIBO PCB DE KERNEL----------//
