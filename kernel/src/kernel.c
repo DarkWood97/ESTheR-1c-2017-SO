@@ -47,7 +47,6 @@
 #define FINALIZAR_PROGRAMA 503
 #define INICIAR_PROGRAMA 501
 #define ESCRIBIR_DATOS 505
-#define MENSAJE_PCB 2000
 /*#define SOY_KERNEL 1002*/
 #define FINALIZAR_PROCESO_MEMORIA 503
 
@@ -125,6 +124,7 @@ typedef struct __attribute__((__packed__)) {
 	int FD;
 	t_banderas* flags;
 	int globalFD;
+	int cursor;
 }tablaArchivosFS;
 
 typedef struct __attribute__((__packed__)) {
@@ -316,6 +316,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->tablaHeap = malloc(sizeof(tablaHeap));
 
 		metadata_destruir(metadataDelPrograma);
+		free(codigoDePrograma);
 		pidActual++;
 
 		log_debug(loggerKernel, "PCB creada para el pid: %i ",pcbNuevo->pid);
@@ -484,22 +485,22 @@ void enviarCodigoDeProgramaAMemoria(char* codigo){
 	void *codigoParaMemoria;
 	int i;
 	int tamanioDeCodigoRestante = string_length(codigo);
-	int cantidadDePaginasQueOcupa = tamanioDeCodigoRestante/tamanioPagina;
-	if((tamanioDeCodigoRestante % tamanioPagina) != 0){
+	int cantidadDePaginasQueOcupa = tamanioDeCodigoRestante/TAMANIO_PAGINA;
+	if((tamanioDeCodigoRestante % TAMANIO_PAGINA) != 0){
 		cantidadDePaginasQueOcupa++;
 	}
 	for(i = 0; i<cantidadDePaginasQueOcupa; i++){
 		int tamanioMensaje;
 		codigoParaMemoria = malloc(tamanioDeCodigoRestante);
-		if(tamanioDeCodigoRestante>tamanioPagina){
-			tamanioMensaje = tamanioPagina;
+		memcpy(codigoParaMemoria, codigo+(i*TAMANIO_PAGINA), TAMANIO_PAGINA);
+		if(tamanioDeCodigoRestante>TAMANIO_PAGINA){
+			tamanioMensaje = TAMANIO_PAGINA;
 		}else{
 			tamanioMensaje = tamanioDeCodigoRestante;
 		}
-		memcpy(codigoParaMemoria, codigo+(i*tamanioPagina), tamanioDeCodigoRestante);
 		sendRemasterizado(socketMemoria, ESCRIBIR_DATOS, tamanioMensaje, codigoParaMemoria);
 		free(codigoParaMemoria);
-		tamanioDeCodigoRestante -= tamanioPagina;
+		tamanioDeCodigoRestante -= TAMANIO_PAGINA;
 	}
 }
 
@@ -516,7 +517,7 @@ void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
 
 void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   char* codigo = string_new();
-  string_append(&codigo, paqueteConCodigo->mensaje);
+  string_append(&codigo, (char*)paqueteConCodigo->mensaje);
   PCB* pcbInicializado = iniciarPCB(codigo, socketConsola);
   enviarDatos(pcbInicializado,codigo,socketConsola);
 }
@@ -607,20 +608,12 @@ int cantidadDeRafagasDe(int pid){
 }
 
 void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketConsola){
-	int pidFinalizado = *(int*)paqueteConProceso->mensaje;
-	if(finalizarProceso(pidFinalizado)){
-		char* mensajeFinalizado = string_new();
-		string_append(&mensajeFinalizado,"Se finalizo correctamente el proceso");
-		int tamanio = sizeof(char)*strlen(mensajeFinalizado);
-		void* mensaje = malloc(sizeof(int)*2+tamanio);
-		memcpy(mensaje,&pidFinalizado,sizeof(int));
-		memcpy(mensaje+sizeof(int),&tamanio,sizeof(int));
-		memcpy(mensaje+sizeof(int)*2,mensajeFinalizado,tamanio);
-		sendRemasterizado(socketConsola,FINALIZO_CORRECTAMENTE,sizeof(int)*2+tamanio,mensaje);
-		free(mensajeFinalizado);
-		free(mensaje);
+	if(finalizarProceso((int)paqueteConProceso->mensaje)){
+		sendDeNotificacion(socketConsola,FINALIZO_CORRECTAMENTE);
 	}
-	//Caso Finalizo INCORRECTAMENTE
+	else{
+		sendDeNotificacion(socketConsola,FINALIZO_INCORRECTAMENTE);
+	}
 }
 
 //--------------------------------------HILOS-----------------------------------//
@@ -649,60 +642,60 @@ void modificarGradoMultiprogramacion(int grado){
 	GRADO_MULTIPROG=grado;
 }
 
-//void *manejadorTeclado(){
-//	char* comando = malloc(50*sizeof(char));
-//	size_t tamanioMaximo = 50;
-//
-//	while(1){
-//		puts("Esperando comando...");
-//
-//		getline(&comando, &tamanioMaximo, stdin);
-//
-//		int tamanioRecibido = strlen(comando);
-//		comando[tamanioRecibido-1] = '\0';
-//		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
-//		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
-//
-//		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
-//			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
-//			finalizarPrograma((int)valorPid);
-//		}else{
-//			if(string_equals_ignore_case(comando, "consultarListado")){
-//				consultarListado();
-//			}else{
-//				if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
-//					char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
-//					consultarEstado(estado);
-//				}else{
-//					if(string_equals_ignore_case(comando, "detenerPlanificacion")){
-//						detenerPlanificacion();
-//					}else{
-//						if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
-//							reanudarPlanificacion();
-//						}else{
-//							if(string_equals_ignore_case(comando, "modificarGradoDeMultiprogramacion")){
-//								//modificarGradoMultiprogramacion(grado);
-//							}else{
-//								puts("Error de comando");
-//							}
-//							comando = realloc(comando,50*sizeof(char));
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	free(comando);
-//}
+void *manejadorTeclado(){
+	char* comando = malloc(50*sizeof(char));
+	size_t tamanioMaximo = 50;
+
+	while(1){
+		puts("Esperando comando...");
+
+		getline(&comando, &tamanioMaximo, stdin);
+
+		int tamanioRecibido = strlen(comando);
+		comando[tamanioRecibido-1] = '\0';
+		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
+		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
+
+		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
+			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
+			finalizarPrograma((int)valorPid);
+		}else{
+			if(string_equals_ignore_case(comando, "consultarListado")){
+				consultarListado();
+			}else{
+				if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
+					char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
+					consultarEstado(estado);
+				}else{
+					if(string_equals_ignore_case(comando, "detenerPlanificacion")){
+						detenerPlanificacion();
+					}else{
+						if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
+							reanudarPlanificacion();
+						}else{
+							if(string_equals_ignore_case(comando, "modificarGradoDeMultiprogramacion")){
+								modificarGradoMultiprogramacion(grado);
+							}else{
+								puts("Error de comando");
+							}
+							comando = realloc(comando,50*sizeof(char));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	free(comando);
+}
 
 
 
 //PLANIFICACION DEL SISTEMA
 
 void manejarColaNueva(){
-	if(queue_size(colaListo)<GRADO_MULTIPROG){
-		PCB* pcbNueva;
+	if(queue_size(colaNuevo)<GRADO_MULTIPROG){
+		PCB* pcbNueva=malloc(sizeof(PCB));
 		pcbNueva=queue_pop(colaNuevo);
 		queue_push(colaListo,pcbNueva);
 		log_info(loggerKernel,"Se ha agregado la PCB del proceso %d a la cola de Listo", pcbNueva->pid);
@@ -724,7 +717,8 @@ void *planificarSistema(){
 	}
 }
 
-//CPU
+//----------------------------------------------------------------HILOS CPU---------------------------------------------//
+//ABRIR ARCHIVO
 bool buscarEnTG(char* path){
 	int i;
 	tablaGlobalFS* entradaATG;
@@ -737,11 +731,10 @@ bool buscarEnTG(char* path){
 	return false;
 }
 
-bool ordenarLista(tablaGlobalFS* menorFd, tablaGlobalFS* mayorFd){
-	return menorFd->globalFD<mayorFd->globalFD;
-}
-
 int nuevoGFD(){
+	bool ordenarLista(tablaGlobalFS* menorFd, tablaGlobalFS* mayorFd){
+		return menorFd->globalFD<mayorFd->globalFD;
+	}
 	list_sort(tablaAdminGlobal,(void*)ordenarLista);
 	int i;
 	int FD=0;
@@ -767,12 +760,15 @@ int crearEntradaTG(char* path){
 	return entradaATG->globalFD;
 }
 
-bool existePath(tablaGlobalFS* pathActual, tablaGlobalFS* pathBuscado){
-	return string_equals_ignore_case(pathActual->file,pathBuscado->file);
-}
+
 
 int agregarEntradaTG(char* path){
 	tablaGlobalFS* entradaGFS;
+
+	bool existePath(tablaGlobalFS* pathBuscado){
+		return string_equals_ignore_case(entradaGFS->file,pathBuscado->file);
+	}
+
 	if(buscarEnTG(path)){
 		return crearEntradaTG(path);
 	}else{
@@ -782,12 +778,15 @@ int agregarEntradaTG(char* path){
 	}
 }
 
-bool pidIguales(tablaArchivosFS* pidActual, tablaArchivosFS* pidIgual){
-	return pidActual->pid==pidIgual->pid;
-}
 
 int nuevoFD(int pid){
 	t_list* listaDelPID=list_create();
+	bool pidIguales(tablaArchivosFS* pidActual){
+		return pidActual->pid==pid;
+	}
+	bool ordenarLista(tablaGlobalFS* menorFd, tablaGlobalFS* mayorFd){
+		return menorFd->globalFD<mayorFd->globalFD;
+	}
 	listaDelPID=list_filter(tablaAdminArchivos,(void*)pidIguales); //LA FUNCION NO PUEDE RECIBIR DOS PARAMETROS, HAY QUE DECLARARLA ADENTRO
 	list_sort(listaDelPID,(void*)ordenarLista);
 	int i;
@@ -812,33 +811,33 @@ void agregarEntradaTP(int pid, int fd,t_banderas* flags,int fdGlobal){
 	list_add(tablaAdminArchivos,entradaATP);
 }
 
-//bool validarArchivo(char* path){
-//	void *buffer=malloc(string_length(path));
-//	int tamanioPath=string_length(path);
-//	memcpy(buffer,&tamanioPath, sizeof(int));
-//	memcpy(buffer+sizeof(int),path, string_length(path));
-//	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
-//	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
-//		return true;
-//	}else{
-//		return false;
-//	}
-//}
-//
-//bool crearArchivo(char* path){
-//	void *buffer=malloc(string_length(path));
-//	int tamanioPath=string_length(path);
-//	memcpy(buffer,&tamanioPath, sizeof(int));
-//	memcpy(buffer+sizeof(int),path, string_length(path));
-//	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
-//	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
-//		log_info(loggerKernel,"Se abrio correctamente el archivo %s.",path);
-//		return true;
-//	}else{
-//		log_info(loggerKernel,"No se pudo abrir el archivo %s.",path);
-//		return false;
-//	}
-//}
+bool validarArchivo(char* path){
+	void *buffer=malloc(string_length(path));
+	int tamanioPath=string_length(path);
+	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, string_length(path));
+	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
+	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
+		return true;
+	}else{
+		return false;
+	}
+}
+
+bool crearArchivo(char* path){
+	void *buffer=malloc(string_length(path));
+	int tamanioPath=string_length(path);
+	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, string_length(path));
+	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
+	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
+		log_info(loggerKernel,"Se abrio correctamente el archivo %s.",path);
+		return true;
+	}else{
+		log_info(loggerKernel,"No se pudo abrir el archivo %s.",path);
+		return false;
+	}
+}
 
 void agregarRegistoSyscall(int pid){
 	registroSyscall* registro=malloc(sizeof(int)*2);
@@ -846,46 +845,181 @@ void agregarRegistoSyscall(int pid){
 	for(i=0;i<list_size(registroDeSyscall);i++){
 		registro=(registroSyscall*)list_get(registroDeSyscall,i);
 		if(pid==registro->pid){
-			list_remove(registroDeSyscall,i);
 			registro->cantidadSyscall++;
-			list_add(registroDeSyscall,registro);
 		}
 	}
 }
 
-//int abrirArchivo(int pid,char* path,t_banderas* flags){
-//	int fdGlobal, fd;
-//	if(validarArchivo(path)){
-//		fdGlobal=agregarEntradaTG(path);
-//		fd = nuevoFD(pid);
-//		agregarEntradaTP(pid,fd,flags,fdGlobal);
-//		log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
-//		agregarRegistoSyscall(pid);
-//		return fd;
-//	}else{
-//		if(flags->creacion==true){
-//			if(!crearArchivo(path)){
-//				return -1;
-//			}
-//			fdGlobal=agregarEntradaTG(path);
-//			fdGlobal=agregarEntradaTG(path);
-//			fd = nuevoFD(pid);
-//			agregarEntradaTP(pid,fd,flags,fdGlobal);
-//			agregarRegistoSyscall(pid);
-//			log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
-//			return fd;
-//		}else{
-//			log_info(loggerKernel,"Error al abrir archivo por permiso incorrecto");
-//			return -1;
-//		}
-//	}
-//
-//}
+int abrirArchivo(int pid,char* path,t_banderas* flags){
+	int fdGlobal, fd;
+	if(validarArchivo(path)){
+		fdGlobal=agregarEntradaTG(path);
+		fd = nuevoFD(pid);
+		agregarEntradaTP(pid,fd,flags,fdGlobal);
+		log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
+		agregarRegistoSyscall(pid);
+		return fd;
+	}else{
+		if(flags->creacion==true){
+			if(!crearArchivo(path)){
+				return -1;
+			}
+			fdGlobal=agregarEntradaTG(path);
+			fdGlobal=agregarEntradaTG(path);
+			fd = nuevoFD(pid);
+			agregarEntradaTP(pid,fd,flags,fdGlobal);
+			agregarRegistoSyscall(pid);
+			log_info(loggerKernel,"Se genero correctamente el FD %d , del pid %d.  ",fd,pid);
+			return fd;
+		}else{
+			log_info(loggerKernel,"Error al abrir archivo por permiso incorrecto");
+			return -1;
+		}
+	}
 
-void enviarPCB(int socketCPU, PCB* unProcesoParaCPU){
-	void* pcbSerializada = serializarPCB(unProcesoParaCPU);
-	sendRemasterizado(socketCPU,MENSAJE_PCB,sacarTamanioPCB(unProcesoParaCPU),pcbSerializada);
-	free(pcbSerializada);
+}
+
+//CERRAR ARCHIVO
+int cerrarArchivo(int pid,int fd){
+	bool pidIguales(tablaArchivosFS* pidActual){
+		return pidActual->pid==pid;
+	}
+	tablaArchivosFS* entradaTP=list_find(tablaAdminArchivos,(void*)pidIguales);
+
+	bool tieneEntrada(tablaArchivosFS* pidActual){
+		return pidActual->globalFD==entradaTP->globalFD;
+	}
+	tablaGlobalFS* hayUnaEntradaEnTG= list_find(tablaAdminGlobal,(void*)tieneEntrada);
+
+	if(hayUnaEntradaEnTG==NULL){
+		log_info(loggerKernel,"Error hay cerrar archivo. No tiene registro en la tabla global de archivos");
+	}else{
+		hayUnaEntradaEnTG->open--;
+		if(hayUnaEntradaEnTG->open==0){
+			bool posicionABorrarTP(tablaGlobalFS* entrada){
+				return entrada->open==0;
+			}
+			bool borrarArchivoTP(){
+
+			}
+			list_remove_and_destroy_element(tablaAdminArchivos,(void*)posicionABorrarTP,(void*)borrarArchivoTP);
+			bool posicionABorrarTG(tablaGlobalFS* entrada){
+				return entrada->open==0;
+			}
+			bool borrarArchivoTG(){
+
+			}
+			list_remove_and_destroy_element(tablaAdminGlobal,(void*)posicionABorrarTG,(void*)borrarArchivoTG);
+			agregarRegistoSyscall(pid);
+		}
+	}
+
+
+}
+//BORRAR ARCHIVO
+bool borrarArchivoFS(char* path){
+	void *buffer=malloc(string_length(path));
+	int tamanioPath=string_length(path);
+	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, string_length(path));
+	sendRemasterizado(socketFS,BORRAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
+	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
+		log_info(loggerKernel,"Se Borro correctamente el archivo %s.",path);
+		return true;
+	}else{
+		log_info(loggerKernel,"No se pudo borrar el archivo %s.",path);
+		return false;
+	}
+}
+
+int borrarArchivo(int pid, int fd){
+	bool pidIguales(tablaArchivosFS* pidActual){
+		return pidActual->pid==pid;
+	}
+	tablaArchivosFS* entradaTP=list_find(tablaAdminArchivos,(void*)pidIguales);
+
+	bool tieneEntrada(tablaArchivosFS* pidActual){
+		return pidActual->globalFD==entradaTP->globalFD;
+	}
+	tablaGlobalFS* hayUnaEntradaEnTG= list_find(tablaAdminGlobal,(void*)tieneEntrada);
+	if((hayUnaEntradaEnTG->open>=1) && (pid==entradaTP->pid)){
+		if(borrarArchivoFS(hayUnaEntradaEnTG->file)){
+			agregarRegistoSyscall(pid);
+		}else{
+			log_info(loggerKernel,"Error al borrar el archivo %s", hayUnaEntradaEnTG->file);
+		}
+	}else{
+		log_info(loggerKernel,"No se puedo borrar archivo del FD %d , del pid %d",fd,pid);
+	}
+
+}
+
+//ESCRIBIR ARCHIVO
+bool guardarArchivo(char* path,int offset,int size, char* buffer){
+	void *bufferAMandar=malloc(string_length(path)+string_length(buffer)+sizeof(int)*2);
+	int tamanioPath=string_length(path);
+	int tamanioBuffer=string_length(buffer);
+	memcpy(bufferAMandar,&tamanioPath, sizeof(int));
+	memcpy(bufferAMandar+sizeof(int),path, string_length(path));
+	memcpy(bufferAMandar+sizeof(int)*2,offset,sizeof(int));
+	memcpy(bufferAMandar+sizeof(int)*3,size,sizeof(int));
+	memcpy(bufferAMandar+sizeof(int)*4,tamanioBuffer,sizeof(int));
+	memcpy(bufferAMandar+sizeof(int)*5,buffer,string_length(buffer));
+	sendRemasterizado(socketFS,OBTENER_DATOS,string_length(path)+string_length(buffer)+sizeof(int)*2,bufferAMandar);
+	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
+		log_info(loggerKernel,"Se Borro correctamente el archivo %s.",path);
+		return true;
+	}else{
+		log_info(loggerKernel,"No se pudo borrar el archivo %s.",path);
+		return false;
+	}
+}
+
+int escribirArchivo(int pid,int fd,int tamanio, char* buffer){//ESTA BIEN SI RECIBO UN VOID PONERLE UN CHAR
+	bool pidIguales(tablaArchivosFS* pidActual){
+		return pidActual->pid==pid;
+	}
+	tablaArchivosFS* entradaTP=list_find(tablaAdminArchivos,(void*)pidIguales);
+	bool tieneEntrada(tablaArchivosFS* pidActual){
+		return pidActual->globalFD==entradaTP->globalFD;
+	}
+	tablaGlobalFS* hayUnaEntradaEnTG= list_find(tablaAdminGlobal,(void*)tieneEntrada);
+	if(guardarArchivo(hayUnaEntradaEnTG->file,entradaTP->cursor,tamanio,buffer)){
+		agregarRegistoSyscall(pid);
+	}else{
+		log_info(loggerKernel,"No se puedo escribir el archivo del FD %d , del pid %d",fd,pid);
+	}
+}
+
+//LEER ARCHIVO
+char* mandarALeer(char* path,int offset,int size){
+	void *buffer=malloc(string_length(path)+sizeof(int)*2);
+	int tamanioPath=string_length(path);
+	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, string_length(path));
+	memcpy(buffer+sizeof(int)*2,offset,sizeof(int));
+	memcpy(buffer+sizeof(int)*3,size,sizeof(int));
+	sendRemasterizado(socketFS,OBTENER_DATOS,string_length(path)+sizeof(int),buffer);
+	if(recvDeNotificacion(socketFS)==OPERACION_FALLIDA){
+		log_info(loggerKernel,"No se pudo leer el archivo %s.",path);
+		return NULL;
+	}else{
+		paquete* paqueteRecibido=recvRemasterizado(socketFS);
+		return (char*)paqueteRecibido->mensaje;
+	}
+}
+
+int leerArchivo(int pid, int fd){
+	bool pidIguales(tablaArchivosFS* pidActual){
+			return pidActual->pid==pid;
+	}
+	tablaArchivosFS* entradaTP=list_find(tablaAdminArchivos,(void*)pidIguales);
+	bool tieneEntrada(tablaArchivosFS* pidActual){
+		return pidActual->globalFD==entradaTP->globalFD;
+	}
+	tablaGlobalFS* hayUnaEntradaEnTG= list_find(tablaAdminGlobal,(void*)tieneEntrada);
+	//char* contenidoALeer=mandarALeer(hayUnaEntradaEnTG->file,entradaTP->cursor);//ME DEBERIA PASAR EL TAMANIO DE LO QUE QUIERE LEER
+
 }
 
 void *manejadorCPU(void* socket){
@@ -908,7 +1042,7 @@ void *manejadorCPU(void* socket){
   char* path=string_new();
   int tamanioPath;
   t_banderas* flags=malloc(sizeof(t_banderas));
-  //int estadoOperacionArchivo=0;
+  int estadoOperacionArchivo=0;
 
   while(estaOcupadaCPU){
     paquete *paqueteRecibidoDeCPU;
@@ -918,7 +1052,7 @@ void *manejadorCPU(void* socket){
 
         break;
       case SIGNAL_SEMAFORO:
-        //signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
+        signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
         break;
       case RESERVAR_HEAP:
 
@@ -927,7 +1061,7 @@ void *manejadorCPU(void* socket){
 
         break;
       case LEER_DATOS_ARCHIVO:
-        //leerDatos(procesoParaCPU->pid, paqueteRecibidoDeCPU->mensaje);
+        leerDatos(procesoParaCPU->pid, paqueteRecibidoDeCPU->mensaje);
         break;
       case ESCRIBIR_DATOS_ARCHIVO:
 
@@ -958,7 +1092,7 @@ void *manejadorCPU(void* socket){
     	  tamanioPath=paqueteRecibidoDeCPU->tamMsj-sizeof(int)-sizeof(t_banderas);
     	  memcpy(path,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath,tamanioPath);
     	  memcpy(flags,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
-    	  //estadoOperacionArchivo=abrirArchivo(pid,path,flags);
+    	  estadoOperacionArchivo=abrirArchivo(pid,path,flags);
     	  break;
       case BORRAR_ARCHIVO:
         break;
@@ -1010,8 +1144,8 @@ int main (int argc, char *argv[]){
 	//PUESTA EN MARCHA
 	verificarParametrosInicio(argc);
 	inicializarKernel(argv[1]);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 0;
@@ -1046,10 +1180,10 @@ int main (int argc, char *argv[]){
 	FD_SET(socketEscuchaConsolas, &socketsCliente);
 	socketMaxCliente = calcularSocketMaximo(socketEscuchaConsolas, socketEscuchaCPU);
 	realizarHandshakeMemoria(socketMemoria);
-	//realizarHandshakeFS(socketFS);
+	realizarHandshakeFS(socketFS);
 
 	//ADMINISTRACION DE CONEXIONES
-	//pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
+	pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
 	pthread_create(&hiloManejadorPlanificacion, NULL, planificarSistema, NULL);
 
 	while(1){
