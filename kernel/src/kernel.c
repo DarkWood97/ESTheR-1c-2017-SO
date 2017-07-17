@@ -151,7 +151,7 @@ t_queue* colaFinalizado;
 t_queue* colaListo;
 t_queue* colaNuevo;
 t_queue* listaDeCPULibres;
-t_queue* finalizadosPorConsola; //MEJOR T_LIST
+t_list* finalizadosPorConsola; //MEJOR T_LIST
 
 //TABLAS FS
 t_list* tablaAdminArchivos;
@@ -540,12 +540,12 @@ bool finalizarProceso(int pid){
   if(pcbAFinalizar != NULL){
     switch (pcbAFinalizar->estado) {
       case NUEVO:
-        list_remove_and_destroy_by_condition(colaNuevo->elements, esPCBProceso, free);
+        list_remove_and_destroy_by_condition(colaNuevo->elements, (void*)esPCBProceso, free);
         log_info(loggerKernel, "El proceso %d se encuentra en la cola de nuevos...", pid);
         log_info(loggerKernel, "El proceso %d fue removido de la cola de nuevos...", pid);
         break;
       case LISTO:
-        list_remove_and_destroy_by_condition(colaListo->elements, esPCBProceso, free);
+        list_remove_and_destroy_by_condition(colaListo->elements, (void*)esPCBProceso, free);
         log_info(loggerKernel, "El proceso %d se encuentra en la cola de listos...", pid);
         log_info(loggerKernel, "El proceso %d fue removido de la cola de listos...", pid);
         break;
@@ -555,7 +555,7 @@ bool finalizarProceso(int pid){
         log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
         break;
       case BLOQUEADO:
-        list_remove_and_destroy_by_condition(colaBloqueado->elements, esPCBProceso, free);
+        list_remove_and_destroy_by_condition(colaBloqueado->elements, (void*)esPCBProceso, free);
         log_info(loggerKernel, "El proceso %d se encuentra en la cola de bloqueados...", pid);
         log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
         break;

@@ -153,110 +153,46 @@ void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
 //		aDevolver=sentencia;
 //}
 
-/*
- * funcionesGenericas.c
- *
- *  Created on: 6/4/2017
- *      Author: utnso
- */
-
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <string.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
-//#include <sys/time.h>
-//#include <sys/types.h>
-//#include <sys/wait.h>
-//#include <netinet/in.h>
-//#include <unistd.h>
-//#include <fcntl.h>
-//#include <errno.h>
-//#include <pthread.h>
-//#include <arpa/inet.h>
-//#include <signal.h>
-//#include <netdb.h>
-//#include <commons/log.h>
-//#include <commons/string.h>
-//#include <commons/config.h>
-//#include <commons/collections/dictionary.h>
-//#include <commons/collections/list.h>
-//#include "funcionesCpu.h"
-
-//t_config *generarT_ConfigParaCargar(char *path) {
-//	t_config *configuracionDelComponente;
-//	if((configuracionDelComponente = config_create(path)) == NULL){
-//		perror("Error de ruta de archivo de configuracion");
-//		exit(-1);
-//	}
-//	return configuracionDelComponente;
-//}
-
-//void recibirMensajeDeKernel(int socketKernel){
-//	char *buff = malloc(sizeof(char)*16);
-//	int tamanioBuff = strlen(buff)+1;
-//	if(recv(socketKernel,buff,tamanioBuff,0) == -1){
-//		perror("Error de receive");
-//		exit(-1);
-//	}
-//	printf("%s",buff);
-//	free(buff);
-//}
-//void verificarParametrosInicio(int argc)
-//{
-//	if(argc!=2){
-//			perror("Faltan parametros");
-//			exit(-1);
-//		}
-//}
-//void verificarParametrosCrear(t_config* configuracion, int sizeStruct)
-//{
-//	if (dictionary_size(configuracion->properties) != sizeStruct) {
-//			perror("Faltan parametros para inicializar el fileSystem");
-//			exit(-1);
-//		}
-//}
-
-
+//----------------------SERIALIZAR PCB
 void *serializarT_Intructions(PCB *pcbConT_intruction){
-  void *serializacion = malloc(sizeof(t_intructions)*pcbConT_intruction->cantidadDeT_Intructions);
+  void *serializacion = malloc(sizeof(t_intructions)*pcbConT_intruction->cantidadTIntructions);
   int i, auxiliar1 = 0;
-  for(i = 0; i<pcbConT_intruction->cantidadDeT_Intructions; i++){
-    memcpy(serializacion+sizeof(int)*auxiliar1, &pcbConT_intruction->cod[i].start, sizeof(int));
+  for(i = 0; i<pcbConT_intruction->cantidadTIntructions; i++){
+    memcpy(serializacion+sizeof(int)*auxiliar1, &pcbConT_intruction->indiceCodigo[i].start, sizeof(int));
     auxiliar1++;
-    memcpy(serializacion+sizeof(int)*auxiliar1,&pcbConT_intruction->cod[i].offset, sizeof(int));
+    memcpy(serializacion+sizeof(int)*auxiliar1,&pcbConT_intruction->indiceCodigo[i].offset, sizeof(int));
     auxiliar1++;
   }
   return serializacion;
 }
 
 void* serializarVariable(t_list* variables){
-	void* variableSerializada = malloc(list_size(variables)*sizeof(variable));
-	int i;
-	int cantidadDeVariables = list_size(variables);
-	memcpy(variableSerializada, &cantidadDeVariables, sizeof(int));
-	for(i = 1; i<cantidadDeVariables; i++){
-		variable *variableObtenida = list_get(variables, i);
-    	memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
-	}
-	return variableSerializada;
+    void* variableSerializada = malloc(list_size(variables)*sizeof(variable)+sizeof(int));
+    int i;
+    int cantidadDeVariables = list_size(variables);
+    memcpy(variableSerializada, &cantidadDeVariables, sizeof(int));
+    for(i = 0; i<cantidadDeVariables; i++){ //Antes i=1
+        variable *variableObtenida = list_get(variables, i);
+        memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
+    }
+    return variableSerializada;
 }
 
 int sacarTamanioDeLista(t_list* contexto){
-	int i, tamanioDeContexto;
-	for(i = 0; i<list_size(contexto); i++){
-		Stack *contextoAObtener = list_get(contexto, i);
-		tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
-		//free(contextoAObtener);
-	}
-	return tamanioDeContexto;
+    int i, tamanioDeContexto = 0;
+    for(i = 0; i<list_size(contexto); i++){
+        stack *contextoAObtener = list_get(contexto, i);
+        tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
+        //free(contextoAObtener);
+    }
+    return tamanioDeContexto;
 }
 
-void *serializarContextoActual(PCB* pcbConContextos){
-	void* contextoSerializado = malloc(sacarTamanioDeLista(pcbConContextos->contextos));
+void *serializarStack(PCB* pcbConContextos){
+    void* contextoSerializado = malloc(sacarTamanioDeLista(pcbConContextos->indiceStack));
   int i;
-  for(i = 0; i<pcbConContextos->tamContextos; i++){
-    Stack* contexto = list_get(pcbConContextos->contextos, i);
+  for(i = 0; i<pcbConContextos->tamanioContexto; i++){
+    stack* contexto = list_get(pcbConContextos->indiceStack, i);
     memcpy(contextoSerializado, &contexto->pos, sizeof(int));
     void *argsSerializadas = serializarVariable(contexto->args);
     void *varsSerializadas = serializarVariable(contexto->vars);
@@ -268,24 +204,100 @@ void *serializarContextoActual(PCB* pcbConContextos){
 }
 
 int sacarTamanioPCB(PCB* pcbASerializar){
- int tamanio= sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+sacarTamanioDeLista(pcbASerializar->contextos)+string_length(pcbASerializar->etiquetas);
- return tamanio;
+    int tamaniosDeContexto = sacarTamanioDeLista(pcbASerializar->indiceStack);
+    int tamanio= sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+tamaniosDeContexto+pcbASerializar->tamanioEtiquetas;
+    return tamanio;
 }
 
-void *serializarPCB(PCB* pcbASerializar){
-	int tamanioPCB = sacarTamanioPCB(pcbASerializar);
-	void* pcbSerializada = malloc(tamanioPCB);
-	memcpy(pcbSerializada, &pcbASerializar->pid, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int), &pcbASerializar->programCounter, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadPaginasCodigo, sizeof(int));
-	void* indiceDeCodigoSerializado = serializarT_Intructions(pcbASerializar);
-	memcpy(pcbSerializada+sizeof(int)*3, &pcbASerializar->cantidadDeT_Intructions, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int)*4, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions);
-	memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions, &pcbASerializar->tamEtiquetas, sizeof(int));
-	memcpy(pcbSerializada+ sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions, pcbASerializar->etiquetas, pcbASerializar->tamEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
-	memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->exitCode, sizeof(int));
-	void* contextoActualSerializado = serializarContextoActual(pcbASerializar);
-	memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas, &pcbASerializar->tamContextos, sizeof(int));
-	memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadDeT_Intructions+pcbASerializar->tamEtiquetas+sacarTamanioDeLista(pcbASerializar->contextos), contextoActualSerializado, sacarTamanioDeLista(pcbASerializar->contextos));
-	return pcbSerializada;
+void* serializarPCB(PCB* pcbASerializar){
+    int tamanioPCB = sacarTamanioPCB(pcbASerializar);
+    void* pcbSerializada = malloc(tamanioPCB);
+    memcpy(pcbSerializada, &pcbASerializar->pid, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int), &pcbASerializar->programCounter, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*2, &pcbASerializar->cantidadPaginasCodigo, sizeof(int));
+    void* indiceDeCodigoSerializado = serializarT_Intructions(pcbASerializar);
+    memcpy(pcbSerializada+sizeof(int)*3, &pcbASerializar->cantidadTIntructions, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*4, indiceDeCodigoSerializado, sizeof(t_intructions)*pcbASerializar->cantidadTIntructions);
+    memcpy(pcbSerializada+sizeof(int)*4+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, &pcbASerializar->tamanioEtiquetas, sizeof(int));
+    if(pcbASerializar->tamanioEtiquetas!=0){
+    	memcpy(pcbSerializada+ sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions, pcbASerializar->indiceEtiquetas, pcbASerializar->tamanioEtiquetas); //CHEQUEAR QUE ES TAMETIQUETAS
+    }
+    memcpy(pcbSerializada+sizeof(int)*5+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->rafagas, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->posicionStackActual, sizeof(int));
+    void* stackSerializado = serializarStack(pcbASerializar);
+    memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
+    memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas+sacarTamanioDeLista(pcbASerializar->indiceStack), stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
+    return pcbSerializada;
+}
+
+//---------------DESERIALIZAR PCB
+void desserializarVariables(t_list *variables, paquete *paqueteConVariables, int* dondeEstoy){
+    int cantidadDeVariables;
+    memcpy(&cantidadDeVariables, paqueteConVariables->mensaje+*dondeEstoy, sizeof(int));
+    *dondeEstoy += sizeof(int);
+    int i;
+    for(i = 0; i<cantidadDeVariables; i++){
+        variable *variable = malloc(sizeof(variable));
+        memcpy(&variable->nombreVariable, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(char));
+        *dondeEstoy += sizeof(char);
+        variable->direccionDeVariable = malloc(sizeof(direccion));
+        memcpy(&variable->direccionDeVariable->numPagina, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
+        *dondeEstoy += sizeof(int);
+        memcpy(&variable->direccionDeVariable->offset, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
+        *dondeEstoy += sizeof(int);
+        memcpy(&variable->direccionDeVariable->tamanioPuntero, paqueteConVariables->mensaje+(*dondeEstoy), sizeof(int));
+        *dondeEstoy += sizeof(int);
+        list_add(variables, variable);
+    }
+}
+
+void desserializarContexto(PCB* pcbConContexto, paquete* paqueteConContexto, int dondeEstoy){
+    int nivelDeContexto;
+    for(nivelDeContexto = 0; nivelDeContexto<pcbConContexto->tamanioContexto; nivelDeContexto++){
+        stack *contextoAAgregarAPCB = malloc(sizeof(stack));
+        contextoAAgregarAPCB->args = list_create();
+        contextoAAgregarAPCB->vars = list_create();
+        memcpy(&contextoAAgregarAPCB->pos, paqueteConContexto->mensaje+dondeEstoy, sizeof(int));
+        dondeEstoy +=sizeof(int);
+        desserializarVariables(contextoAAgregarAPCB->args, paqueteConContexto, &dondeEstoy);
+        desserializarVariables(contextoAAgregarAPCB->vars, paqueteConContexto, &dondeEstoy);
+        memcpy(&contextoAAgregarAPCB->retPos, paqueteConContexto->mensaje + dondeEstoy, sizeof(int));
+        memcpy(&contextoAAgregarAPCB->retVar, paqueteConContexto->mensaje + dondeEstoy + sizeof(int), sizeof(direccion));
+        list_add(pcbConContexto->indiceStack, contextoAAgregarAPCB);
+        dondeEstoy += sizeof(int);
+    }
+}
+
+int desserializarTIntructions(PCB* pcbDesserializada, paquete *paqueteConPCB){
+    int i, auxiliar = 0;
+    memcpy(&pcbDesserializada->cantidadTIntructions, paqueteConPCB->mensaje+(sizeof(int)*3), sizeof(int));
+    pcbDesserializada->indiceCodigo = malloc(pcbDesserializada->cantidadTIntructions*sizeof(t_intructions));
+    for(i = 0; i<pcbDesserializada->cantidadTIntructions; i++){
+        memcpy(&pcbDesserializada->indiceCodigo[i].start, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
+        auxiliar++;
+        memcpy(&pcbDesserializada->indiceCodigo[i].offset, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
+        auxiliar++;
+    }
+    int retorno = sizeof(int)*(3+auxiliar);
+    return retorno;
+}
+
+PCB* deserializarPCB(paquete* paqueteConPCB){
+    PCB* pcbDesserializada = malloc(paqueteConPCB->tamMsj);
+    memcpy(&pcbDesserializada->pid, paqueteConPCB->mensaje, sizeof(int));
+    memcpy(&pcbDesserializada->programCounter, paqueteConPCB->mensaje+sizeof(int), sizeof(int));
+    memcpy(&pcbDesserializada->cantidadPaginasCodigo, paqueteConPCB->mensaje+sizeof(int)*2, sizeof(int));
+    int dondeEstoy = desserializarTIntructions(pcbDesserializada, paqueteConPCB);
+    memcpy(&pcbDesserializada->tamanioEtiquetas, paqueteConPCB->mensaje+dondeEstoy, sizeof(int));
+    pcbDesserializada->indiceEtiquetas = string_new();//etiquetas
+    if(pcbDesserializada->tamanioEtiquetas!=0){
+    	 memcpy(pcbDesserializada->indiceEtiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy, pcbDesserializada->tamanioEtiquetas);
+    }
+    memcpy(&pcbDesserializada->rafagas,paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamanioEtiquetas,sizeof(int));
+    memcpy(&pcbDesserializada->tamanioContexto, paqueteConPCB->mensaje+sizeof(int)*2+dondeEstoy+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    memcpy(&pcbDesserializada->posicionStackActual, paqueteConPCB->mensaje+dondeEstoy+sizeof(int)*3+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    dondeEstoy +=sizeof(int)*4+pcbDesserializada->tamanioEtiquetas;
+    pcbDesserializada->indiceStack = list_create();
+    desserializarContexto(pcbDesserializada, paqueteConPCB, dondeEstoy);
+    return pcbDesserializada;
 }

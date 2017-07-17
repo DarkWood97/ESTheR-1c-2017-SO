@@ -108,7 +108,7 @@ typedef struct {
 }stack;
 
 
-typedef struct __attribute__((__packed_)) {
+typedef struct __attribute__((__packed__)) {
 	int pid;
 	//int estado;
 	int programCounter;
@@ -187,5 +187,6 @@ void verificarParametrosCrear(t_config *,int);
 //bool estadoDelPrograma();
 void *serializarPCB(PCB*);
 int sacarTamanioPCB(PCB*);
+PCB* deserializarPCB(paquete*);
 
 #endif /* FUNCIONESCPU_H_ */
