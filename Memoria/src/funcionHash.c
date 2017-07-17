@@ -32,8 +32,9 @@ int buscarFrameProceso(int pid, int numeroPagina, bool(*funcionMagica)(int, int,
     if(!funcionMagica(pid, numeroPagina, paginaDeHash)){
         log_info(loggerMemoria, "El frame obtenido con la funcion de hashing no es correcto...");
         log_info(loggerMemoria, "Pasando a buscar el frame correcto...");
-        deDondeEmpiezo = paginaDeHash+1;
+        deDondeEmpiezo = paginaDeHash;
         while(noEsLaBuscada){
+        	paginaDeHash++;
             //YA DI TODA LA VUELTA, SIGNIFICA QUE LA PAGINA NO ESTA
             if(paginaDeHash == deDondeEmpiezo){
                 log_info(loggerMemoria, "No se encontro el frame perteneciente a la pagina %d del proceso %d...", numeroPagina, pid);
@@ -49,7 +50,7 @@ int buscarFrameProceso(int pid, int numeroPagina, bool(*funcionMagica)(int, int,
                 log_info(loggerMemoria, "Se llego al final de la tabla de paginas invertidas, volviendo a empezar para completar el recorrido...");
                 paginaDeHash = 0;
             }
-            paginaDeHash++;
+            //paginaDeHash++;
         }
     }else{
         log_info(loggerMemoria, "El frame obtenido con la funcion hash es el correcto...");

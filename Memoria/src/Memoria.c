@@ -84,22 +84,28 @@ bool estaLlenaLaCache(){
 //  return false;
 //}
 
-t_list* filtrarEntradas(int pid, int numPagina){
-	bool chequearExistenciaEnCache(entradaDeCache* entradaAChequear){
-	  if(entradaAChequear->pid == pid && entradaAChequear->numPagina == numPagina){
-	    return true;
-	  }
-	  return false;
-	}
-  t_list* entradasFiltradas = list_create();
-  entradasFiltradas = list_remove_by_condition(cacheDeMemoria->entradasCache, (void*)chequearExistenciaEnCache);
-  return entradasFiltradas;
-}
+//entradaDeCache* filtrarEntradas(int pid, int numPagina){
+//	bool chequearExistenciaEnCache(entradaDeCache* entradaAChequear){
+//	  if(entradaAChequear->pid == pid && entradaAChequear->numPagina == numPagina){
+//	    return true;
+//	  }
+//	  return false;
+//	}
+//  entradaDeCache* entradasFiltradas;
+//  entradasFiltradas = list_remove_by_condition(cacheDeMemoria->entradasCache, (void*)chequearExistenciaEnCache);
+//  return entradasFiltradas;
+//}
 
 entradaDeCache* obtenerEntrada(int pid, int numPagina){
-  entradaDeCache* entradaObtenida;
-  entradaObtenida = list_get(filtrarEntradas(pid, numPagina),0);
-  return entradaObtenida;
+	bool chequearExistenciaEnCache(entradaDeCache* entradaAChequear){
+		  if(entradaAChequear->pid == pid && entradaAChequear->numPagina == numPagina){
+		    return true;
+		  }
+		  return false;
+		}
+	  entradaDeCache* entradasFiltradas;
+	  entradasFiltradas = list_remove_by_condition(cacheDeMemoria->entradasCache, (void*)chequearExistenciaEnCache);
+	  return entradasFiltradas;
 }
 
 void* leerDeCache(int pid, int numPagina, int tamALeer, int offset){

@@ -310,8 +310,8 @@ void escribimeArchivo(t_descriptor_archivo descriptor_archivo, void* informacion
 	void* mensajeDeEscritura = malloc(tamanioMensaje);
 	memcpy(mensajeDeEscritura, &pcbEnProceso->pid, sizeof(int));
 	memcpy(mensajeDeEscritura+sizeof(int), &descriptor_archivo, sizeof(t_descriptor_archivo));
-	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+sizeof(int), informacion, tamanio);
-	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+tamanio+sizeof(int), &tamanio, sizeof(t_valor_variable));
+	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+sizeof(int), &tamanio, sizeof(t_valor_variable));
+	memcpy(mensajeDeEscritura+sizeof(t_descriptor_archivo)+sizeof(t_valor_variable)+sizeof(int), informacion, tamanio);
 	sendRemasterizado(socketKernel, ESCRIBIR_ARCHIVO, tamanioMensaje, mensajeDeEscritura);
 	if(recvDeNotificacion(socketKernel) != OPERACION_CON_ARCHIVO_EXITOSA){
 		log_info(loggerProgramas, "El proceso %d no pudo escribir en el archivo %d...", pcbEnProceso->pid, descriptor_archivo);

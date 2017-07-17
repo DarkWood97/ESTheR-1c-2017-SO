@@ -72,6 +72,7 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 	string_append(&datosParaEjecucion->algoritmo, nombreAlgoritmo);
 	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje+ string_length(nombreAlgoritmo), sizeof(int));
 	memcpy(&datosParaEjecucion->quantumSleep, paqueteDeArmado->mensaje+string_length(nombreAlgoritmo)+sizeof(int), sizeof(int));
+	free(nombreAlgoritmo);
 }
 
 void realizarHandshakeConKernel(){
@@ -83,7 +84,8 @@ void realizarHandshakeConKernel(){
 		log_error(loggerCPU, "Error al recibir los datos de ejecucion de kernel...");
 		exit(-1);
 	}
-
+	free(paqueteConConfigsDeKernel->mensaje);
+	free(paqueteConConfigsDeKernel);
 }
 
 
@@ -99,6 +101,7 @@ void realizarHandshakeConMemoria(){
 		log_error(loggerCPU, "Error al recibir el tamanio de pagina de memoria...");
 		exit(-1);
 	}
+	free(paqueteConTamPagina->mensaje);
 	free(paqueteConTamPagina);
 }
 
@@ -106,7 +109,7 @@ void realizarHandshakeConMemoria(){
 void recibirPCBDeKernel(){
 	paquete *paqueteConPCB;
 	paqueteConPCB = recvRemasterizado(socketKernel);
-	deserializarPCB(paqueteConPCB);
+	pcbEnProceso = deserializarPCB(paqueteConPCB);
 	free(paqueteConPCB);
 }
 
@@ -124,7 +127,7 @@ void recibirPCBDeKernel(){
 // }
 
 bool programaSigueEjecutando(){
-	return programaEnEjecucionFinalizado&&programaEnEjecucionAbortado&&programaEnEjecucionBloqueado;
+	return !programaEnEjecucionFinalizado&&!programaEnEjecucionAbortado&&!programaEnEjecucionBloqueado;
 }
 
 void preparandoParaEjecutar(){

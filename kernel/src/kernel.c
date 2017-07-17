@@ -283,7 +283,7 @@ int obtenerCantidadPaginas(char* codigoDePrograma){
 }
 
 int mandarInicioAMemoria(void* inicioDePrograma){
-  sendRemasterizado(socketMemoria, INICIAR_PROGRAMA, sizeof(int), inicioDePrograma);
+  sendRemasterizado(socketMemoria, INICIAR_PROGRAMA, sizeof(int)*2, inicioDePrograma);
   return recvDeNotificacion(socketMemoria);
 }
 
@@ -303,7 +303,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->programCounter = metadataDelPrograma->instruccion_inicio;
 		pcbNuevo->rafagas = 0;
 		pcbNuevo->exitCode = 0;
-		pcbNuevo->cantidadPaginasCodigo = ceil((double)tamanioCodigo/(double)cantidadPaginasCodigo);
+		pcbNuevo->cantidadPaginasCodigo = ceil((double)tamanioCodigo/(double)cantidadPaginasCodigo); //ARREGLAR ESTO
 		pcbNuevo->cantidadTIntructions = metadataDelPrograma->instrucciones_size;
 		pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
 		pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
@@ -480,9 +480,10 @@ void* serializarPCB(PCB* pcbASerializar){
 
 
 //--------------ADMINISTRACION DE PROGRAMAS---------------//
-void enviarCodigoDeProgramaAMemoria(char* codigo){
+void enviarCodigoDeProgramaAMemoria(int pid, char* codigo){
 	void *codigoParaMemoria;
 	int i;
+	int offset = 0;
 	int tamanioDeCodigoRestante = string_length(codigo);
 	int cantidadDePaginasQueOcupa = tamanioDeCodigoRestante/tamanioPagina;
 	if((tamanioDeCodigoRestante % tamanioPagina) != 0){
@@ -490,14 +491,20 @@ void enviarCodigoDeProgramaAMemoria(char* codigo){
 	}
 	for(i = 0; i<cantidadDePaginasQueOcupa; i++){
 		int tamanioMensaje;
-		codigoParaMemoria = malloc(tamanioDeCodigoRestante);
+		codigoParaMemoria = malloc(tamanioDeCodigoRestante+sizeof(int)*4);
+		memcpy(codigoParaMemoria, &pid, sizeof(int));
+		memcpy(codigoParaMemoria+sizeof(int), &i, sizeof(int));
+		memcpy(codigoParaMemoria+sizeof(int)*2, &offset, sizeof(int));
 		if(tamanioDeCodigoRestante>tamanioPagina){
+			memcpy(codigoParaMemoria+sizeof(int)*3, &tamanioPagina, sizeof(int));
+			memcpy(codigoParaMemoria+sizeof(int)*4, codigo+(i*tamanioPagina), tamanioPagina);
 			tamanioMensaje = tamanioPagina;
 		}else{
+			memcpy(codigoParaMemoria+sizeof(int)*3, &tamanioDeCodigoRestante, sizeof(int));
+			memcpy(codigoParaMemoria+sizeof(int)*4, codigo+(i*tamanioPagina), tamanioDeCodigoRestante);
 			tamanioMensaje = tamanioDeCodigoRestante;
 		}
-		memcpy(codigoParaMemoria, codigo+(i*tamanioPagina), tamanioDeCodigoRestante);
-		sendRemasterizado(socketMemoria, ESCRIBIR_DATOS, tamanioMensaje, codigoParaMemoria);
+		sendRemasterizado(socketMemoria, ESCRIBIR_DATOS, tamanioMensaje+sizeof(int)*4, codigoParaMemoria);
 		free(codigoParaMemoria);
 		tamanioDeCodigoRestante -= tamanioPagina;
 	}
@@ -505,7 +512,7 @@ void enviarCodigoDeProgramaAMemoria(char* codigo){
 
 void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
 	if(pcbInicializado!=NULL){
-		enviarCodigoDeProgramaAMemoria(codigo);
+		enviarCodigoDeProgramaAMemoria(pcbInicializado->pid, codigo);
 		sendRemasterizado(socketDeConsola, ENVIAR_PID, sizeof(int), &pcbInicializado->pid);
 	}
 	else{
@@ -1165,13 +1172,13 @@ void realizarhandshakeCPU(int socket){
 int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
-	verificarParametrosInicio(argc);
-	inicializarKernel(argv[1]);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
+	//verificarParametrosInicio(argc);
+	//inicializarKernel(argv[1]);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
-	pidActual = 0;
+	pidActual = 1;
 	int socketEscuchaCPU, socketEscuchaConsolas, socketMaxCliente, socketAChequear, socketQueAceptaClientes;
 	int *socketConsola;
 	int *socketCPU;
