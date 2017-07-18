@@ -480,9 +480,9 @@ void mostrarProgramasIniciados(){
 	int i = 0;
 	pthread_mutex_lock(&mutexProcesos);
 	if(!(list_is_empty(listaProcesos))){
+		printf("Los programas son: \n");
 		for(;i<list_size(listaProcesos);i++){
 			programa* unPrograma = list_get(listaProcesos,i);
-			printf("Los programas son: \n");
 			printf("PID-PROGRAMA: %d \n", unPrograma->pid);
 		}
 	}

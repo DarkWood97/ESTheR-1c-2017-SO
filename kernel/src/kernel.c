@@ -167,7 +167,7 @@ t_queue* colaListo;
 t_queue* colaNuevo;
 t_queue* listaDeCPULibres;
 t_queue* colaProcesos;
-t_list* finalizadosPorConsola; //MEJOR T_LIST
+t_list* finalizadosPorConsola;
 
 //TABLAS FS
 t_list* tablaAdminArchivos;
@@ -290,7 +290,6 @@ char* cargarEtiquetas(t_metadata_program* metadata_program,int sizeEtiquetasInde
 int obtenerCantidadPaginas(char* codigoDePrograma){
   long int tamanioCodigo = string_length(codigoDePrograma);
   int cantidadPaginas = tamanioCodigo/(tamanioPagina-sizeof(heap)*2)+STACK_SIZE;
-  //int cantidadPaginas = tamanioCodigo / tamanioPagina;
   if((tamanioCodigo % tamanioPagina) != 0){
     cantidadPaginas++;
   }
@@ -553,7 +552,7 @@ void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   enviarDatos(pcbInicializado,codigo,socketConsola);
 }
 
-bool finalizarProceso(int pid){
+bool finalizarProceso(int pid, int exitCode){
   bool esPCBProceso(PCB *pcbABuscar){
     return pcbABuscar->pid == pid;
   }
@@ -586,7 +585,7 @@ bool finalizarProceso(int pid){
         break;
     }
     pcbAFinalizar->estado = FINALIZADO;
-    pcbAFinalizar->exitCode = -7;
+    pcbAFinalizar->exitCode = exitCode;
     list_add(finalizadosPorConsola, &pid);
     return true;
   }else{
@@ -628,7 +627,8 @@ int cantidadDeRafagasDe(int pid){
 
 void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketConsola){
 	int pidFinalizado = *(int*)paqueteConProceso->mensaje;
-	if(finalizarProceso(pidFinalizado)){
+	int exitCode = -6;
+	if(finalizarProceso(pidFinalizado,exitCode)){
 		char* mensajeFinalizado = string_new();
 		string_append(&mensajeFinalizado,"Se finalizo correctamente el proceso");
 		int tamanio = sizeof(char)*strlen(mensajeFinalizado);
@@ -679,54 +679,115 @@ void modificarGradoMultiprogramacion(int grado){
 	GRADO_MULTIPROG=grado;
 }
 
-//void *manejadorTeclado(){
-//	char* comando = malloc(50*sizeof(char));
-//	size_t tamanioMaximo = 50;
-//
-//	while(1){
-//		puts("Esperando comando...");
-//
-//		getline(&comando, &tamanioMaximo, stdin);
-//
-//		int tamanioRecibido = strlen(comando);
-//		comando[tamanioRecibido-1] = '\0';
-//		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
-//		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
-//
-//		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
-//			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
-//			finalizarPrograma((int)valorPid);
-//		}else{
-//			if(string_equals_ignore_case(comando, "consultarListado")){
-//				consultarListado();
-//			}else{
-//				if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
-//					char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
-//					consultarEstado(estado);
-//				}else{
-//					if(string_equals_ignore_case(comando, "detenerPlanificacion")){
-//						detenerPlanificacion();
-//					}else{
-//						if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
-//							reanudarPlanificacion();
-//						}else{
-//							if(string_equals_ignore_case(comando, "modificarGradoDeMultiprogramacion")){
-//								//modificarGradoMultiprogramacion(grado);
-//							}else{
-//								puts("Error de comando");
-//							}
-//							comando = realloc(comando,50*sizeof(char));
-//						}
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	free(comando);
-//}
+void mostrarProcesosEnCola(t_queue* unaCola){
+	int i = 0;
+	if(!(list_is_empty(unaCola->elements))){
+		printf("Los programas son: \n");
+		for(;i<list_size(unaCola->elements);i++){
+			PCB* unPCB = list_get(unaCola->elements,i);
+			printf("PID-PROGRAMA: %d \n", unPCB->pid);
+		}
+	}
+	else{
+		printf("No hay Procesos.");
+	}
+}
+
+void consultarListado(){
+	mostrarProcesosEnCola(colaProcesos);
+}
+
+void consultarEstado(char* estado){
+	if(string_equals_ignore_case(estado, "nuevo")){
+		mostrarProcesosEnCola(colaNuevo);
+	} else if(string_equals_ignore_case(estado, "bloqueado")){
+		mostrarProcesosEnCola(colaBloqueado);
+	} else if(string_equals_ignore_case(estado, "listo")){
+		mostrarProcesosEnCola(colaListo);
+	} else if(string_equals_ignore_case(estado, "ejecutando")){
+		mostrarProcesosEnCola(colaEjecutando);
+	} else if(string_equals_ignore_case(estado, "finalizado")){
+		mostrarProcesosEnCola(colaFinalizado);
+	} else{
+		printf("El estado %s es incorrecto.",estado);
+	}
 
 
+}
+
+void detenerPlanificacion(){
+	estadoPlanificacionesSistema = false;
+}
+
+void reanudarPlanificacion(){
+	estadoPlanificacionesSistema = true;
+}
+
+void obtenerRafagas(int pid){
+	int i = 0;
+	if(!(list_is_empty(colaProcesos->elements))){
+		for(;i<list_size(colaProcesos->elements);i++){
+			PCB* unPCB = list_get(colaProcesos->elements,i);
+			if(unPCB->pid==pid){
+				printf("Cantidad de rafagas ejecutadas por el pid %d fueron %d",pid,unPCB->rafagas);
+			}
+		}
+	}
+	else{
+		printf("No hay procesos cargados en el sistema.");
+	}
+}
+
+void* manejadorTeclado(){
+	char* comando = malloc(50*sizeof(char));
+	size_t tamanioMaximo = 50;
+
+	while(1){
+		puts("Esperando comando...");
+
+		getline(&comando, &tamanioMaximo, stdin);
+
+		int tamanioRecibido = strlen(comando);
+		comando[tamanioRecibido-1] = '\0';
+		char* posibleFinalizarPrograma = string_substring_until(comando, strlen("finalizarPrograma"));
+		char* posibleConsultarEstado = string_substring_until(comando, strlen("consultarEstado"));
+		char* posibleModificarGrado = string_substring_until(comando, strlen("modificarGradoDeMultiprogramacion"));
+		char* posibleObtenerRafaga = string_substring_until(comando,strlen("obtenerRafagas"));
+
+		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
+			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
+			int exitCode = -7;
+			finalizarProceso((int)valorPid,exitCode);
+			free(posibleFinalizarPrograma);
+			free(valorPid);
+		}else if(string_equals_ignore_case(comando, "consultarListado")){
+			consultarListado();
+		}else if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
+			char* estado=string_substring_from(comando,strlen("consultarEstado")+1);
+			consultarEstado(estado);
+			free(posibleConsultarEstado);
+			free(estado);
+		}else if(string_equals_ignore_case(comando, "detenerPlanificacion")){
+			detenerPlanificacion();
+		}else if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
+			reanudarPlanificacion();
+		}else if(string_equals_ignore_case(posibleModificarGrado, "modificarGradoDeMultiprogramacion")){
+			char* valorGrado=string_substring_from(comando,strlen("modificarGradoDeMultiprogramacion")+1);
+			modificarGradoMultiprogramacion((int)valorGrado);
+			free(posibleModificarGrado);
+			free(valorGrado);
+		}else if(string_equals_ignore_case(posibleObtenerRafaga, "obtenerRafagas")){
+			char* valorPid=string_substring_from(comando,strlen("obtenerRafagas")+1);
+			obtenerRafagas((int)valorPid);
+			free(posibleObtenerRafaga);
+			free(valorPid);
+		}else{
+			puts("Error de comando");
+		}
+
+		comando = realloc(comando,50*sizeof(char));
+	}
+}
 
 //PLANIFICACION DEL SISTEMA
 
