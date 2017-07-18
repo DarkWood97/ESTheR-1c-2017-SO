@@ -913,7 +913,7 @@ int main(int argc, char *argv[]) {
 								*socketCPU = socketClienteChequeado;
 								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketCPU);
 								sendRemasterizado(socketClienteChequeado, TAMANIO_PAGINA_PARA_CPU, sizeof(int), &MARCOS_SIZE);
-								log_info(loggerMemoria,"Se registro nueva CPU...\n");
+								log_info(loggerMemoria,"Se registro nueva CPU...");
 								FD_CLR(socketClienteChequeado,&aceptarConexiones);
 								break;
 							case ES_KERNEL:

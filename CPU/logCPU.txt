@@ -72,3 +72,12 @@
 [INFO] 21:22:01:999 CPU/(18494:18494): Handshake con memoria realizado.
 [INFO] 21:26:21:537 CPU/(18690:18690): CPU inicializada correctamente.
 [INFO] 21:26:24:20 CPU/(18690:18690): Handshake con memoria realizado.
+[INFO] 21:55:38:427 CPU/(19368:19368): CPU inicializada correctamente.
+[ERROR] 21:55:41:646 CPU/(19368:19368): Error al recibir el tamanio de pagina de memoria...
+[INFO] 21:56:16:266 CPU/(19568:19568): CPU inicializada correctamente.
+[INFO] 21:56:16:859 CPU/(19568:19568): Handshake con memoria realizado.
+[INFO] 22:01:30:916 CPU/(19685:19685): CPU inicializada correctamente.
+[ERROR] 22:01:33:437 CPU/(19685:19685): Error al recibir el tamanio de pagina de memoria...
+[INFO] 22:02:39:487 CPU/(19750:19750): CPU inicializada correctamente.
+[ERROR] 22:02:40:993 CPU/(19750:19750): Error al recibir el tamanio de pagina de memoria...
+[INFO] 22:03:12:840 CPU/(19809:19809): CPU inicializada correctamente.

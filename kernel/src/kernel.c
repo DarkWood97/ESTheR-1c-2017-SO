@@ -152,7 +152,6 @@ t_queue* colaFinalizado;
 t_queue* colaListo;
 t_queue* colaNuevo;
 t_queue* listaDeCPULibres;
-t_queue* colaProcesos;
 t_list* finalizadosPorConsola; //MEJOR T_LIST
 
 //TABLAS FS
@@ -322,8 +321,6 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		log_debug(loggerKernel, "PCB creada para el pid: %i ",pcbNuevo->pid);
 
 		queue_push(colaNuevo,pcbNuevo);
-		queue_push(colaProcesos,pcbNuevo);
-
 		log_debug(loggerKernel, "El pid: %i ha ingresado a la cola de nuevo.",pcbNuevo->pid);
 	}else{
 		free(codigoDePrograma);
@@ -519,16 +516,8 @@ void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
 		sendRemasterizado(socketDeConsola, ENVIAR_PID, sizeof(int), &pcbInicializado->pid);
 	}
 	else{
-		char* mensaje = string_new();
-		string_append(&mensaje,"No hay espacio para iniciar el programa.");
-		int tamanio = strlen(mensaje);
-		void* mensajeConTamanio = malloc(sizeof(int)+tamanio);
-		memcpy(mensajeConTamanio,&tamanio,sizeof(int));
-		memcpy(mensajeConTamanio+sizeof(int),mensaje,tamanio);
-		sendRemasterizado(socketDeConsola,ESPACIO_INSUFICIENTE,tamanio+sizeof(int),mensaje);
+		sendDeNotificacion(socketDeConsola,ESPACIO_INSUFICIENTE);
 		free(pcbInicializado);
-		free(mensaje);
-		free(mensajeConTamanio);
 	}
 }
 
@@ -539,12 +528,32 @@ void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   enviarDatos(pcbInicializado,codigo,socketConsola);
 }
 
+t_list* obtenerListaConTodosLosProcesos(){
+	t_list* listaConProcesos = list_create();
+	if(!list_is_empty(colaBloqueado)){
+		list_add_all(listaConProcesos,colaBloqueado);
+	}
+	if(!list_is_empty(colaEjecutando)){
+		list_add_all(listaConProcesos,colaEjecutando);
+	}
+	if(!list_is_empty(colaFinalizado)){
+		list_add_all(listaConProcesos,colaFinalizado);
+	}
+	if(!list_is_empty(colaListo)){
+		list_add_all(listaConProcesos,colaListo);
+	}
+	if(!list_is_empty(colaListo)){
+		list_add_all(listaConProcesos,colaNuevo);
+	}
+	return listaConProcesos;
+}
+
 bool finalizarProceso(int pid){
   bool esPCBProceso(PCB *pcbABuscar){
     return pcbABuscar->pid == pid;
   }
-
-  PCB *pcbAFinalizar = list_find(colaProcesos->elements, (void*)esPCBProceso);
+  t_list* listaDeProcesos = obtenerListaConTodosLosProcesos();
+  PCB *pcbAFinalizar = list_find(listaDeProcesos, (void*)esPCBProceso);
   if(pcbAFinalizar != NULL){
     switch (pcbAFinalizar->estado) {
       case NUEVO:
@@ -574,7 +583,7 @@ bool finalizarProceso(int pid){
     pcbAFinalizar->estado = FINALIZADO;
     pcbAFinalizar->exitCode = -7;
     list_add(finalizadosPorConsola, &pid);
-    queue_destroy(colaProcesos);
+    list_destroy(listaDeProcesos);
     return true;
   }else{
     puts("El proceso %d no existe, por lo tanto no se puede finalizar...");
@@ -624,21 +633,11 @@ void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketCons
 		memcpy(mensaje,&pidFinalizado,sizeof(int));
 		memcpy(mensaje+sizeof(int),&tamanio,sizeof(int));
 		memcpy(mensaje+sizeof(int)*2,mensajeFinalizado,tamanio);
-		sendRemasterizado(socketConsola,FINALIZAR_PROGRAMA,sizeof(int)*2+tamanio,mensaje);
+		sendRemasterizado(socketConsola,FINALIZO_CORRECTAMENTE,sizeof(int)*2+tamanio,mensaje);
 		free(mensajeFinalizado);
 		free(mensaje);
 	}
-	else{
-		char* mensaje = string_new();
-		string_append(&mensaje,"El programa con el PID indicado no existe, inconsistencia de datos de consola.");
-		int tamanio = strlen(mensaje);
-		void* mensajeConTamanio = malloc(sizeof(int)+tamanio);
-		memcpy(mensajeConTamanio,&tamanio,sizeof(int));
-		memcpy(mensajeConTamanio+sizeof(int),mensaje,tamanio);
-		sendRemasterizado(socketConsola,FINALIZO_INCORRECTAMENTE,tamanio+sizeof(int),mensaje);
-		free(mensaje);
-		free(mensajeConTamanio);
-	}
+	//Caso Finalizo INCORRECTAMENTE
 }
 
 //--------------------------------------HILOS-----------------------------------//
@@ -1179,7 +1178,7 @@ int main (int argc, char *argv[]){
 	//inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
-	pidActual = 1;
+	pidActual = 0;
 	int socketEscuchaCPU, socketEscuchaConsolas, socketMaxCliente, socketAChequear, socketQueAceptaClientes;
 	int *socketConsola;
 	int *socketCPU;
@@ -1200,7 +1199,6 @@ int main (int argc, char *argv[]){
 	colaFinalizado = queue_create();
 	colaListo = queue_create();
 	colaNuevo = queue_create();
-	colaProcesos = queue_create();
 	listaDeCPULibres=queue_create();
 
 	//CONEXIONES
