@@ -57,6 +57,3 @@ int buscarFrameProceso(int pid, int numeroPagina, bool(*funcionMagica)(int, int,
     }
     return paginaDeHash;
 }
-
-
-

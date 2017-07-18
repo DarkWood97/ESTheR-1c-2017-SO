@@ -513,23 +513,23 @@ int almacenarBytesEnMemoria(int pid, int numPagina, int offset, int tamanio, voi
 	return OPERACION_FALLIDA;
 }
 
-int leer(int pid, int pagina, int tamALeer, int offset, void* datosLeidos){
-	int numeroDeFrame;
-	if(estaCargadoEnCache(pid, pagina)){
-		datosLeidos = leerDeCache(pid, pagina, tamALeer, offset);
-		printf("%s", (char*)datosLeidos);
-	}else{
-		numeroDeFrame = buscarFrameProceso(pid, pagina, esElFrameCorrecto);
-		if(numeroDeFrame != -1){
-			long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
-			memcpy(datosLeidos, memoriaSistema + comienzoDeLectura, tamALeer);
-
-		}else{
-			return OPERACION_FALLIDA;
-		}
-	}
-  	return OPERACION_EXITOSA_FINALIZADA;
-}
+//int leer(int pid, int pagina, int tamALeer, int offset, void* datosLeidos){
+//	int numeroDeFrame;
+//	if(estaCargadoEnCache(pid, pagina)){
+//		datosLeidos = leerDeCache(pid, pagina, tamALeer, offset);
+//		printf("%s", (char*)datosLeidos);
+//	}else{
+//		numeroDeFrame = buscarFrameProceso(pid, pagina, esElFrameCorrecto);
+//		if(numeroDeFrame != -1){
+//			long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
+//			memcpy(datosLeidos, memoriaSistema + comienzoDeLectura, tamALeer);
+//
+//		}else{
+//			return OPERACION_FALLIDA;
+//		}
+//	}
+//  	return OPERACION_EXITOSA_FINALIZADA;
+//}
 
 int reservarPaginasParaProceso(int pid, int cantidadDePaginas){
 	if(cantidadDePaginas<(MARCOS-cantidadPaginasDeTabla) && cantidadDePaginas<cantidadPaginasLibres){
