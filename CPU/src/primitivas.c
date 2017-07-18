@@ -56,12 +56,15 @@ t_valor_variable asignarValorCompartida(t_nombre_compartida variable, t_valor_va
 
 t_puntero definirVariable(t_nombre_variable identificador_variable){
   //int cantidadDeContextos = list_size(pcbEnProceso->indiceStack);
+	log_info(loggerProgramas, "Se recibio una peticion para definir la variable %c...", identificador_variable);
   direccion *direccionDeVariable;
   direccionDeVariable = malloc(sizeof(direccion));
   if((identificador_variable>='0')&&(identificador_variable<='9')){
+	  log_info(loggerProgramas, "La variable %c es un argumento de funcion...", identificador_variable);
     direccionDeVariable = generarDireccionParaArgumento(pcbEnProceso->posicionStackActual);
     agregarVariableAArgs(direccionDeVariable, identificador_variable);
   }else{
+	  log_info(loggerProgramas, "La variable %c es una variable...", identificador_variable);
     direccionDeVariable = generarDireccionParaVariable(pcbEnProceso->posicionStackActual);
     agregarVariableAVars(direccionDeVariable, identificador_variable);
   }

@@ -1172,10 +1172,10 @@ void realizarhandshakeCPU(int socket){
 int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
-	//verificarParametrosInicio(argc);
-	//inicializarKernel(argv[1]);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
+	verificarParametrosInicio(argc);
+	inicializarKernel(argv[1]);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 1;

@@ -189,12 +189,12 @@ int obtenerPCAnterior(PCB *pcb){
    return direccionAnterior;
  }
 
- direccion* generarDireccionParaVariable(int cantidadDeContextos){
+ direccion* generarDireccionParaVariable(int posicionDelStack){
    direccion *direccionAnterior;
    direccionAnterior = malloc(sizeof(direccion));
-   stack *contextoActual = list_get(pcbEnProceso->indiceStack, cantidadDeContextos);
+   stack *contextoActual = list_get(pcbEnProceso->indiceStack, posicionDelStack);
    int cantidadDeVars = list_size(contextoActual->vars);
-   if(cantidadDeContextos == 1 && cantidadDeVars == 0){
+   if(posicionDelStack == 0 && cantidadDeVars == 0){
      //generarDireccionDePrimeraPagina(direccionAnterior);
    }else if(obtenerCantidadDeVars(contextoActual) == 0){
      stack *contextoAnterior = obtenerContextoAnterior();

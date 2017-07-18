@@ -163,6 +163,7 @@ void agregarACache(int pid, int numPagina, void* contenido){
     nuevaEntrada->numPagina = numPagina;
     nuevaEntrada->contenido = malloc(MARCOS_SIZE);
     memcpy(nuevaEntrada->contenido, contenido, MARCOS_SIZE);
+    //printf("%s", (char*)nuevaEntrada->contenido);
     if(estaLlenaLaCache()){
       sacarLRU();
       log_info(loggerMemoria, "Se elimino la entrada LRU...");
@@ -503,6 +504,7 @@ int almacenarBytesEnMemoria(int pid, int numPagina, int offset, int tamanio, voi
 			log_info(loggerMemoria, "Se procede a agregar la pagina %d del proceso %d a cache...", numPagina, pid);
 			void* contenidoDePagina = malloc(MARCOS_SIZE);
 			memcpy(contenidoDePagina, entradasDeTabla+comienzoDePagina, MARCOS_SIZE);
+			//printf("%s", (char*)contenidoDePagina);
 			agregarACache(pid, numPagina, contenidoDePagina);
 			free(contenidoDePagina);
 		}
@@ -515,11 +517,13 @@ int leer(int pid, int pagina, int tamALeer, int offset, void* datosLeidos){
 	int numeroDeFrame;
 	if(estaCargadoEnCache(pid, pagina)){
 		datosLeidos = leerDeCache(pid, pagina, tamALeer, offset);
+		printf("%s", (char*)datosLeidos);
 	}else{
 		numeroDeFrame = buscarFrameProceso(pid, pagina, esElFrameCorrecto);
 		if(numeroDeFrame != -1){
 			long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
 			memcpy(datosLeidos, memoriaSistema + comienzoDeLectura, tamALeer);
+
 		}else{
 			return OPERACION_FALLIDA;
 		}
@@ -654,14 +658,23 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
 	int pid, tamALeer, offset, pagina;
     memcpy(&pid, paqueteDeLectura->mensaje, sizeof(int));
     memcpy(&pagina, paqueteDeLectura->mensaje + sizeof(int), sizeof(int));
-    memcpy(&tamALeer, paqueteDeLectura->mensaje + sizeof(int)*2, sizeof(int));
-    memcpy(&offset, paqueteDeLectura->mensaje + sizeof(int)*3, sizeof(int));
+    memcpy(&offset, paqueteDeLectura->mensaje + sizeof(int)*2, sizeof(int));
+    memcpy(&tamALeer, paqueteDeLectura->mensaje + sizeof(int)*3, sizeof(int));
     void* datosLeidos = malloc(tamALeer);
-    if(leer(pid, pagina, offset, tamALeer, datosLeidos)==OPERACION_EXITOSA_FINALIZADA){
-    	 sendRemasterizado(socketConPeticionDeLectura, DATOS_DE_PAGINA, tamALeer, datosLeidos);
-    }else{
-    	sendDeNotificacion(socketConPeticionDeLectura, OPERACION_FALLIDA);
-    }
+    int numeroDeFrame;
+    	if(estaCargadoEnCache(pid, pagina)){
+    		datosLeidos = leerDeCache(pid, pagina, tamALeer, offset);
+    		sendRemasterizado(socketConPeticionDeLectura, DATOS_DE_PAGINA, tamALeer, datosLeidos);
+    	}else{
+    		numeroDeFrame = buscarFrameProceso(pid, pagina, esElFrameCorrecto);
+    		if(numeroDeFrame != -1){
+    			long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
+    			memcpy(datosLeidos, memoriaSistema + comienzoDeLectura, tamALeer);
+    			sendRemasterizado(socketConPeticionDeLectura, DATOS_DE_PAGINA, tamALeer, datosLeidos);
+    		}else{
+    			sendDeNotificacion(socketConPeticionDeLectura, OPERACION_FALLIDA);
+    		}
+    	}
     free(datosLeidos);
 }
 //------------------------------LIBERAR PAGINA---------------------------------------//

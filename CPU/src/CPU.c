@@ -148,7 +148,7 @@ void modificarQuantum(){
 
 char* pedirLineaAMemoria(){
 	int cuantoLeer = pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].offset;
-	char* lineaDeInstruccion = malloc(cuantoLeer+1);
+	char* lineaDeInstruccion = string_new();
 	void* mensajeParaMemoria = malloc(sizeof(int)*4);
 	memcpy(mensajeParaMemoria, &pcbEnProceso->pid, sizeof(int));
 	int numeroDePagina = (pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].start)/tamPaginasMemoria;
@@ -161,7 +161,8 @@ char* pedirLineaAMemoria(){
 	paquete *paqueteConSentencia;
 	paqueteConSentencia = recvRemasterizado(socketMemoria);
 	if(paqueteConSentencia->tipoMsj==DATOS_DE_PAGINA){
-		memcpy(lineaDeInstruccion, paqueteConSentencia->mensaje, cuantoLeer);
+		string_append(&lineaDeInstruccion, paqueteConSentencia->mensaje);
+		//memcpy(lineaDeInstruccion, paqueteConSentencia->mensaje, cuantoLeer);
 		free(paqueteConSentencia);
 		string_append(&lineaDeInstruccion, "\0");
 		return lineaDeInstruccion;
@@ -229,9 +230,9 @@ int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
 	loggerProgramas = log_create("./logProgramas.txt", "Programas",0,0);
-	verificarParametrosInicio(argc);
-	inicializarCPU(argv[1]);
-	//inicializarCPU("Debug/CPU.config");
+	//verificarParametrosInicio(argc);
+	//inicializarCPU(argv[1]);
+	inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);
@@ -254,7 +255,8 @@ int main(int argc, char *argv[]) {
 			lineaDeEjecucion = pedirLineaAMemoria();//Aca adentro voy a tener que ponerle el \0 y chequear si esta abortado
 			analizadorLinea(lineaDeEjecucion, &primitivas, &primitivasDeKernel);
 			modificarQuantum();
-			avanzarEnEjecucion();
+			//avanzarEnEjecucion();
+			pcbEnProceso->programCounter++;
 			pcbEnProceso->rafagas++;
 			usleep(datosParaEjecucion->quantumSleep);
 		}
