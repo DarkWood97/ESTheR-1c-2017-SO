@@ -1272,6 +1272,8 @@ int main (int argc, char *argv[]){
 	tablaAdminArchivos=list_create();
 	tablaAdminGlobal=list_create();
 
+	finalizadosPorConsola = list_create();
+
 	//INICIALIZANDO COLAS
 	colaBloqueado = queue_create();
 	colaEjecutando = queue_create();
