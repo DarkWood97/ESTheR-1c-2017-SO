@@ -8,17 +8,17 @@
 
 #define ES_KERNEL 1006
 #define CORTO_KERNEL 2
-#define GUARDAR_DATOS 3
-#define OBTENER_DATOS 4
-#define CREAR_ARCHIVO 6
-#define BORRAR_ARCHIVO 7
-#define VALIDAR_ARCHIVO 8
+#define GUARDAR_DATOS 403
+#define OBTENER_DATOS 404
+#define CREAR_ARCHIVO 405
+#define BORRAR 406
+#define VALIDAR_ARCHIVO 407
 #define HANDSHAKE_ACEPTADO 9
-#define OPERACION_FINALIZADA_CORRECTAMENTE 10
-#define OPERACION_FALLIDA 11
-#define EXISTE_ARCHIVO 12
-#define NO_EXISTE_ARCHIVO 13
-#define DATOS_DE_LECTURA 14
+#define OPERACION_FINALIZADA_CORRECTAMENTE 410
+#define OPERACION_FALLIDA 411
+#define EXISTE_ARCHIVO 412
+#define NO_EXISTE_ARCHIVO 413
+#define DATOS_DE_LECTURA 414
 //--TYPEDEF--------------------------------------------------------------
 
 typedef struct __attribute__((packed)) {
@@ -408,7 +408,6 @@ bool guardarBloques(char**bloques,int tamanioArchivo, int size,int offset,char* 
 					asignarBloqueArchivo(nuevoBloque,cadena);
 				}else{
 					log_info(loggerFS,"No se encontro bloques disponibles para el archivo");
-					//MANDAR KERNEL ERROR
 					return false;
 				}
 
@@ -435,7 +434,6 @@ bool guardarBloques(char**bloques,int tamanioArchivo, int size,int offset,char* 
 
 		}
 	}
-	//MANDAR A KERNEL
 	return true;
 }
 
@@ -466,37 +464,7 @@ int guardarDatosArchivo(void* mensaje){
 	}
 
 }
-
-//---------------------------------------------------------------------------------
-//void recibirMensajeCrear(void* mensaje){
-//	int tamanioPath;
-//	memcpy(modoDeArchivo,mensaje,sizeof(char));
-//	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
-//	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
-//}
-
-//void recibirMensajeObtenerDatos(void* mensaje){
-//	int tamanioPath;
-//	memcpy(modoDeArchivo,mensaje,sizeof(char));
-//	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
-//	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
-//	memcpy(offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
-//	memcpy(size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
-//}
-
-//void recibirMensajeGuardarDatos(void* mensaje){
-//	int tamanioPath;
-//	int tamanioBuffer;
-//	memcpy(modoDeArchivo,mensaje,sizeof(char));
-//	memcpy(tamanioPath,mensaje+sizeof(char),sizeof(int));
-//	memcpy(pathDeArchivo,mensaje+sizeof(char)+sizeof(int),tamanioPath);
-//	memcpy(offset,mensaje+sizeof(char)+sizeof(int)+tamanioPath,sizeof(int));
-//	memcpy(size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int),sizeof(int));
-//	memcpy(tamanioBuffer,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int),sizeof(int));
-//	memcpy(size,mensaje+sizeof(char)+sizeof(int)+tamanioPath+sizeof(int)+sizeof(int)+sizeof(int),tamanioBuffer);
-//}
-
-
+//------------------------------FUNCION RECIBIR--------------------------------------
 int recibirEntero(){
 	int enteroRecibido;
 	if(recv(socketKernel,&enteroRecibido, sizeof(int), 0)==-1){
@@ -542,7 +510,7 @@ int main(int argc, char *argv[]) {
 	}
 	while(1){
 		paquete* paqueteRecibidoDeKernel;
-	    recvRemasterizado(socketKernel);
+	    paqueteRecibidoDeKernel=recvRemasterizado(socketKernel);
 	    switch (paqueteRecibidoDeKernel->tipoMsj) {
 	      case VALIDAR_ARCHIVO:
 	    	  existeArchivo = validarArchivo(paqueteRecibidoDeKernel->mensaje);
@@ -554,7 +522,7 @@ int main(int argc, char *argv[]) {
 	    		  sendDeNotificacion(socketKernel, NO_EXISTE_ARCHIVO);
 	    	  }
 	        break;
-	      case BORRAR_ARCHIVO:
+	      case BORRAR:
 	    	  if(seBorroArchivoDeFS(paqueteRecibidoDeKernel->mensaje)){
 	    		  log_info(loggerFS, "Se borro el archivo %s exitosamente.",(char*)paqueteRecibidoDeKernel->mensaje);
 	    		  sendDeNotificacion(socketKernel, OPERACION_FINALIZADA_CORRECTAMENTE);
@@ -564,7 +532,6 @@ int main(int argc, char *argv[]) {
 	    	  }
 	    	  break;
 	      case CREAR_ARCHIVO:
-//	    	recibirMensajeCrear(paqueteRecibidoDeKernel.mensaje);
 	    	  if(crearArchivo(paqueteRecibidoDeKernel->mensaje) == OPERACION_FINALIZADA_CORRECTAMENTE){
 	    		  sendDeNotificacion(socketKernel, OPERACION_FINALIZADA_CORRECTAMENTE);
 	    	  }else{
@@ -572,7 +539,6 @@ int main(int argc, char *argv[]) {
 	    	  }
 	    	  break;
 	      case OBTENER_DATOS:
-	    	//recibirMensajeObtenerDatos(paqueteRecibidoDeKernel.mensaje);
 	    	  datosDeLectura = obtenerDatosDelArchivo(paqueteRecibidoDeKernel->mensaje);
 	    	  if(datosDeLectura != NULL){
 	    		  sendRemasterizado(socketKernel, DATOS_DE_LECTURA, string_length(datosDeLectura), datosDeLectura);
@@ -582,7 +548,6 @@ int main(int argc, char *argv[]) {
 	    	  free(datosDeLectura);
 	    	  break;
 	      case GUARDAR_DATOS:
-//	    	recibirMensajeGuardarDatos(paqueteRecibidoDeKernel.mensaje);
 	    	  if(guardarDatosArchivo(paqueteRecibidoDeKernel->mensaje) == OPERACION_FINALIZADA_CORRECTAMENTE){
 	    		  sendDeNotificacion(socketKernel, OPERACION_FINALIZADA_CORRECTAMENTE);
 	    	  }else{
