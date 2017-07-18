@@ -177,14 +177,16 @@ void finalizarHilo(programa* programaAFinalizar)
 }
 
 void aniadirPaqueteALaLista(paquete* unPaqueteRecibido){
-	paquete* unPaqueteAAniadir = malloc(sizeof(int)*2+unPaqueteRecibido->tamMsj);
+	paquete* unPaqueteAAniadir = malloc(sizeof(paquete));
 	unPaqueteAAniadir->mensaje = malloc(unPaqueteRecibido->tamMsj);
 	int tipoDeMsj = unPaqueteRecibido->tipoMsj;
 	int tamanioDeMsj = unPaqueteRecibido->tamMsj;
 	memcpy(unPaqueteAAniadir->mensaje,unPaqueteRecibido->mensaje,tamanioDeMsj);
 	unPaqueteAAniadir->tipoMsj = tipoDeMsj;
 	unPaqueteAAniadir->tamMsj = tamanioDeMsj;
+	pthread_mutex_lock(&mutexHilosCorrectos);
 	list_add(listaHilosCorrectos,unPaqueteAAniadir);
+	pthread_mutex_unlock(&mutexHilosCorrectos);
 }
 
 void finalizarPrograma(int pid)
@@ -257,12 +259,14 @@ bool imprimirInformacionPaquete(paquete* paqueteRecibido, programa* unPrograma){
 
 void manejarHiloCorrespondiente(programa* unPrograma){
 	while(!list_is_empty(listaHilosCorrectos)){
+		pthread_mutex_lock(&mutexHilosCorrectos);
 		paquete* paqueteHiloAdecuado = list_get(listaHilosCorrectos, 0);
 		if(IMPRIMIR_INFO==paqueteHiloAdecuado->tipoMsj){
 			if(imprimirInformacionPaquete(paqueteHiloAdecuado,unPrograma)){
 				list_remove(listaHilosCorrectos, 0);
 				destruirPaquete(paqueteHiloAdecuado);
 			}
+			pthread_mutex_unlock(&mutexHilosCorrectos);
 		}
 		else if(FINALIZAR_PROGRAMA==paqueteHiloAdecuado->tipoMsj){
 			int pidAFinalizar;
@@ -273,23 +277,30 @@ void manejarHiloCorrespondiente(programa* unPrograma){
 				memcpy(&tamanioInfo,paqueteHiloAdecuado->mensaje+sizeof(int),sizeof(int));
 				char* infoAImprimir = malloc(tamanioInfo);
 				memcpy(infoAImprimir,paqueteHiloAdecuado->mensaje+(sizeof(int)*2),tamanioInfo);
-				printf("Mensaje recibido: %s",infoAImprimir);
-				free(infoAImprimir);
 				list_remove(listaHilosCorrectos, 0);
 				destruirPaquete(paqueteHiloAdecuado);
+				pthread_mutex_unlock(&mutexHilosCorrectos);
+				printf("Mensaje recibido: %s",infoAImprimir);
+				free(infoAImprimir);
 				((programa*)unPrograma)->impresiones++;
-				pthread_mutex_lock(&mutexProcesos);
-				list_replace(listaProcesos, obtenerPosicionLista(pidPrograma), unPrograma);
 				char* final = malloc(1000);
 				final = temporal_get_string_time();
 				tiempo tiempoF = obtenerTiempo(final);
 				imprimirInformacion(pidPrograma,unPrograma->impresiones,unPrograma->inicio,tiempoF);
 				free(final);
+				pthread_mutex_lock(&mutexProcesos);
+				list_replace(listaProcesos, obtenerPosicionLista(pidPrograma), unPrograma);
 				eliminarPrograma(pidPrograma);
 				finalizarHilo(unPrograma);
 				pthread_mutex_unlock(&mutexProcesos);
 				pthread_exit(NULL);
 			}
+			else{
+				pthread_mutex_unlock(&mutexHilosCorrectos);
+			}
+		}
+		else{
+			pthread_mutex_unlock(&mutexHilosCorrectos);
 		}
 	}
 }
@@ -357,10 +368,12 @@ void crearPrograma(paquete* unPaqueteRecibido){
 void* manejadorPaquetes(){
 	while(1){
 		int i;
-		pthread_mutex_lock(&mutexHilosCorrectos);
 		if(!list_is_empty(listaHilosCorrectos)){
+			pthread_mutex_lock(&mutexHilosCorrectos);
 			int tamanio = list_size(listaHilosCorrectos);
+			pthread_mutex_unlock(&mutexHilosCorrectos);
 			for(i=0;i<tamanio;i++){
+				pthread_mutex_lock(&mutexHilosCorrectos);
 				paquete* paqueteHiloAdecuado = list_get(listaHilosCorrectos, i);
 					if((MENSAJE_PID==paqueteHiloAdecuado->tipoMsj)){
 						crearPrograma(paqueteHiloAdecuado);
@@ -368,6 +381,7 @@ void* manejadorPaquetes(){
 						destruirPaquete(paqueteHiloAdecuado);
 						tamanio = list_size(listaHilosCorrectos);
 						i--;
+						pthread_mutex_unlock(&mutexHilosCorrectos);
 					}
 					else if(ESPACIO_INSUFICIENTE==paqueteHiloAdecuado->tipoMsj){
 						log_error(loggerConsola, "No hay espacio suficiente...");
@@ -376,6 +390,7 @@ void* manejadorPaquetes(){
 						destruirPaquete(paqueteHiloAdecuado);
 						tamanio = list_size(listaHilosCorrectos);
 						i--;
+						pthread_mutex_unlock(&mutexHilosCorrectos);
 					}
 					else if(FINALIZO_INCORRECTAMENTE==paqueteHiloAdecuado->tipoMsj){
 						printf("El proceso con el pid ingresado no es correcto, no existe y por lo tanto no se puede finalizar.");
@@ -384,10 +399,13 @@ void* manejadorPaquetes(){
 						destruirPaquete(paqueteHiloAdecuado);
 						tamanio = list_size(listaHilosCorrectos);
 						i--;
+						pthread_mutex_unlock(&mutexHilosCorrectos);
+					}
+					else{
+						pthread_mutex_unlock(&mutexHilosCorrectos);
 					}
 			}
 		}
-		pthread_mutex_unlock(&mutexHilosCorrectos);
 	}
 }
 
