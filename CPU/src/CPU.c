@@ -72,6 +72,7 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 	string_append(&datosParaEjecucion->algoritmo, nombreAlgoritmo);
 	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje+ string_length(nombreAlgoritmo), sizeof(int));
 	memcpy(&datosParaEjecucion->quantumSleep, paqueteDeArmado->mensaje+string_length(nombreAlgoritmo)+sizeof(int), sizeof(int));
+	memcpy(&datosParaEjecucion->tamanioStack, paqueteDeArmado->mensaje+string_length(nombreAlgoritmo)+sizeof(int)*2, sizeof(int));
 	free(nombreAlgoritmo);
 }
 
@@ -84,8 +85,7 @@ void realizarHandshakeConKernel(){
 		log_error(loggerCPU, "Error al recibir los datos de ejecucion de kernel...");
 		exit(-1);
 	}
-	free(paqueteConConfigsDeKernel->mensaje);
-	free(paqueteConConfigsDeKernel);
+	destruirPaquete(paqueteConConfigsDeKernel);
 }
 
 
@@ -101,8 +101,7 @@ void realizarHandshakeConMemoria(){
 		log_error(loggerCPU, "Error al recibir el tamanio de pagina de memoria...");
 		exit(-1);
 	}
-	free(paqueteConTamPagina->mensaje);
-	free(paqueteConTamPagina);
+	destruirPaquete(paqueteConTamPagina);
 }
 
 //-------------RECIBO PCB DE KERNEL----------//
@@ -110,7 +109,8 @@ void recibirPCBDeKernel(){
 	paquete *paqueteConPCB;
 	paqueteConPCB = recvRemasterizado(socketKernel);
 	pcbEnProceso = deserializarPCB(paqueteConPCB);
-	free(paqueteConPCB);
+	destruirPaquete(paqueteConPCB);
+	obtenerUltimoPunteroStack();
 }
 
 
@@ -148,7 +148,7 @@ void modificarQuantum(){
 
 char* pedirLineaAMemoria(){
 	int cuantoLeer = pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].offset;
-	char* lineaDeInstruccion = string_new();
+	char* lineaDeInstruccion;
 	void* mensajeParaMemoria = malloc(sizeof(int)*4);
 	memcpy(mensajeParaMemoria, &pcbEnProceso->pid, sizeof(int));
 	int numeroDePagina = (pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].start)/tamPaginasMemoria;
@@ -161,14 +161,15 @@ char* pedirLineaAMemoria(){
 	paquete *paqueteConSentencia;
 	paqueteConSentencia = recvRemasterizado(socketMemoria);
 	if(paqueteConSentencia->tipoMsj==DATOS_DE_PAGINA){
-		string_append(&lineaDeInstruccion, paqueteConSentencia->mensaje);
+		lineaDeInstruccion = string_substring_until(paqueteConSentencia->mensaje, cuantoLeer);
+		//string_append(&lineaDeInstruccion, paqueteConSentencia->mensaje);
 		//memcpy(lineaDeInstruccion, paqueteConSentencia->mensaje, cuantoLeer);
-		free(paqueteConSentencia);
-		string_append(&lineaDeInstruccion, "\0");
+		destruirPaquete(paqueteConSentencia);
+		lineaDeInstruccion[cuantoLeer-1] = '\0';
 		return lineaDeInstruccion;
 	}
 	else{
-		free(paqueteConSentencia);
+		destruirPaquete(paqueteConSentencia);
 		programaEnEjecucionAbortado = true;
 		return NULL;
 	}
@@ -230,9 +231,9 @@ int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
 	loggerProgramas = log_create("./logProgramas.txt", "Programas",0,0);
-	//verificarParametrosInicio(argc);
-	//inicializarCPU(argv[1]);
-	inicializarCPU("Debug/CPU.config");
+	verificarParametrosInicio(argc);
+	inicializarCPU(argv[1]);
+	//inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);

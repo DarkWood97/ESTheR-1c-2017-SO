@@ -57,8 +57,8 @@
 //-----MEMORIA
 #define LEER_DATOS 504
 #define DATOS_DE_PAGINA 103
-#define PETICION_LECTURA_MEMORIA 202
-#define PETICION_ESCRITURA_MEMORIA 203
+//#define PETICION_LECTURA_MEMORIA 202
+#define PETICION_ESCRITURA_MEMORIA 505
 //------ARCHIVOS
 #define ABRIR_ARCHIVO 300
 #define NO_SE_PUDO_ABRIR 301
@@ -145,6 +145,7 @@ typedef struct{
 	char* algoritmo;
 	int quantum;
 	int quantumSleep;
+	int tamanioStack;
 }datosDeKernel;
 
 typedef struct{
@@ -164,6 +165,7 @@ int tamPaginasMemoria;
 int variableMaxima;
 int socketMemoria;
 int socketKernel;
+long int punteroAPosicionEnStack;
 bool programaEnEjecucionAbortado;
 bool programaEnEjecucionFinalizado;
 bool programaEnEjecucionBloqueado;
@@ -177,6 +179,7 @@ void inicializarCPU(char*);
 void recibirMensajeDeKernel(int);
 void verificarParametrosInicio(int);
 void verificarParametrosCrear(t_config *,int);
+void obtenerUltimoPunteroStack();
 //paquete serializar(void*,int);
 //void enviar(int,paquete);
 //void realizarHandshake(int, int);

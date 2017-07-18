@@ -235,3 +235,8 @@ int recvDeNotificacion(int deQuien){
 	}
 	return notificacion;
 }
+
+void destruirPaquete(paquete* paqueteADestruir){
+	free(paqueteADestruir->mensaje);
+	free(paqueteADestruir);
+}

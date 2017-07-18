@@ -11,7 +11,7 @@ t_valor_variable dereferenciar(t_puntero direccion_variable){
   t_valor_variable valorDeRetorno;
   direccion *direccionVirtual = obtenerDireccionDePuntero(direccion_variable);
   log_info(loggerProgramas, "El proceso %d pidio una lectura a memoria en la pagina %d offset %d...", pcbEnProceso->pid, direccionVirtual->numPagina, direccionVirtual->offset);
-  realizarPeticionDeLecturaAMemoria(direccionVirtual, valorDeRetorno);
+  realizarPeticionDeLecturaAMemoria(direccionVirtual);
   valorDeRetorno = recibirLecturaDeMemoria();
   log_info(loggerProgramas, "El proceso %d recibio la peticion de lectura en memoria con los datos %d...", pcbEnProceso->pid, valorDeRetorno);
   free(direccionVirtual);
@@ -55,28 +55,36 @@ t_valor_variable asignarValorCompartida(t_nombre_compartida variable, t_valor_va
 
 
 t_puntero definirVariable(t_nombre_variable identificador_variable){
-  //int cantidadDeContextos = list_size(pcbEnProceso->indiceStack);
-	log_info(loggerProgramas, "Se recibio una peticion para definir la variable %c...", identificador_variable);
-  direccion *direccionDeVariable;
-  direccionDeVariable = malloc(sizeof(direccion));
-  if((identificador_variable>='0')&&(identificador_variable<='9')){
-	  log_info(loggerProgramas, "La variable %c es un argumento de funcion...", identificador_variable);
-    direccionDeVariable = generarDireccionParaArgumento(pcbEnProceso->posicionStackActual);
-    agregarVariableAArgs(direccionDeVariable, identificador_variable);
-  }else{
-	  log_info(loggerProgramas, "La variable %c es una variable...", identificador_variable);
-    direccionDeVariable = generarDireccionParaVariable(pcbEnProceso->posicionStackActual);
-    agregarVariableAVars(direccionDeVariable, identificador_variable);
-  }
-  return convertirDeDireccionAPuntero(direccionDeVariable);
+    log_info(loggerProgramas, "Se recibio una peticion para definir la variable %c...", identificador_variable);
+    if(punteroAPosicionEnStack+4>tamPaginasMemoria && cantidadDePaginasDeStack(punteroAPosicionEnStack)>datosParaEjecucion->tamanioStack){
+        log_info(loggerProgramas, "No se puede declarar la variable, el proceso a generado un stackoverflow...");
+        programaEnEjecucionAbortado = true;
+        return -1;
+    }else{
+        variable* variableAAgregar = malloc(sizeof(variable));
+        variableAAgregar->nombreVariable = identificador_variable;
+        if((identificador_variable>='0')&&(identificador_variable<='9')){
+            log_info(loggerProgramas, "La variable %c es un argumento de funcion...", identificador_variable);
+            variableAAgregar->direccionDeVariable = obtenerDireccionDePuntero(punteroAPosicionEnStack);
+            agregarArgumentoAStack(variableAAgregar);
+            log_info(loggerProgramas, "Se agrego el argumento %c al stack...", identificador_variable);
+        }else{
+            log_info(loggerProgramas, "La variable %c es una variable...", identificador_variable);
+            variableAAgregar->direccionDeVariable = obtenerDireccionDePuntero(punteroAPosicionEnStack);
+            agregarVariableAStack(variableAAgregar);
+            log_info(loggerProgramas, "Se agrego la variable %c al stack...", identificador_variable);
+        }
+        punteroAPosicionEnStack +=4;
+        return convertirDeDireccionAPuntero(variableAAgregar->direccionDeVariable);
+    }
 }
 
 
 
 //---------------------OBTENER POSICION DE VARIABLE--------------------//
 t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
-	bool esVariableBuscada(t_nombre_variable identificadorDevariableChequeado){
-		return identificador_variable == identificadorDevariableChequeado;
+	bool esVariableBuscada(variable* variableBuscada){
+		return identificador_variable == variableBuscada->nombreVariable;
 	}
   int posicionDeRetorno;
   direccion *direccionAConvertir;

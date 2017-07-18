@@ -28,5 +28,6 @@ int recvDeNotificacion(int);
 void sendDeNotificacion(int , int );
 paquete *recvRemasterizado(int);
 void sendRemasterizado(int, int, int, void*);
+void destruirPaquete(paquete*);
 
 #endif /* SRC_SOCKET_H_ */

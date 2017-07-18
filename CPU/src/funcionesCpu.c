@@ -30,6 +30,17 @@ t_config *generarT_ConfigParaCargar(char *path) {
 	return configuracionDelComponente;
 }
 
+void obtenerUltimoPunteroStack(){
+    //OBTENGO LA POSICION A PARTIR DE DONDE TENGO QUE EMPEZAR A GUARDAR MIS VARIABLES Y ARGUMENTOS EN EL STACK.
+    punteroAPosicionEnStack = pcbEnProceso->cantidadPaginasCodigo * tamPaginasMemoria;
+    int posicionDeStack;
+    for(posicionDeStack = 0; posicionDeStack<list_size(pcbEnProceso->indiceStack); posicionDeStack++){
+        stack* stackChequeado = list_get(pcbEnProceso->indiceStack, posicionDeStack);
+        punteroAPosicionEnStack += list_size(stackChequeado->args)*4;
+        punteroAPosicionEnStack += list_size(stackChequeado->vars)*4;
+    }
+}
+
 void crearCPU(t_config *configuracionCPU){
 	IP_KERNEL = string_new();
 	IP_MEMORIA = string_new();

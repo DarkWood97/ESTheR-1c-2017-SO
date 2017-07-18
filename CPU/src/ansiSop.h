@@ -11,7 +11,7 @@
 
 
 direccion *obtenerDireccionDePuntero(t_puntero);
-void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_variable);
+void realizarPeticionDeLecturaAMemoria(direccion*);
 t_valor_variable recibirLecturaDeMemoria();
 void realizarPeticionDeEscrituraEnMemoria(direccion*, t_valor_variable);
 t_valor_variable recibirValorCompartida();
@@ -22,15 +22,13 @@ int obtenerPCAnterior(PCB *);
 void liberarElemento(void*);
 int obtenerPosicionDeStackAnterior();
 void generarContexto(stack *);
-void agregarVariableAArgs(direccion *, t_nombre_variable);
-void agregarVariableAVars(direccion *, t_nombre_variable);
-direccion* generarDireccionParaVariable(int);
-direccion* generarDireccionParaArgumento(int);
-int obtenerCantidadDeArgs(stack *);
-int obtenerCantidadDeVars(stack *);
+int cantidadDePaginasDeStack(int);
+void agregarArgumentoAStack(variable *);
+void agregarVariableAStack(variable*);
 direccion *obtenerDireccionDeVariable(variable*);
 t_puntero convertirDeDireccionAPuntero(direccion*);
 stack* obtenerContextoAnterior();
 void mandarAGuardarDatosDeArchivo(paquete *, t_puntero);
+
 
 #endif /* ANSISOP_H_ */

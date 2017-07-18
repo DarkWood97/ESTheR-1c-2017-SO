@@ -43,11 +43,11 @@ direccion *obtenerDireccionDePuntero(t_puntero puntero){
 	return direccionDelDato;
 }
 
-void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual, t_valor_variable sirveParaTamanio){
+void realizarPeticionDeLecturaAMemoria(direccion* direccionVirtual){
 	void *mensajeDePeticionLectura = malloc(sizeof(int)+sizeof(direccion));
 	memcpy(mensajeDePeticionLectura, &pcbEnProceso->pid, sizeof(int));
 	memcpy(mensajeDePeticionLectura+sizeof(int), direccionVirtual, sizeof(direccion));
-	sendRemasterizado(socketMemoria, PETICION_LECTURA_MEMORIA, sizeof(direccion)+sizeof(int), mensajeDePeticionLectura);
+	sendRemasterizado(socketMemoria, LEER_DATOS, sizeof(direccion)+sizeof(int), mensajeDePeticionLectura);
 }
 
 t_valor_variable recibirLecturaDeMemoria(){
@@ -157,81 +157,44 @@ int obtenerPCAnterior(PCB *pcb){
    return direccionDeVariable;
  }
 
- int obtenerCantidadDeVars(stack *contextoACalcular){
-   return list_size(contextoACalcular->vars);
+ int cantidadDePaginasDeStack(int espacioUsado){
+     //STACK_SIZE = A CANTIDAD DE ESPACIO USADO?
+	 return 1;
  }
 
- int obtenerCantidadDeArgs(stack *contextoACalcular){
-   return list_size(contextoACalcular->args);
+ void agregarArgumentoAStack(variable * variableAAgregar){
+     stack* stackParaAgregarArgumento = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
+     log_info(loggerProgramas, "Obteniendo posicion del stack donde debe agregarse el argumento...");
+     if(stackParaAgregarArgumento == NULL){
+         log_info(loggerProgramas, "La poscicion del stack no existe...");
+         log_info(loggerProgramas, "Creando posicion de stack...");
+         stackParaAgregarArgumento = malloc(sizeof(stack));
+         stackParaAgregarArgumento->args = list_create();
+         stackParaAgregarArgumento->vars = list_create();
+         stackParaAgregarArgumento->pos = pcbEnProceso->posicionStackActual;
+         log_info(loggerProgramas, "Nueva posicion de stack creada correctamente...");
+     }
+     log_info(loggerProgramas, "Agregando argumento a args...");
+     list_add(stackParaAgregarArgumento->args, variableAAgregar);
  }
 
- void generarDireccionDePrimeraPagina(direccion *direccionAnterior){
- 	direccionAnterior->numPagina = 0;
- 	direccionAnterior->offset = pcbEnProceso->cantidadPaginasCodigo; //LA ULTIMA PAGINA DE CODIGO ES CANTIDAD-1
- 	direccionAnterior->tamanioPuntero = 4;
- }
-
- direccion* generarDireccionParaArgumento(int cantidadDeContextos){
-   direccion *direccionAnterior;
-   direccionAnterior = malloc(sizeof(direccion));
-   stack *contextoActual = list_get(pcbEnProceso->indiceStack, cantidadDeContextos);
-   int cantidadDeArgumentos = list_size(contextoActual->args);
-   if(cantidadDeContextos == 1 && cantidadDeArgumentos == 0){
-	   generarDireccionDePrimeraPagina(direccionAnterior);
-   }else if(obtenerCantidadDeArgs(contextoActual) == 0){
-     stack *contextoAnterior = obtenerContextoAnterior();
-     direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->args, list_size(contextoAnterior->args)-1));
-     direccionAnterior->offset +=4;
-   }else{
-     direccionAnterior = obtenerDireccionDeVariable(list_get(contextoActual->args, list_size(contextoActual->args)-1));
-     direccionAnterior->offset +=4;
-   }
-   return direccionAnterior;
- }
-
- direccion* generarDireccionParaVariable(int posicionDelStack){
-   direccion *direccionAnterior;
-   direccionAnterior = malloc(sizeof(direccion));
-   stack *contextoActual = list_get(pcbEnProceso->indiceStack, posicionDelStack);
-   int cantidadDeVars = list_size(contextoActual->vars);
-   if(posicionDelStack == 0 && cantidadDeVars == 0){
-     //generarDireccionDePrimeraPagina(direccionAnterior);
-   }else if(obtenerCantidadDeVars(contextoActual) == 0){
-     stack *contextoAnterior = obtenerContextoAnterior();
-     direccionAnterior = obtenerDireccionDeVariable(list_get(contextoAnterior->vars, list_size(contextoAnterior->vars)-1));
-     direccionAnterior->offset += 4;
-   }else{
-     direccionAnterior = obtenerDireccionDeVariable(list_get(contextoActual->vars, list_size(contextoActual->vars)-1));
-     direccionAnterior->offset += 4;
-   }
-   return direccionAnterior;
- }
-
-void agregarVariableAVars(direccion *direccionDeVariable, t_nombre_variable identificador_variable){
-   variable* variable;
-   variable = malloc(sizeof(variable));
-   variable->direccionDeVariable = direccionDeVariable;
-   variable->nombreVariable = identificador_variable;
-   stack *contextoParaAgregar = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
-   list_add(contextoParaAgregar->vars, variable);
-   /*
-    * La otra opcion seria:
-    * t_contexto *contextoParaAgregar = list_remove(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1);
-    * list_add(contextoParaAgregar->vars, variable)
-    * list_add(pcbEnProceso->contextoActual, contextoParaAgregar);
-    */
- }
-
- void agregarVariableAArgs(direccion *direccionDeVariable, t_nombre_variable identificador_variable){
- 	variable* variable;
- 	variable = malloc(sizeof(variable));
- 	variable->direccionDeVariable = direccionDeVariable;
- 	variable->nombreVariable = identificador_variable;
- 	stack* contextoParaAgregar = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
- 	list_add(contextoParaAgregar->args, variable);
-
- 	//list_add((list_get(pcbEnProceso->contextoActual, list_size(pcbEnProceso->contextoActual)-1))->args, variable);
- }
+ void agregarVariableAStack(variable* variableAAgregar){
+     stack *stackParaAgregarVariable = list_get(pcbEnProceso->indiceStack, pcbEnProceso->posicionStackActual);
+     log_info(loggerProgramas, "Obteniendo posicion del stack donde debe agregarse la variable...");
+     if(stackParaAgregarVariable == NULL){
+         log_info(loggerProgramas, "La poscicion del stack no existe...");
+         log_info(loggerProgramas, "Creando posicion de stack...");
+         stackParaAgregarVariable = malloc(sizeof(stack));
+         stackParaAgregarVariable->args = list_create();
+         stackParaAgregarVariable->vars = list_create();
+         stackParaAgregarVariable->pos = pcbEnProceso->posicionStackActual;
+         log_info(loggerProgramas, "Nueva posicion de stack creada correctamente...");
+     }else{
+         log_info(loggerProgramas, "La posicion de stack %d existe...");
+     }
+     log_info(loggerProgramas, "Agregando variable a vars...");
+     list_add(stackParaAgregarVariable->vars, variableAAgregar);
+}
 
  void mandarAGuardarDatosDeArchivo(paquete *paqueteConDatos, t_puntero punteroDeDatos){
  	if(paqueteConDatos->tipoMsj == DATOS_DE_ARCHIVO){

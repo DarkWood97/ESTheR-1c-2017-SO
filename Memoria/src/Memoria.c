@@ -660,7 +660,7 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
     memcpy(&pagina, paqueteDeLectura->mensaje + sizeof(int), sizeof(int));
     memcpy(&offset, paqueteDeLectura->mensaje + sizeof(int)*2, sizeof(int));
     memcpy(&tamALeer, paqueteDeLectura->mensaje + sizeof(int)*3, sizeof(int));
-    void* datosLeidos = malloc(tamALeer);
+    void* datosLeidos;
     int numeroDeFrame;
     	if(estaCargadoEnCache(pid, pagina)){
     		datosLeidos = leerDeCache(pid, pagina, tamALeer, offset);
@@ -668,6 +668,7 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
     	}else{
     		numeroDeFrame = buscarFrameProceso(pid, pagina, esElFrameCorrecto);
     		if(numeroDeFrame != -1){
+    			datosLeidos = malloc(tamALeer);
     			long int comienzoDeLectura = numeroDeFrame*MARCOS_SIZE + offset;
     			memcpy(datosLeidos, memoriaSistema + comienzoDeLectura, tamALeer);
     			sendRemasterizado(socketConPeticionDeLectura, DATOS_DE_PAGINA, tamALeer, datosLeidos);
@@ -830,7 +831,7 @@ void *manejadorConexionKernel(void* socket){
 			perror("No se recibio correctamente el mensaje");
 			log_error(loggerMemoria, "No se reconoce la peticion hecha por el kernel...");
 		}
-		free(paqueteRecibidoDeKernel);
+		destruirPaquete(paqueteRecibidoDeKernel);
 	}
 }
 //--------------------------------------------MANEJADOR CPU--------------------------------------//
@@ -856,7 +857,7 @@ void *manejadorConexionCPU (void *socket){
     	  perror("No se reconoce el mensaje enviado por CPU");
     	  log_error(loggerMemoria, "No se reconoce la peticion realizada por la CPU %d...", socketCPU);
 	  }
-	  free(paqueteRecibidoDeCPU);
+	  destruirPaquete(paqueteRecibidoDeCPU);
   }
 }
 //------------------------------------------FIN DE FUNCIONES MANEJADORAS DE HILOS------------------------//
