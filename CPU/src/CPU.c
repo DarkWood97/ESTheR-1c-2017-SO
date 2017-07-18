@@ -156,7 +156,7 @@ char* pedirLineaAMemoria(){
 	int offset = pcbEnProceso->indiceCodigo[pcbEnProceso->programCounter].start%tamPaginasMemoria;
 	memcpy(mensajeParaMemoria+sizeof(int)*2, &offset, sizeof(int));
 	memcpy(mensajeParaMemoria+sizeof(int)*3, &cuantoLeer, sizeof(int));
-	sendRemasterizado(socketMemoria, LEER_DATOS, cuantoLeer, mensajeParaMemoria);
+	sendRemasterizado(socketMemoria, LEER_DATOS, sizeof(int)*4, mensajeParaMemoria);
 	free(mensajeParaMemoria);
 	paquete *paqueteConSentencia;
 	paqueteConSentencia = recvRemasterizado(socketMemoria);
@@ -230,9 +230,9 @@ int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
 	loggerProgramas = log_create("./logProgramas.txt", "Programas",0,0);
-	verificarParametrosInicio(argc);
-	inicializarCPU(argv[1]);
-	//inicializarCPU("Debug/CPU.config");
+	//verificarParametrosInicio(argc);
+	//inicializarCPU(argv[1]);
+	inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);
@@ -259,6 +259,7 @@ int main(int argc, char *argv[]) {
 			pcbEnProceso->programCounter++;
 			pcbEnProceso->rafagas++;
 			usleep(datosParaEjecucion->quantumSleep);
+			free(lineaDeEjecucion);
 		}
 		chequearEstaAbortado();
 		chequearEstaFinalizado();
