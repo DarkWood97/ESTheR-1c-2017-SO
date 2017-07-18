@@ -76,13 +76,7 @@ int crearBitmap(){
 	return file;
 }
 
-
-
-void inicializarMmap(){
-	int file=abrirBitmap();
-	if(file<0){
-		file=crearBitmap();
-	}
+void inicializarBitmap(int file){
 	struct stat myStat;
 	if (fstat(file, &myStat) < 0) {
 	    printf("Error al establecer fstat\n");
@@ -95,7 +89,26 @@ void inicializarMmap(){
 			close(file);
 	}
 
-	bitarray = bitarray_create_with_mode(mmapBitmap,5200/8, MSB_FIRST);
+	bitarray = bitarray_create_with_mode(mmapBitmap,cantidad_bloque/8, MSB_FIRST);
+}
+
+void limpiarBitarray(){
+	int i=0;
+	for(i=0;i<bitarray_get_max_bit(bitarray);i++){
+		bitarray_clean_bit(bitarray,i);
+	}
+}
+
+void inicializarMmap(){
+	int file=abrirBitmap();
+	if(file<0){
+		file=crearBitmap();
+		inicializarBitmap(file);
+		limpiarBitarray();
+	}else{
+		inicializarBitmap(file);
+	}
+
 }
 
 
