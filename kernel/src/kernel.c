@@ -14,6 +14,7 @@
 #define SOY_KERNEL_MEMORIA 1002
 #define TAMANIO_PAGINA 1020
 #define SOY_KERNEL_FS
+#define HANG_UP 0
 
 //OPERACIONES CPU
 #define RESERVAR_HEAP 103
@@ -432,13 +433,21 @@ void *serializarT_Intructions(PCB *pcbConT_intruction){
 }
 
 void* serializarVariable(t_list* variables){
-    void* variableSerializada = malloc(list_size(variables)*sizeof(variable)+sizeof(int));
-    int i;
+    void* variableSerializada = malloc(list_size(variables)*(sizeof(char)+sizeof(direccion))+sizeof(int));
+    int i, dondeEstoy = 0;
     int cantidadDeVariables = list_size(variables);
     memcpy(variableSerializada, &cantidadDeVariables, sizeof(int));
+    dondeEstoy += sizeof(int);
     for(i = 0; i<cantidadDeVariables; i++){ //Antes i=1
         variable *variableObtenida = list_get(variables, i);
-        memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->nombreVariable, sizeof(char));
+        dondeEstoy += sizeof(char);
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->direccionDeVariable->pagina, sizeof(int));
+        dondeEstoy += sizeof(int);
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->direccionDeVariable->offset, sizeof(int));
+        dondeEstoy += sizeof(int);
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->direccionDeVariable->tamanio, sizeof(int));
+        dondeEstoy += sizeof(int);
     }
     return variableSerializada;
 }
@@ -447,7 +456,7 @@ int sacarTamanioDeLista(t_list* contexto){
     int i, tamanioDeContexto = 0;
     for(i = 0; i<list_size(contexto); i++){
         stack *contextoAObtener = list_get(contexto, i);
-        tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
+        tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+(list_size(contextoAObtener->args)+list_size(contextoAObtener->vars))*(sizeof(char)+sizeof(direccion));
         //free(contextoAObtener);
     }
     return tamanioDeContexto;
@@ -455,15 +464,19 @@ int sacarTamanioDeLista(t_list* contexto){
 
 void *serializarStack(PCB* pcbConContextos){
     void* contextoSerializado = malloc(sacarTamanioDeLista(pcbConContextos->indiceStack));
-  int i;
+  int i, dondeEstoy = 0;
   for(i = 0; i<pcbConContextos->tamanioContexto; i++){
     stack* contexto = list_get(pcbConContextos->indiceStack, i);
-    memcpy(contextoSerializado, &contexto->posicion, sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, &contexto->posicion, sizeof(int));
+    dondeEstoy += sizeof(int);
     void *argsSerializadas = serializarVariable(contexto->args);
     void *varsSerializadas = serializarVariable(contexto->vars);
-    memcpy(contextoSerializado+sizeof(int), argsSerializadas, list_size(contexto->args)*sizeof(variable));
-    memcpy(contextoSerializado+sizeof(int)+list_size(contexto->args)*sizeof(variable), varsSerializadas, list_size(contexto->vars)*sizeof(variable));
-    memcpy(contextoSerializado+list_size(contexto->args)*sizeof(variable)+list_size(contexto->vars)*sizeof(variable), &contexto->retPos, sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, argsSerializadas, list_size(contexto->args)*(sizeof(char)+sizeof(direccion))+sizeof(int));
+    dondeEstoy += ((list_size(contexto->args)*(sizeof(char)+sizeof(direccion)))+sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, varsSerializadas, list_size(contexto->vars)*(sizeof(char)+sizeof(direccion))+sizeof(int));
+    dondeEstoy += ((list_size(contexto->vars)*(sizeof(char)+sizeof(direccion)))+sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, &contexto->retPos, sizeof(int));
+    dondeEstoy += sizeof(direccion);
     free(argsSerializadas);
     free(varsSerializadas);
   }
@@ -672,6 +685,9 @@ void* manejadorConexionConsola(void* socketAceptado){
 			break;
 		case FINALIZAR_PROGRAMA:
 			finalizarProcesoEnviadoDeConsola(paqueteRecibidoDeConsola, socketDeConsola);
+			break;
+		case HANG_UP:
+			close(socketDeConsola);
 			break;
 		default:
 			perror("No se recibio correctamente el mensaje");
@@ -1139,8 +1155,9 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
 
 //ENVIAR PCB
 void enviarPCB(int socketCPU, PCB* unProcesoParaCPU){
+	int tamanioPCB = sacarTamanioPCB(unProcesoParaCPU);
 	void* pcbSerializada = serializarPCB(unProcesoParaCPU);
-	sendRemasterizado(socketCPU,MENSAJE_PCB,sacarTamanioPCB(unProcesoParaCPU),pcbSerializada);
+	sendRemasterizado(socketCPU,MENSAJE_PCB,tamanioPCB,pcbSerializada);
 	free(pcbSerializada);
 }
 
@@ -1325,10 +1342,10 @@ void realizarhandshakeCPU(int socket){
 int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
-	//verificarParametrosInicio(argc);
-	//inicializarKernel(argv[1]);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
+	verificarParametrosInicio(argc);
+	inicializarKernel(argv[1]);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 1;

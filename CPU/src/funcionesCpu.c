@@ -178,15 +178,22 @@ void *serializarT_Intructions(PCB *pcbConT_intruction){
 }
 
 void* serializarVariable(t_list* variables){
-    void* variableSerializada = malloc(list_size(variables)*sizeof(variable)+sizeof(int));
-    int i;
+    void* variableSerializada = malloc(list_size(variables)*(sizeof(char)+sizeof(direccion))+sizeof(int));
+    int i, dondeEstoy = 0;
     int cantidadDeVariables = list_size(variables);
     memcpy(variableSerializada, &cantidadDeVariables, sizeof(int));
+    dondeEstoy += sizeof(int);
     for(i = 0; i<cantidadDeVariables; i++){ //Antes i=1
         variable *variableObtenida = list_get(variables, i);
-        memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->nombreVariable, sizeof(char));
+        dondeEstoy += sizeof(char);
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->direccionDeVariable->numPagina, sizeof(int));
+        dondeEstoy += sizeof(int);
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->direccionDeVariable->offset, sizeof(int));
+        dondeEstoy += sizeof(int);
+        memcpy(variableSerializada+dondeEstoy, &variableObtenida->direccionDeVariable->tamanioPuntero, sizeof(int));
+        dondeEstoy += sizeof(int);
     }
-   // free(variableSerializada);
     return variableSerializada;
 }
 
@@ -202,15 +209,19 @@ int sacarTamanioDeLista(t_list* contexto){
 
 void *serializarStack(PCB* pcbConContextos){
     void* contextoSerializado = malloc(sacarTamanioDeLista(pcbConContextos->indiceStack));
-  int i;
+  int i, dondeEstoy = 0;
   for(i = 0; i<pcbConContextos->tamanioContexto; i++){
     stack* contexto = list_get(pcbConContextos->indiceStack, i);
-    memcpy(contextoSerializado, &contexto->pos, sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, &contexto->pos, sizeof(int));
+    dondeEstoy += sizeof(int);
     void *argsSerializadas = serializarVariable(contexto->args);
     void *varsSerializadas = serializarVariable(contexto->vars);
-    memcpy(contextoSerializado+sizeof(int), argsSerializadas, list_size(contexto->args)*sizeof(variable));
-    memcpy(contextoSerializado+sizeof(int)+list_size(contexto->args)*sizeof(variable), varsSerializadas, list_size(contexto->vars)*sizeof(variable));
-    memcpy(contextoSerializado+list_size(contexto->args)*sizeof(variable)+list_size(contexto->vars)*sizeof(variable), &contexto->retPos, sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, argsSerializadas, list_size(contexto->args)*(sizeof(char)+sizeof(direccion))+sizeof(int));
+    dondeEstoy += ((list_size(contexto->args)*(sizeof(char)+sizeof(direccion)))+sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, varsSerializadas, list_size(contexto->vars)*(sizeof(char)+sizeof(direccion))+sizeof(int));
+    dondeEstoy += ((list_size(contexto->vars)*(sizeof(char)+sizeof(direccion)))+sizeof(int));
+    memcpy(contextoSerializado+dondeEstoy, &contexto->retPos, sizeof(int));
+    dondeEstoy += sizeof(direccion);
     free(argsSerializadas);
     free(varsSerializadas);
   }
