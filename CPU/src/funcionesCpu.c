@@ -186,6 +186,7 @@ void* serializarVariable(t_list* variables){
         variable *variableObtenida = list_get(variables, i);
         memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
     }
+    free(variableSerializada);
     return variableSerializada;
 }
 
@@ -238,6 +239,8 @@ void* serializarPCB(PCB* pcbASerializar){
     void* stackSerializado = serializarStack(pcbASerializar);
     memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
     memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
+    free(indiceDeCodigoSerializado);
+    free(stackSerializado);
     return pcbSerializada;
 }
 

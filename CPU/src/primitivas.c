@@ -24,6 +24,9 @@ void asignar(t_puntero direccion_variable, t_valor_variable valor){
   direccion *direccionVirtual = obtenerDireccionDePuntero(direccion_variable);
   log_info(loggerProgramas, "El proceso %d pidio que se asigne el valor %d a la variable que se encuentra en el puntero %d...", pcbEnProceso->pid, valor, direccion_variable);
   realizarPeticionDeEscrituraEnMemoria(direccionVirtual, valor);
+  if(recvDeNotificacion(socketMemoria) != OPERACION_CON_MEMORIA_EXITOSA){
+	  programaEnEjecucionAbortado = true;
+  }
   free(direccionVirtual);
 }
 

@@ -317,7 +317,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->programCounter = metadataDelPrograma->instruccion_inicio;
 		pcbNuevo->rafagas = 0;
 		pcbNuevo->exitCode = 0;
-		pcbNuevo->cantidadPaginasCodigo = ceil((double)tamanioCodigo/(double)cantidadPaginasCodigo); //ARREGLAR ESTO
+		pcbNuevo->cantidadPaginasCodigo = ceil((double)tamanioCodigo/(double)tamanioPagina); //ARREGLAR ESTO
 		pcbNuevo->cantidadTIntructions = metadataDelPrograma->instrucciones_size;
 		pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
 		pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
@@ -439,6 +439,7 @@ void* serializarVariable(t_list* variables){
         variable *variableObtenida = list_get(variables, i);
         memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
     }
+    free(variableSerializada);
     return variableSerializada;
 }
 
@@ -447,6 +448,7 @@ int sacarTamanioDeLista(t_list* contexto){
     for(i = 0; i<list_size(contexto); i++){
         stack *contextoAObtener = list_get(contexto, i);
         tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
+        //free(contextoAObtener);
     }
     return tamanioDeContexto;
 }
@@ -490,6 +492,8 @@ void* serializarPCB(PCB* pcbASerializar){
     void* stackSerializado = serializarStack(pcbASerializar);
     memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
     memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
+    free(indiceDeCodigoSerializado);
+    free(stackSerializado);
     return pcbSerializada;
 }
 
@@ -1301,7 +1305,7 @@ void realizarhandshakeCPU(int socket){
 	}
 	memcpy(buffer+string_length(ALGORITMO)+sizeof(int), &QUANTUM_SLEEP, sizeof(int));
 	memcpy(buffer+string_length(ALGORITMO)+sizeof(int)*2,&STACK_SIZE,sizeof(int));
-	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(ALGORITMO)+sizeof(int)*2, buffer);
+	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(ALGORITMO)+sizeof(int)*3, buffer);
 	free(buffer);
 }
 

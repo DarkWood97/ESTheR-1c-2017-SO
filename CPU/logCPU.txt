@@ -1,115 +1,36 @@
-[INFO] 11:21:36:596 CPU/(3674:3674): CPU inicializada correctamente.
-[INFO] 11:23:28:421 CPU/(3822:3822): CPU inicializada correctamente.
-[INFO] 11:23:54:757 CPU/(3868:3868): CPU inicializada correctamente.
-[INFO] 11:25:19:761 CPU/(4004:4004): CPU inicializada correctamente.
-[INFO] 15:38:01:117 CPU/(4425:4425): CPU inicializada correctamente.
-[INFO] 15:40:24:872 CPU/(4723:4723): CPU inicializada correctamente.
-[INFO] 15:41:16:155 CPU/(4847:4847): CPU inicializada correctamente.
-[INFO] 15:43:57:378 CPU/(4992:4992): CPU inicializada correctamente.
-[INFO] 16:00:04:660 CPU/(6846:6846): CPU inicializada correctamente.
-[INFO] 16:01:32:303 CPU/(7032:7032): CPU inicializada correctamente.
-[INFO] 16:02:11:71 CPU/(7096:7096): CPU inicializada correctamente.
-[INFO] 16:02:11:670 CPU/(7096:7096): Handshake con memoria realizado.
-[INFO] 16:02:33:65 CPU/(7195:7195): CPU inicializada correctamente.
-[INFO] 16:02:33:670 CPU/(7195:7195): Handshake con memoria realizado.
-[INFO] 11:15:38:111 CPU/(4383:4383): CPU inicializada correctamente.
-[INFO] 11:16:16:744 CPU/(4383:4383): Handshake con memoria realizado.
-[INFO] 11:17:15:253 CPU/(4468:4468): CPU inicializada correctamente.
-[INFO] 11:17:23:501 CPU/(4468:4468): Handshake con memoria realizado.
-[INFO] 13:21:09:134 CPU/(8569:8569): CPU inicializada correctamente.
-[INFO] 13:21:12:729 CPU/(8569:8569): Handshake con memoria realizado.
-[INFO] 13:22:23:145 CPU/(8652:8652): CPU inicializada correctamente.
-[INFO] 13:22:24:199 CPU/(8652:8652): Handshake con memoria realizado.
-[INFO] 13:25:29:902 CPU/(8820:8820): CPU inicializada correctamente.
-[INFO] 13:25:30:629 CPU/(8820:8820): Handshake con memoria realizado.
-[INFO] 13:26:45:20 CPU/(8951:8951): CPU inicializada correctamente.
-[INFO] 13:26:45:754 CPU/(8951:8951): Handshake con memoria realizado.
-[INFO] 13:27:23:530 CPU/(9022:9022): CPU inicializada correctamente.
-[INFO] 13:27:24:138 CPU/(9022:9022): Handshake con memoria realizado.
-[INFO] 13:28:27:782 CPU/(9117:9117): CPU inicializada correctamente.
-[INFO] 13:28:28:864 CPU/(9117:9117): Handshake con memoria realizado.
-[INFO] 14:01:44:178 CPU/(12286:12286): CPU inicializada correctamente.
-[INFO] 14:01:44:773 CPU/(12286:12286): Handshake con memoria realizado.
-[INFO] 14:04:04:140 CPU/(12435:12435): CPU inicializada correctamente.
-[INFO] 14:04:05:239 CPU/(12435:12435): Handshake con memoria realizado.
-[INFO] 19:33:15:934 CPU/(13397:13397): CPU inicializada correctamente.
-[INFO] 19:33:16:484 CPU/(13397:13397): Handshake con memoria realizado.
-[INFO] 19:36:00:296 CPU/(13502:13502): CPU inicializada correctamente.
-[INFO] 19:36:01:489 CPU/(13502:13502): Handshake con memoria realizado.
-[INFO] 19:36:54:678 CPU/(13569:13569): CPU inicializada correctamente.
-[INFO] 19:36:55:441 CPU/(13569:13569): Handshake con memoria realizado.
-[INFO] 19:38:15:119 CPU/(13678:13678): CPU inicializada correctamente.
-[INFO] 19:38:17:423 CPU/(13678:13678): Handshake con memoria realizado.
-[INFO] 19:40:12:512 CPU/(13860:13860): CPU inicializada correctamente.
-[INFO] 19:40:13:850 CPU/(13860:13860): Handshake con memoria realizado.
-[INFO] 19:44:02:167 CPU/(14103:14103): CPU inicializada correctamente.
-[INFO] 19:44:03:34 CPU/(14103:14103): Handshake con memoria realizado.
-[INFO] 19:45:37:733 CPU/(14103:14103): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:45:37:733 CPU/(14103:14103): Instruccion de program counter modificada.
-[INFO] 19:46:05:206 CPU/(14103:14103): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:46:05:206 CPU/(14103:14103): Instruccion de program counter modificada.
-[INFO] 19:46:15:51 CPU/(14103:14103): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:46:15:51 CPU/(14103:14103): Instruccion de program counter modificada.
-[INFO] 19:46:22:491 CPU/(14103:14103): Enviando la PCB del proceso 1 por terminar su rafaga, a kernel...
-[INFO] 19:52:24:134 CPU/(14493:14493): CPU inicializada correctamente.
-[INFO] 19:52:24:690 CPU/(14493:14493): Handshake con memoria realizado.
-[INFO] 19:52:27:786 CPU/(14493:14493): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:52:27:786 CPU/(14493:14493): Instruccion de program counter modificada.
-[INFO] 19:53:22:652 CPU/(14493:14493): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:53:22:652 CPU/(14493:14493): Instruccion de program counter modificada.
-[INFO] 19:54:29:779 CPU/(14635:14635): CPU inicializada correctamente.
-[INFO] 19:54:30:884 CPU/(14635:14635): Handshake con memoria realizado.
-[INFO] 19:54:58:953 CPU/(14635:14635): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:54:58:953 CPU/(14635:14635): Instruccion de program counter modificada.
-[INFO] 19:55:31:561 CPU/(14635:14635): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:55:31:561 CPU/(14635:14635): Instruccion de program counter modificada.
-[INFO] 19:55:40:473 CPU/(14635:14635): Se pasa a modificar instruccion de proceso 1
-[INFO] 19:55:40:473 CPU/(14635:14635): Instruccion de program counter modificada.
-[INFO] 19:55:56:608 CPU/(14635:14635): Enviando la PCB del proceso 1 por terminar su rafaga, a kernel...
-[INFO] 21:17:44:254 CPU/(18368:18368): CPU inicializada correctamente.
-[INFO] 21:17:45:871 CPU/(18368:18368): Handshake con memoria realizado.
-[INFO] 21:22:01:404 CPU/(18494:18494): CPU inicializada correctamente.
-[INFO] 21:22:01:999 CPU/(18494:18494): Handshake con memoria realizado.
-[INFO] 21:26:21:537 CPU/(18690:18690): CPU inicializada correctamente.
-[INFO] 21:26:24:20 CPU/(18690:18690): Handshake con memoria realizado.
-[INFO] 21:55:38:427 CPU/(19368:19368): CPU inicializada correctamente.
-[ERROR] 21:55:41:646 CPU/(19368:19368): Error al recibir el tamanio de pagina de memoria...
-[INFO] 21:56:16:266 CPU/(19568:19568): CPU inicializada correctamente.
-[INFO] 21:56:16:859 CPU/(19568:19568): Handshake con memoria realizado.
-[INFO] 22:01:30:916 CPU/(19685:19685): CPU inicializada correctamente.
-[ERROR] 22:01:33:437 CPU/(19685:19685): Error al recibir el tamanio de pagina de memoria...
-[INFO] 22:02:39:487 CPU/(19750:19750): CPU inicializada correctamente.
-[ERROR] 22:02:40:993 CPU/(19750:19750): Error al recibir el tamanio de pagina de memoria...
-[INFO] 22:03:12:840 CPU/(19809:19809): CPU inicializada correctamente.
-[INFO] 22:20:46:902 CPU/(20945:20945): CPU inicializada correctamente.
-[INFO] 22:20:48:62 CPU/(20945:20945): Handshake con memoria realizado.
-[INFO] 22:21:38:395 CPU/(21149:21149): CPU inicializada correctamente.
-[INFO] 22:21:38:959 CPU/(21149:21149): Handshake con memoria realizado.
-[INFO] 22:22:08:50 CPU/(21208:21208): CPU inicializada correctamente.
-[INFO] 22:22:08:660 CPU/(21208:21208): Handshake con memoria realizado.
-[INFO] 22:22:37:900 CPU/(21258:21258): CPU inicializada correctamente.
-[ERROR] 22:22:39:748 CPU/(21258:21258): Error al recibir el tamanio de pagina de memoria...
-[INFO] 22:23:35:30 CPU/(21329:21329): CPU inicializada correctamente.
-[INFO] 22:23:35:630 CPU/(21329:21329): Handshake con memoria realizado.
-[INFO] 22:33:42:316 CPU/(2632:2632): CPU inicializada correctamente.
-[INFO] 22:33:43:292 CPU/(2632:2632): Handshake con memoria realizado.
-[INFO] 22:37:09:106 CPU/(2942:2942): CPU inicializada correctamente.
-[INFO] 22:37:52:858 CPU/(2984:2984): CPU inicializada correctamente.
-[INFO] 22:39:06:801 CPU/(3068:3068): CPU inicializada correctamente.
-[INFO] 22:39:08:189 CPU/(3068:3068): Handshake con memoria realizado.
-[INFO] 22:50:17:339 CPU/(4248:4248): CPU inicializada correctamente.
-[INFO] 22:50:18:262 CPU/(4248:4248): Handshake con memoria realizado.
-[INFO] 22:56:49:375 CPU/(5002:5002): CPU inicializada correctamente.
-[INFO] 22:56:50:433 CPU/(5002:5002): Handshake con memoria realizado.
-[INFO] 22:57:38:662 CPU/(5002:5002): Enviando la PCB del proceso 1 por haberse abortado, a kernel...
-[INFO] 15:22:39:699 CPU/(2703:2703): CPU inicializada correctamente.
-[INFO] 15:22:43:626 CPU/(2703:2703): Handshake con memoria realizado.
-[INFO] 15:23:39:342 CPU/(2786:2786): CPU inicializada correctamente.
-[INFO] 15:23:40:405 CPU/(2786:2786): Handshake con memoria realizado.
-[INFO] 15:25:16:810 CPU/(3004:3004): CPU inicializada correctamente.
-[INFO] 15:25:17:387 CPU/(3004:3004): Handshake con memoria realizado.
-[INFO] 15:38:56:422 CPU/(4111:4111): CPU inicializada correctamente.
-[INFO] 15:38:57:310 CPU/(4111:4111): Handshake con memoria realizado.
-[INFO] 15:43:44:665 CPU/(4402:4402): CPU inicializada correctamente.
-[INFO] 15:43:45:277 CPU/(4402:4402): Handshake con memoria realizado.
-[INFO] 15:46:05:782 CPU/(4402:4402): Enviando la PCB del proceso 1 por terminar su rafaga, a kernel...
+[INFO] 01:12:36:577 CPU/(7716:7716): CPU inicializada correctamente.
+[INFO] 01:13:12:64 CPU/(7769:7769): CPU inicializada correctamente.
+[INFO] 01:19:12:564 CPU/(8382:8382): CPU inicializada correctamente.
+[INFO] 01:19:14:252 CPU/(8382:8382): Handshake con memoria realizado.
+[INFO] 01:28:32:790 CPU/(8747:8747): CPU inicializada correctamente.
+[INFO] 01:28:34:181 CPU/(8747:8747): Handshake con memoria realizado.
+[INFO] 01:29:32:13 CPU/(8747:8747): Enviando la PCB del proceso 1 por haberse abortado, a kernel...
+[INFO] 01:29:32:13 CPU/(8747:8747): Se prosigue a limpiar la PCB para el proximo proceso...
+[INFO] 01:29:32:13 CPU/(8747:8747): PCB limpiada exitosamente...
+[INFO] 01:30:18:476 CPU/(8894:8894): CPU inicializada correctamente.
+[INFO] 01:30:20:627 CPU/(8894:8894): Handshake con memoria realizado.
+[INFO] 01:32:02:163 CPU/(8894:8894): Enviando la PCB del proceso 1 por haberse abortado, a kernel...
+[INFO] 01:32:02:482 CPU/(8894:8894): Se prosigue a limpiar la PCB para el proximo proceso...
+[INFO] 01:32:02:482 CPU/(8894:8894): PCB limpiada exitosamente...
+[INFO] 01:32:42:274 CPU/(9053:9053): CPU inicializada correctamente.
+[INFO] 01:32:43:658 CPU/(9053:9053): Handshake con memoria realizado.
+[INFO] 01:33:43:33 CPU/(9053:9053): Enviando la PCB del proceso 1 por haberse abortado, a kernel...
+[INFO] 01:33:43:33 CPU/(9053:9053): Se prosigue a limpiar la PCB para el proximo proceso...
+[INFO] 01:33:43:33 CPU/(9053:9053): PCB limpiada exitosamente...
+[INFO] 01:35:00:817 CPU/(9267:9267): CPU inicializada correctamente.
+[INFO] 01:35:02:936 CPU/(9267:9267): Handshake con memoria realizado.
+[INFO] 01:36:31:967 CPU/(9398:9398): CPU inicializada correctamente.
+[INFO] 01:36:33:416 CPU/(9398:9398): Handshake con memoria realizado.
+[INFO] 01:39:13:735 CPU/(9637:9637): CPU inicializada correctamente.
+[INFO] 01:39:14:591 CPU/(9637:9637): Handshake con memoria realizado.
+[INFO] 01:40:51:366 CPU/(9637:9637): Se pasa a modificar instruccion de proceso 1
+[INFO] 01:40:51:366 CPU/(9637:9637): Instruccion de program counter modificada.
+[INFO] 01:41:04:591 CPU/(9637:9637): Enviando la PCB del proceso 1 por terminar su rafaga, a kernel...
+[INFO] 01:41:05:230 CPU/(9637:9637): Se prosigue a limpiar la PCB para el proximo proceso...
+[INFO] 01:41:05:230 CPU/(9637:9637): PCB limpiada exitosamente...
+[INFO] 01:42:32:289 CPU/(9808:9808): CPU inicializada correctamente.
+[INFO] 01:42:32:873 CPU/(9808:9808): Handshake con memoria realizado.
+[INFO] 02:32:19:833 CPU/(12074:12074): CPU inicializada correctamente.
+[INFO] 02:32:22:161 CPU/(12074:12074): Handshake con memoria realizado.
+[INFO] 02:34:53:773 CPU/(12211:12211): CPU inicializada correctamente.
+[INFO] 02:34:54:656 CPU/(12211:12211): Handshake con memoria realizado.
