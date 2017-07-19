@@ -5,6 +5,8 @@
 #include <commons/txt.h>
 #include <sys/mman.h>
 #include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define ES_KERNEL 1006
 #define CORTO_KERNEL 2
@@ -248,8 +250,12 @@ int obtenerBloque(){
 void crearPathBloque(int nuevoBloque){
 	char* cadenaBloque = armarNombreArchivo(nuevoBloque);
 	char* path = concatenarPath(cadenaBloque,"/Bloques/");
-	//VER COMO CREAR DIRECTORIOS
-
+	struct stat mySt={0};
+	if(stat(path,&mySt)==-1){
+		mkdir(path,0777);
+	}
+	int file=creat(path,0777);
+	close(file);
 }
 
 void asignarBloqueArchivo(int nuevoBloque,char* cadena){
@@ -257,7 +263,7 @@ void asignarBloqueArchivo(int nuevoBloque,char* cadena){
 	int tamanioArchivo=config_get_int_value(datosArchivo, "TAMANIO");
 	char** bloques=config_get_array_value(datosArchivo,"BLOQUES");
 	FILE* archivo=fopen(cadena,"w+");
-	char* tamanio="TAMANIO";
+	char* tamanio="TAMANIO=";
 	string_append(&tamanio,string_itoa(tamanioArchivo));
 	fputs(tamanio,archivo);
 	fputc('\n',archivo);
@@ -273,6 +279,7 @@ void asignarBloqueArchivo(int nuevoBloque,char* cadena){
 	fputs(string_itoa(nuevoBloque),archivo);
 	fputc(']',archivo);
 	fputc('\n',archivo);
+	fclose(archivo);
 }
 
 int crearArchivo (void* mensaje){
@@ -283,28 +290,23 @@ int crearArchivo (void* mensaje){
 	int bloque;
 	char* cadena=malloc(strlen(punto_Montaje)+strlen(pathDeArchivo)+strlen("/Archivos/"));
 	cadena=concatenarPath(pathDeArchivo,"/Archivos/");
-//	FILE* archivo=fopen(cadena,"w+");
-//	if(archivo!=NULL){
-//		fputs("TAMANIO=0",archivo);
-//		fputc('\n',archivo);
-//		fputs("BLOQUES=[",archivo);
-		bloque=obtenerBloque();
-		//NO TENDRIA QUE INICIALIZAR EL PATH BLOQUE
-		if(bloque!=0){
-//			fputs(string_itoa(bloque),archivo);
-			asignarBloqueArchivo(bloque,cadena);
-			log_info(loggerFS,"Se asigna a %s correctamente el bloque %d",cadena,bloque);
-			log_info(loggerFS, "Se creo el archivo %s exitosamente.",cadena);
-			return OPERACION_FINALIZADA_CORRECTAMENTE;
-		}else{
-			log_info(loggerFS,"No se pudo crear el archivo %s por falta de bloques disponibles",cadena);
-			return OPERACION_FALLIDA;
-		}
-//		fputc(']',archivo);
-//		fputc('\n',archivo);
-//	}else{
-//		log_info(loggerFS, "No se pudo crear el archivo %s.", cadena);
-//	}
+	//CREO DIRECTORIO
+	struct stat mySt={0};
+	if(stat(cadena,&mySt)==-1){
+		mkdir(cadena,0777);
+	}
+
+	bloque=obtenerBloque();
+	//NO TENDRIA QUE INICIALIZAR EL PATH BLOQUE
+	if(bloque!=0){
+		asignarBloqueArchivo(bloque,cadena);
+		log_info(loggerFS,"Se asigna a %s correctamente el bloque %d",cadena,bloque);
+		log_info(loggerFS, "Se creo el archivo %s exitosamente.",cadena);
+		return OPERACION_FINALIZADA_CORRECTAMENTE;
+	}else{
+		log_info(loggerFS,"No se pudo crear el archivo %s por falta de bloques disponibles",cadena);
+		return OPERACION_FALLIDA;
+	}
 }
 
 
