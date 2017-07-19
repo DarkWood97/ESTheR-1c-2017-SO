@@ -149,7 +149,7 @@ bool noSuperoLaCantidadMaxDeEntradas(int pid){
 	}
 	t_list *listaFiltrada = list_filter(cacheDeMemoria->entradasCache, (void*)esProceso);
 	int cantidadDeEntradasDeProceso = list_size(listaFiltrada);
-	list_destroy_and_destroy_elements(listaFiltrada, (void*)eliminarEntrada);
+	list_destroy(listaFiltrada);
 	if(cantidadDeEntradasDeProceso>=CACHE_X_PROC){
 		return false;
 	}

@@ -190,7 +190,7 @@ int obtenerPCAnterior(PCB *pcb){
          stackParaAgregarVariable->pos = pcbEnProceso->posicionStackActual;
          log_info(loggerProgramas, "Nueva posicion de stack creada correctamente...");
      }else{
-         log_info(loggerProgramas, "La posicion de stack %d existe...");
+         log_info(loggerProgramas, "La posicion de stack %d existe...", pcbEnProceso->posicionStackActual);
      }
      log_info(loggerProgramas, "Agregando variable a vars...");
      list_add(stackParaAgregarVariable->vars, variableAAgregar);

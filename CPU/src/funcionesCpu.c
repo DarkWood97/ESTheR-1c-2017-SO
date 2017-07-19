@@ -186,7 +186,7 @@ void* serializarVariable(t_list* variables){
         variable *variableObtenida = list_get(variables, i);
         memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
     }
-    free(variableSerializada);
+   // free(variableSerializada);
     return variableSerializada;
 }
 
@@ -194,7 +194,7 @@ int sacarTamanioDeLista(t_list* contexto){
     int i, tamanioDeContexto = 0;
     for(i = 0; i<list_size(contexto); i++){
         stack *contextoAObtener = list_get(contexto, i);
-        tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+list_size(contextoAObtener->args)*sizeof(variable)+list_size(contextoAObtener->vars)*sizeof(variable);
+        tamanioDeContexto += sizeof(int)*4+sizeof(direccion)+(list_size(contextoAObtener->args)+list_size(contextoAObtener->vars))*(sizeof(char)+sizeof(direccion));
         //free(contextoAObtener);
     }
     return tamanioDeContexto;
@@ -211,6 +211,8 @@ void *serializarStack(PCB* pcbConContextos){
     memcpy(contextoSerializado+sizeof(int), argsSerializadas, list_size(contexto->args)*sizeof(variable));
     memcpy(contextoSerializado+sizeof(int)+list_size(contexto->args)*sizeof(variable), varsSerializadas, list_size(contexto->vars)*sizeof(variable));
     memcpy(contextoSerializado+list_size(contexto->args)*sizeof(variable)+list_size(contexto->vars)*sizeof(variable), &contexto->retPos, sizeof(int));
+    free(argsSerializadas);
+    free(varsSerializadas);
   }
   return contextoSerializado;
 }

@@ -32,7 +32,7 @@
 #define PROCESO_BLOQUEADO 2003
 #define PROCESO_FINALIZADO 2002
 #define PROCESO_ABORTADO 2001
-
+#define PROCESO_FINALIZO_RAFAGA 2004
 //ESTADOS PROCESOS
 #define NUEVO 1
 #define LISTO 2
@@ -1148,139 +1148,146 @@ void enviarPCB(int socketCPU, PCB* unProcesoParaCPU){
 void *manejadorCPU(void* socket){
   int socketCPU = *(int*)socket;
   bool estaOcupadaCPU = false;
-  PCB* procesoParaCPU;
-  while(!estaOcupadaCPU && estadoPlanificacionesSistema){
-    if(!queue_is_empty(colaListo)){
-      //SEMAFOROS
-        procesoParaCPU = queue_pop(colaListo);
-        queue_push(colaEjecutando,procesoParaCPU);
-        estaOcupadaCPU = true;
-      //SEMAFOROS
-    }
+  while(1){
+	  PCB* procesoParaCPU;
+	   while(!estaOcupadaCPU && estadoPlanificacionesSistema){
+	     if(!queue_is_empty(colaListo)){
+	       //SEMAFOROS
+	         procesoParaCPU = queue_pop(colaListo);
+	         queue_push(colaEjecutando,procesoParaCPU);
+	         estaOcupadaCPU = true;
+	       //SEMAFOROS
+	     }
+	   }
+	   enviarPCB(socketCPU, procesoParaCPU);
+	   //VARIABLES
+	   PCB* pcbAfectado;
+	   int pid=0;
+	   int FD=0;
+	   char* path=string_new();
+	   int tamanioPath;
+	   t_banderas* flags=malloc(sizeof(t_banderas));
+	   int estadoOperacionArchivo=0;
+	   int tamanio=0;
+	   char* contenido;
+	   void* buffer;
+
+	   while(estaOcupadaCPU){
+	     paquete *paqueteRecibidoDeCPU;
+	     paqueteRecibidoDeCPU = recvRemasterizado(socketCPU);
+	     switch (paqueteRecibidoDeCPU->tipoMsj) {
+	       case WAIT_SEMAFORO:
+
+	         break;
+	       case SIGNAL_SEMAFORO:
+	         //signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
+	         break;
+	       case RESERVAR_HEAP:
+
+	         break;
+	       case LIBERAR_HEAP:
+
+	         break;
+	       case PROCESO_ABORTADO:
+	         pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
+	         pcbAfectado->estaAbortado=true;
+	         pcbAfectado->exitCode=-10;//DEFINIR EXIT CODE
+	         queue_push(colaFinalizado, pcbAfectado);
+	         sendRemasterizado(socketMemoria, FINALIZAR_PROCESO_MEMORIA, sizeof(int), &pcbAfectado->pid);// PROBAR SI FUNCIONA
+	         estaOcupadaCPU = false;
+	         break;
+	       case PROCESO_FINALIZADO:
+	     	pcbAfectado= deserializarPCB(paqueteRecibidoDeCPU);
+	     	pcbAfectado->estado=false;
+	     	pcbAfectado->exitCode=0;
+	         queue_push(colaFinalizado, pcbAfectado);
+	         estaOcupadaCPU = false;
+	         break;
+	       case PROCESO_BLOQUEADO:
+	     	pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
+	     	pcbAfectado->estaAbortado=false;
+	         queue_push(colaBloqueado, pcbAfectado);
+	         estaOcupadaCPU = false;
+	         break;
+	       case PROCESO_FINALIZO_RAFAGA:
+	     	  pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
+	     	  queue_push(colaListo, pcbAfectado);
+	     	  break;
+	       case ABRIR_ARCHIVO:
+	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+	     	  tamanioPath=paqueteRecibidoDeCPU->tamMsj-sizeof(int)-sizeof(t_banderas);
+	     	  memcpy(path,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath,tamanioPath);
+	     	  memcpy(flags,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
+	     	  estadoOperacionArchivo=abrirArchivo(pid,path,flags);
+	     	  if(estadoOperacionArchivo!=-1){
+	     		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
+	     	  }else{
+	     		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
+	     	  }
+	     	  break;
+	       case BORRAR_ARCHIVO:
+	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+	     	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
+	     	  estadoOperacionArchivo=borrarArchivo(pid,FD);
+	     	  if(estadoOperacionArchivo!=-1){
+	     		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
+	     	  }else{
+	     		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
+	     	  }
+	         break;
+	       case CERRAR_ARCHIVO:
+	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+	     	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
+	     	  estadoOperacionArchivo=cerrarArchivo(pid,FD);
+	     	  if(estadoOperacionArchivo!=-1){
+	     		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
+	     	  }else{
+	     		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
+	     	  }
+	         break;
+	       case MOVER_CURSOR:
+	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+	     	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
+	     	  memcpy(&tamanio,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3,sizeof(int));
+	     	  estadoOperacionArchivo=moverCursor(pid,FD,tamanio);
+	     	  if(estadoOperacionArchivo==-1){
+	     		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
+	     	  }else{
+	     		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
+	     	  }
+	         break;
+	       case LEER_DATOS_ARCHIVO:
+	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+	     	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
+	     	  memcpy(&tamanio,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3,sizeof(int));
+	     	  contenido=malloc(tamanio);
+	 		  contenido=leerArchivo(pid,FD,tamanio);
+	 		  buffer=malloc(tamanio+sizeof(int));
+	 		  memcpy(buffer,&tamanio,sizeof(int));
+	 		  memcpy(buffer+sizeof(int),contenido,tamanio);
+	     	  if(contenido!=NULL){
+	     	   		  sendRemasterizado(socketCPU,DATOS_DE_LECTURA,tamanio+sizeof(int),buffer);
+	     	  }else{
+	     		  	  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
+	     	  }
+	          break;
+	       case ESCRIBIR_DATOS_ARCHIVO:
+	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
+	     	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
+	     	  memcpy(&tamanio,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3,sizeof(int));
+	     	  buffer =malloc(tamanio);
+	     	  memcpy(buffer,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3+tamanio,tamanio);
+	     	  estadoOperacionArchivo=escribirArchivo(pid,FD,tamanio,buffer);
+	     	  if(estadoOperacionArchivo!=-1){
+	     		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
+	     	  }else{
+	     		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
+	     	  }
+	          break;
+	     }
+	     destruirPaquete(paqueteRecibidoDeCPU);
   }
-  enviarPCB(socketCPU, procesoParaCPU);
-  //VARIABLES
-  PCB* pcbAfectado;
-  int pid=0;
-  int FD=0;
-  char* path=string_new();
-  int tamanioPath;
-  t_banderas* flags=malloc(sizeof(t_banderas));
-  int estadoOperacionArchivo=0;
-  int tamanio=0;
-  char* contenido;
-  void* buffer;
 
-  while(estaOcupadaCPU){
-    paquete *paqueteRecibidoDeCPU;
-    paqueteRecibidoDeCPU = recvRemasterizado(socketCPU);
-    switch (paqueteRecibidoDeCPU->tipoMsj) {
-      case WAIT_SEMAFORO:
-
-        break;
-      case SIGNAL_SEMAFORO:
-        //signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
-        break;
-      case RESERVAR_HEAP:
-
-        break;
-      case LIBERAR_HEAP:
-
-        break;
-      case PROCESO_ABORTADO:
-        pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
-        pcbAfectado->estaAbortado=true;
-        pcbAfectado->exitCode=-10;//DEFINIR EXIT CODE
-        queue_push(colaFinalizado, pcbAfectado);
-        sendRemasterizado(socketMemoria, FINALIZAR_PROCESO_MEMORIA, sizeof(int), &pcbAfectado->pid);// PROBAR SI FUNCIONA
-        estaOcupadaCPU = false;
-        break;
-      case PROCESO_FINALIZADO:
-    	pcbAfectado= deserializarPCB(paqueteRecibidoDeCPU);
-    	pcbAfectado->estado=false;
-    	pcbAfectado->exitCode=0;
-        queue_push(colaFinalizado, pcbAfectado);
-        estaOcupadaCPU = false;
-        break;
-      case PROCESO_BLOQUEADO:
-    	pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
-    	pcbAfectado->estaAbortado=false;
-        queue_push(colaBloqueado, pcbAfectado);
-        estaOcupadaCPU = false;
-        break;
-      case ABRIR_ARCHIVO:
-    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
-    	  tamanioPath=paqueteRecibidoDeCPU->tamMsj-sizeof(int)-sizeof(t_banderas);
-    	  memcpy(path,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath,tamanioPath);
-    	  memcpy(flags,paqueteRecibidoDeCPU->mensaje+sizeof(int)+tamanioPath+sizeof(t_banderas),sizeof(t_banderas));
-    	  estadoOperacionArchivo=abrirArchivo(pid,path,flags);
-    	  if(estadoOperacionArchivo!=-1){
-    		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
-    	  }else{
-    		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
-    	  }
-    	  break;
-      case BORRAR_ARCHIVO:
-    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
-    	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
-    	  estadoOperacionArchivo=borrarArchivo(pid,FD);
-    	  if(estadoOperacionArchivo!=-1){
-    		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
-    	  }else{
-    		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
-    	  }
-        break;
-      case CERRAR_ARCHIVO:
-    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
-    	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
-    	  estadoOperacionArchivo=cerrarArchivo(pid,FD);
-    	  if(estadoOperacionArchivo!=-1){
-    		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
-    	  }else{
-    		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
-    	  }
-        break;
-      case MOVER_CURSOR:
-    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
-    	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
-    	  memcpy(&tamanio,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3,sizeof(int));
-    	  estadoOperacionArchivo=moverCursor(pid,FD,tamanio);
-    	  if(estadoOperacionArchivo==-1){
-    		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
-    	  }else{
-    		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
-    	  }
-        break;
-      case LEER_DATOS_ARCHIVO:
-    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
-    	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
-    	  memcpy(&tamanio,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3,sizeof(int));
-    	  contenido=malloc(tamanio);
-		  contenido=leerArchivo(pid,FD,tamanio);
-		  buffer=malloc(tamanio+sizeof(int));
-		  memcpy(buffer,tamanio,sizeof(int));
-		  memcpy(buffer+sizeof(int),contenido,tamanio);
-    	  if(contenido!=NULL){
-    	   		  sendRemasterizado(socketCPU,DATOS_DE_LECTURA,tamanio+sizeof(int),buffer);
-    	  }else{
-    		  	  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
-    	  }
-         break;
-      case ESCRIBIR_DATOS_ARCHIVO:
-    	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
-    	  memcpy(&FD,paqueteRecibidoDeCPU->mensaje+sizeof(int)*2,sizeof(int));
-    	  memcpy(&tamanio,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3,sizeof(int));
-    	  buffer =malloc(tamanio);
-    	  memcpy(buffer,paqueteRecibidoDeCPU->mensaje+sizeof(int)*3+tamanio,tamanio);
-    	  estadoOperacionArchivo=escribirArchivo(pid,FD,tamanio,buffer);
-    	  if(estadoOperacionArchivo!=-1){
-    		  sendDeNotificacion(socketCPU,OPERACION_CON_ARCHIVO_EXITOSA);
-    	  }else{
-    		  sendDeNotificacion(socketCPU,OPERACION_FALLIDA);
-    	  }
-         break;
-    }
-    destruirPaquete(paqueteRecibidoDeCPU);
   }
 }
 
@@ -1318,10 +1325,10 @@ void realizarhandshakeCPU(int socket){
 int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
-	verificarParametrosInicio(argc);
-	inicializarKernel(argv[1]);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
+	//verificarParametrosInicio(argc);
+	//inicializarKernel(argv[1]);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 1;
