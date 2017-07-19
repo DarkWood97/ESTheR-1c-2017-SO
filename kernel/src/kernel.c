@@ -1229,6 +1229,7 @@ void *manejadorCPU(void* socket){
 	       case PROCESO_FINALIZO_RAFAGA:
 	     	  pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
 	     	  queue_push(colaListo, pcbAfectado);
+	     	  log_info(loggerKernel, "Se recibio la pcb por finalizacion de rafaga");
 	     	  break;
 	       case ABRIR_ARCHIVO:
 	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
