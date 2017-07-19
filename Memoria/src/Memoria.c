@@ -496,7 +496,7 @@ int almacenarBytesEnMemoria(int pid, int numPagina, int offset, int tamanio, voi
 		memcpy(entradasDeTabla + comienzoDePagina+offset, buffer, tamanio);
 		log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en el frame %d...", pid, numFrameProceso);
 		if(estaCargadoEnCache(pid, numPagina)){
-			log_info(loggerMemoria, "El proceso %d, que pidio escritura de datos en memoria en su pagina %numPagina, se encuentra en cache...", pid, numPagina);
+			log_info(loggerMemoria, "El proceso %d, que pidio escritura de datos en memoria en su pagina %d, se encuentra en cache...", pid, numPagina);
 			actualizarDatosDeCache(pid, numPagina, offset, tamanio, buffer);
 			log_info(loggerMemoria, "Datos del proceso %d actualizados correctamente en la pagina %d..." ,pid, numPagina);
 		}else{
@@ -664,7 +664,7 @@ void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca
     int numeroDeFrame;
     	if(estaCargadoEnCache(pid, pagina)){
     		datosLeidos = leerDeCache(pid, pagina, tamALeer, offset);
-    		printf("%s", (char*)datosLeidos);
+    		//printf("%s", (char*)datosLeidos);
     		sendRemasterizado(socketConPeticionDeLectura, DATOS_DE_PAGINA, tamALeer, datosLeidos);
     	}else{
     		numeroDeFrame = buscarFrameProceso(pid, pagina, esElFrameCorrecto);
@@ -868,11 +868,11 @@ void *manejadorConexionCPU (void *socket){
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	//verificarParametrosInicio(argc);
-	char* path = "Debug/memoria.config";
-	//inicializarMemoria(argv[1]);
+	verificarParametrosInicio(argc);
+	//char* path = "Debug/memoria.config";
+	inicializarMemoria(argv[1]);
 	//paquete paqueteDeRecepcion, paqDePaginas;
-	inicializarMemoria(path);
+	//inicializarMemoria(path);
 	log_info(loggerMemoria, "Levantando memoria desde archivo de configuracion...");
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);

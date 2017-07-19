@@ -96,11 +96,13 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
   if(identificador_variable>='0' && identificador_variable<='9'){ //ME PUEDE LLEGAR UNA VARIABLE QUE NO EXISTE?
     direccionAConvertir = obtenerDireccionDeVariable(list_get(ultimoContexto->args, atoi(&identificador_variable)-1));
     posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
+    free(direccionAConvertir);
     return posicionDeRetorno;
   }else{
 	  if(list_any_satisfy(ultimoContexto->vars, (void*)esVariableBuscada)){
 		  direccionAConvertir = obtenerDireccionDeVariable((list_find(ultimoContexto->vars, (void*)esVariableBuscada)));
 		  posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
+		  free(direccionAConvertir);
 		  return posicionDeRetorno;
     /*int cantMaximaDeVars = obtenerCantidadDeArgs(ultimoContexto);
     for(; cantMaximaDeVars>=0; cantMaximaDeVars--){

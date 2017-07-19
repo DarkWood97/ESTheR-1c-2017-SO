@@ -235,3 +235,8 @@ int calcularSocketMaximo(int socketNuevo, int socketMaximoPrevio){
 		return socketMaximoPrevio;
 	}
 }
+
+void destruirPaquete(paquete* paqueteADestruir){
+	free(paqueteADestruir->mensaje);
+	free(paqueteADestruir);
+}

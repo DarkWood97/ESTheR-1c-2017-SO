@@ -34,3 +34,5 @@
 [INFO] 02:32:22:161 CPU/(12074:12074): Handshake con memoria realizado.
 [INFO] 02:34:53:773 CPU/(12211:12211): CPU inicializada correctamente.
 [INFO] 02:34:54:656 CPU/(12211:12211): Handshake con memoria realizado.
+[INFO] 13:25:23:910 CPU/(3774:3774): CPU inicializada correctamente.
+[INFO] 13:25:25:350 CPU/(3774:3774): Handshake con memoria realizado.

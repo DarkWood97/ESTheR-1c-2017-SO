@@ -309,6 +309,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 	memcpy(inicioDePrograma, &pidActual, sizeof(int));
 	memcpy(inicioDePrograma+sizeof(int), &cantidadPaginasCodigo, sizeof(int));
 	int sePudo = mandarInicioAMemoria(inicioDePrograma);
+	free(inicioDePrograma);
 	PCB *pcbNuevo = malloc(sizeof(PCB));
 	if(sePudo == OPERACION_CON_MEMORIA_EXITOSA){
 		t_metadata_program *metadataDelPrograma = metadata_desde_literal(codigoDePrograma);
@@ -439,7 +440,6 @@ void* serializarVariable(t_list* variables){
         variable *variableObtenida = list_get(variables, i);
         memcpy(variableSerializada+sizeof(variable)*i, variableObtenida, sizeof(variable));
     }
-    free(variableSerializada);
     return variableSerializada;
 }
 
@@ -464,6 +464,8 @@ void *serializarStack(PCB* pcbConContextos){
     memcpy(contextoSerializado+sizeof(int), argsSerializadas, list_size(contexto->args)*sizeof(variable));
     memcpy(contextoSerializado+sizeof(int)+list_size(contexto->args)*sizeof(variable), varsSerializadas, list_size(contexto->vars)*sizeof(variable));
     memcpy(contextoSerializado+list_size(contexto->args)*sizeof(variable)+list_size(contexto->vars)*sizeof(variable), &contexto->retPos, sizeof(int));
+    free(argsSerializadas);
+    free(varsSerializadas);
   }
   return contextoSerializado;
 }
@@ -554,6 +556,7 @@ void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   string_append(&codigo, paqueteConCodigo->mensaje);
   PCB* pcbInicializado = iniciarPCB(codigo, socketConsola);
   enviarDatos(pcbInicializado,codigo,socketConsola);
+  free(codigo);
 }
 
 bool finalizarProceso(int pid, int exitCode){
@@ -674,7 +677,7 @@ void* manejadorConexionConsola(void* socketAceptado){
 			perror("No se recibio correctamente el mensaje");
 			log_error(loggerKernel, "No se reconoce la peticion hecha por el kernel...");
 		}
-		free(paqueteRecibidoDeConsola);
+		destruirPaquete(paqueteRecibidoDeConsola);
 	}
 }
 //CONSOLA KERNEL
@@ -1277,6 +1280,7 @@ void *manejadorCPU(void* socket){
     	  }
          break;
     }
+    destruirPaquete(paqueteRecibidoDeCPU);
   }
 }
 
@@ -1291,7 +1295,7 @@ void realizarHandshakeMemoria(int socket) {
 		log_info(loggerKernel, "Error al recibir el tamanio de pagina de memoria.");
 		exit(-1);
 	}
-	free(paqueteConPaginas);
+	destruirPaquete(paqueteConPaginas);
 }
 
 void realizarhandshakeCPU(int socket){

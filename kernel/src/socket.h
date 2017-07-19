@@ -29,5 +29,6 @@ void verificarErrorConexion(int, int );
 void verificarErrorSend(int, int );
 void verificarErrorServer(struct hostent *, char*);
 int calcularSocketMaximo(int, int);
+void destruirPaquete(paquete*);
 
 #endif /* SRC_SOCKET_H_ */
