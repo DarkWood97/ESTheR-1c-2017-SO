@@ -56,7 +56,7 @@ t_valor_variable asignarValorCompartida(t_nombre_compartida variable, t_valor_va
 
 t_puntero definirVariable(t_nombre_variable identificador_variable){
     log_info(loggerProgramas, "Se recibio una peticion para definir la variable %c...", identificador_variable);
-    if(punteroAPosicionEnStack+4>tamPaginasMemoria && cantidadDePaginasDeStack(punteroAPosicionEnStack)>datosParaEjecucion->tamanioStack){
+    if((punteroAPosicionEnStack+4)%tamPaginasMemoria>tamPaginasMemoria && cantidadDePaginasDeStack(punteroAPosicionEnStack)>datosParaEjecucion->tamanioStack){
         log_info(loggerProgramas, "No se puede declarar la variable, el proceso a generado un stackoverflow...");
         programaEnEjecucionAbortado = true;
         return -1;

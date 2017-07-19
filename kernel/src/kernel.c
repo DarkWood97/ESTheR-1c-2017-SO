@@ -489,7 +489,7 @@ void* serializarPCB(PCB* pcbASerializar){
     memcpy(pcbSerializada+sizeof(int)*6+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->posicionStackActual, sizeof(int));
     void* stackSerializado = serializarStack(pcbASerializar);
     memcpy(pcbSerializada+sizeof(int)*7+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, &pcbASerializar->tamanioContexto, sizeof(int));
-    memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas+sacarTamanioDeLista(pcbASerializar->indiceStack), stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
+    memcpy(pcbSerializada+sizeof(int)*8+sizeof(t_intructions)*pcbASerializar->cantidadTIntructions+pcbASerializar->tamanioEtiquetas, stackSerializado, sacarTamanioDeLista(pcbASerializar->indiceStack));
     return pcbSerializada;
 }
 
@@ -572,8 +572,8 @@ bool finalizarProceso(int pid, int exitCode){
         break;
       case EJECUTANDO:
          //ACA HABRIA QUE ESPERAR A QUE CPU LO DEVUELVA
-        log_info(loggerKernel, "El proceso %d se encuentra en la cola de bloqueados...", pid);
-        log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de ejecutando...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de ejecutando...", pid);
         break;
       case BLOQUEADO:
         list_remove_and_destroy_by_condition(colaBloqueado->elements, (void*)esPCBProceso, free);
@@ -586,7 +586,6 @@ bool finalizarProceso(int pid, int exitCode){
     }
     pcbAFinalizar->estado = FINALIZADO;
     pcbAFinalizar->exitCode = exitCode;
-    list_add(finalizadosPorConsola, &pid);
     return true;
   }else{
     puts("El proceso %d no existe, por lo tanto no se puede finalizar...");
@@ -755,11 +754,11 @@ void* manejadorTeclado(){
 		char* posibleObtenerRafaga = string_substring_until(comando,strlen("obtenerRafagas"));
 
 		if(string_equals_ignore_case(posibleFinalizarPrograma,"finalizarPrograma")){
-			char* valorPid=string_substring_from(comando,strlen("finalizarPrograma")+1);
+			int valorPid = atoi(string_substring_from(comando,strlen("finalizarPrograma")+1));
 			int exitCode = -7;
-			finalizarProceso((int)valorPid,exitCode);
+			finalizarProceso(valorPid,exitCode);
+			list_add(finalizadosPorConsola, &valorPid);
 			free(posibleFinalizarPrograma);
-			free(valorPid);
 		}else if(string_equals_ignore_case(comando, "consultarListado")){
 			consultarListado();
 		}else if(string_equals_ignore_case(posibleConsultarEstado, "consultarEstado")){
@@ -772,15 +771,13 @@ void* manejadorTeclado(){
 		}else if(string_equals_ignore_case(comando, "reanudarPlanificacion")){
 			reanudarPlanificacion();
 		}else if(string_equals_ignore_case(posibleModificarGrado, "modificarGradoDeMultiprogramacion")){
-			char* valorGrado=string_substring_from(comando,strlen("modificarGradoDeMultiprogramacion")+1);
-			modificarGradoMultiprogramacion((int)valorGrado);
+			int valorGrado=atoi(string_substring_from(comando,strlen("modificarGradoDeMultiprogramacion")+1));
+			modificarGradoMultiprogramacion(valorGrado);
 			free(posibleModificarGrado);
-			free(valorGrado);
 		}else if(string_equals_ignore_case(posibleObtenerRafaga, "obtenerRafagas")){
-			char* valorPid=string_substring_from(comando,strlen("obtenerRafagas")+1);
-			obtenerRafagas((int)valorPid);
+			int valorPid=atoi(string_substring_from(comando,strlen("obtenerRafagas")+1));
+			obtenerRafagas(valorPid);
 			free(posibleObtenerRafaga);
-			free(valorPid);
 		}else{
 			puts("Error de comando");
 		}
@@ -1294,7 +1291,7 @@ void realizarHandshakeMemoria(int socket) {
 }
 
 void realizarhandshakeCPU(int socket){
-	void *buffer = malloc(string_length(ALGORITMO)+sizeof(int)*2);
+	void *buffer = malloc(string_length(ALGORITMO)+sizeof(int)*3);
 	memcpy(buffer, ALGORITMO, string_length(ALGORITMO));
 	if(string_equals_ignore_case(ALGORITMO, "RR")){
 		memcpy(buffer+string_length(ALGORITMO), &QUANTUM, sizeof(int));
@@ -1303,6 +1300,7 @@ void realizarhandshakeCPU(int socket){
 		memcpy(buffer+string_length(ALGORITMO), &quantumDeMentira, sizeof(int));
 	}
 	memcpy(buffer+string_length(ALGORITMO)+sizeof(int), &QUANTUM_SLEEP, sizeof(int));
+	memcpy(buffer+string_length(ALGORITMO)+sizeof(int)*2,&STACK_SIZE,sizeof(int));
 	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(ALGORITMO)+sizeof(int)*2, buffer);
 	free(buffer);
 }
@@ -1356,7 +1354,7 @@ int main (int argc, char *argv[]){
 	//realizarHandshakeFS(socketFS);
 
 	//ADMINISTRACION DE CONEXIONES
-	//pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
+	pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
 	pthread_create(&hiloManejadorPlanificacion, NULL, planificarSistema, NULL);
 
 	while(1){

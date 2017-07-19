@@ -65,8 +65,8 @@ void chequeameLaSignal(int senial){
 }
 //--------HANDSHAKES--------//
 void armarDatosDeKernel(paquete *paqueteDeArmado){
-	datosParaEjecucion = malloc(sizeof(datosDeKernel));
 	int tamanioDeNombreAlgori = paqueteDeArmado->tamMsj - sizeof(int)*2;
+	datosParaEjecucion = malloc(sizeof(int)*3+tamanioDeNombreAlgori);
 	datosParaEjecucion->algoritmo = string_new();
 	char *nombreAlgoritmo = string_substring_until((char*)paqueteDeArmado->mensaje, tamanioDeNombreAlgori);
 	string_append(&datosParaEjecucion->algoritmo, nombreAlgoritmo);
