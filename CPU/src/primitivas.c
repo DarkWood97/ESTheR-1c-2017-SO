@@ -102,7 +102,7 @@ t_puntero obtenerPosicionVariable(t_nombre_variable identificador_variable){
 	  if(list_any_satisfy(ultimoContexto->vars, (void*)esVariableBuscada)){
 		  direccionAConvertir = obtenerDireccionDeVariable((list_find(ultimoContexto->vars, (void*)esVariableBuscada)));
 		  posicionDeRetorno = convertirDeDireccionAPuntero(direccionAConvertir);
-		  free(direccionAConvertir);
+		  //free(direccionAConvertir);
 		  return posicionDeRetorno;
     /*int cantMaximaDeVars = obtenerCantidadDeArgs(ultimoContexto);
     for(; cantMaximaDeVars>=0; cantMaximaDeVars--){

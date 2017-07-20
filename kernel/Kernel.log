@@ -1,0 +1,16 @@
+[INFO] 21:30:53:859 Kernel/(12949:12949): Se conecto una nueva CPU con el socket 7...
+[INFO] 21:30:55:914 Kernel/(12949:12949): Se conecto una nueva consola con el socket 8...
+[INFO] 21:30:55:926 Kernel/(12949:13055): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 21:30:55:926 Kernel/(12949:13055): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 21:30:55:926 Kernel/(12949:13055): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 21:30:55:926 Kernel/(12949:13055): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 21:30:55:926 Kernel/(12949:13055): Instruccion inicio:67 offset:4 end
+[DEBUG] 21:30:55:926 Kernel/(12949:13055): PCB creada para el pid: 1 
+[DEBUG] 21:30:55:926 Kernel/(12949:13055): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 21:30:55:927 Kernel/(12949:12986): Se ha agregado la PCB del proceso 1 a la cola de Listo
+[INFO] 21:31:00:674 Kernel/(12949:12949): Se recibio una conexion erronea...
+[INFO] 21:31:00:674 Kernel/(12949:12949): Cerrando socket recibido...

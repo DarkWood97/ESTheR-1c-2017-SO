@@ -390,12 +390,12 @@ int desserializarTIntructions(PCB* pcbDesserializada, paquete *paqueteConPCB){
     memcpy(&pcbDesserializada->cantidadTIntructions, paqueteConPCB->mensaje+(sizeof(int)*3), sizeof(int));
     pcbDesserializada->indiceCodigo = malloc(pcbDesserializada->cantidadTIntructions*sizeof(t_intructions));
     for(i = 0; i<pcbDesserializada->cantidadTIntructions; i++){
-        memcpy(&pcbDesserializada->indiceCodigo[i].start, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
+        memcpy(&pcbDesserializada->indiceCodigo[i].start, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
         auxiliar++;
-        memcpy(&pcbDesserializada->indiceCodigo[i].offset, paqueteConPCB->mensaje+sizeof(int)*(3+auxiliar), sizeof(int));
+        memcpy(&pcbDesserializada->indiceCodigo[i].offset, paqueteConPCB->mensaje+sizeof(int)*(4+auxiliar), sizeof(int));
         auxiliar++;
     }
-    int retorno = sizeof(int)*(3+auxiliar);
+    int retorno = sizeof(int)*(4+auxiliar);
     return retorno;
 }
 
@@ -411,8 +411,9 @@ PCB* deserializarPCB(paquete* paqueteConPCB){
     	 memcpy(pcbDesserializada->indiceEtiquetas, paqueteConPCB->mensaje+sizeof(int)+dondeEstoy, pcbDesserializada->tamanioEtiquetas);
     }
     memcpy(&pcbDesserializada->rafagas,paqueteConPCB->mensaje+sizeof(int)+dondeEstoy+pcbDesserializada->tamanioEtiquetas,sizeof(int));
-    memcpy(&pcbDesserializada->tamanioContexto, paqueteConPCB->mensaje+sizeof(int)*2+dondeEstoy+pcbDesserializada->tamanioEtiquetas, sizeof(int));
-    memcpy(&pcbDesserializada->posicionStackActual, paqueteConPCB->mensaje+dondeEstoy+sizeof(int)*3+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    memcpy(&pcbDesserializada->posicionStackActual, paqueteConPCB->mensaje+dondeEstoy+sizeof(int)*2+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+    memcpy(&pcbDesserializada->tamanioContexto, paqueteConPCB->mensaje+sizeof(int)*3+dondeEstoy+pcbDesserializada->tamanioEtiquetas, sizeof(int));
+
     dondeEstoy +=sizeof(int)*4+pcbDesserializada->tamanioEtiquetas;
     pcbDesserializada->indiceStack = list_create();
     desserializarContexto(pcbDesserializada, paqueteConPCB, dondeEstoy);
@@ -1230,6 +1231,7 @@ void *manejadorCPU(void* socket){
 	     	  pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
 	     	  queue_push(colaListo, pcbAfectado);
 	     	  log_info(loggerKernel, "Se recibio la pcb por finalizacion de rafaga");
+	     	  estaOcupadaCPU = false;
 	     	  break;
 	       case ABRIR_ARCHIVO:
 	     	  memcpy(&pid,paqueteRecibidoDeCPU->mensaje+sizeof(int),sizeof(int));
