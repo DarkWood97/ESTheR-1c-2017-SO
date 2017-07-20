@@ -516,11 +516,11 @@ void recibirHandshakeDeKernel(int socketKernel){
 
 int main(int argc, char *argv[]) {
 	loggerFS = log_create("FileSystem.log", "FileSystem", 0, 0);
-	char *path="Debug/fileSystem.config";
+	//char *path="Debug/fileSystem.config";
 	char* datosDeLectura;
-	inicializarFileSystem(path);
-	//verificarParametrosInicio(argc);
-	//inicializarFileSystem(argv[1]);
+	//inicializarFileSystem(path);
+	verificarParametrosInicio(argc);
+	inicializarFileSystem(argv[1]);
 	mostrarConfiguracionesFileSystem();
 	int socketEscuchaFS;
 	socketEscuchaFS = ponerseAEscucharClientes(puerto, 0);

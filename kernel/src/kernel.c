@@ -937,9 +937,9 @@ void agregarEntradaTP(int pid, int fd,t_banderas* flags,int fdGlobal){
 bool validarArchivo(char* path){
 	void *buffer=malloc(string_length(path)+sizeof(int));
 	int tamanioPath=string_length(path);
-	memcpy(buffer,tamanioPath, sizeof(int));
-	memcpy(buffer+sizeof(int),path, string_length(path));
-	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
+	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, tamanioPath);
+	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,tamanioPath+sizeof(int),buffer);
 	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
 		return true;
 	}else{
@@ -950,9 +950,9 @@ bool validarArchivo(char* path){
 bool crearArchivo(char* path){
 	void *buffer=malloc(string_length(path));
 	int tamanioPath=string_length(path);
-	memcpy(buffer,tamanioPath, sizeof(int));
-	memcpy(buffer+sizeof(int),path, string_length(path));
-	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
+	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer+sizeof(int),path, tamanioPath);
+	sendRemasterizado(socketFS,CREAR_ARCHIVO,tamanioPath+sizeof(int),buffer);
 	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
 		log_info(loggerKernel,"Se abrio correctamente el archivo %s.",path);
 		return true;
@@ -1040,9 +1040,9 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
  bool borrarArchivoFS(char* path){
  	void *buffer=malloc(string_length(path)+sizeof(int));
  	int tamanioPath=string_length(path);
- 	memcpy(buffer,tamanioPath, sizeof(int));
- 	memcpy(buffer+sizeof(int),path, string_length(path));
- 	sendRemasterizado(socketFS,BORRAR,string_length(path)+sizeof(int),buffer);
+ 	memcpy(buffer,&tamanioPath, sizeof(int));
+ 	memcpy(buffer+sizeof(int),path, tamanioPath);
+ 	sendRemasterizado(socketFS,BORRAR,tamanioPath+sizeof(int),buffer);
  	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
  		log_info(loggerKernel,"Se Borro correctamente el archivo %s.",path);
  		return true;
@@ -1080,10 +1080,10 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
  bool guardarArchivo(char* path,int offset,int size, void* buffer){
  	void *bufferAMandar=malloc(string_length(path)+size+sizeof(int)*3);
  	int tamanioPath=string_length(path);
- 	memcpy(bufferAMandar,tamanioPath, sizeof(int));
- 	memcpy(bufferAMandar+sizeof(int),path, string_length(path));
- 	memcpy(bufferAMandar+sizeof(int)+tamanioPath,offset,sizeof(int));
- 	memcpy(bufferAMandar+sizeof(int)*2+tamanioPath,size,sizeof(int));
+ 	memcpy(bufferAMandar,&tamanioPath, sizeof(int));
+ 	memcpy(bufferAMandar+sizeof(int),path, tamanioPath);
+ 	memcpy(bufferAMandar+sizeof(int)+tamanioPath,&offset,sizeof(int));
+ 	memcpy(bufferAMandar+sizeof(int)*2+tamanioPath,&size,sizeof(int));
  	memcpy(bufferAMandar+sizeof(int)*3+tamanioPath,buffer,size);
  	sendRemasterizado(socketFS,OBTENER_DATOS,string_length(path)+size+sizeof(int)*3,bufferAMandar);
  	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
@@ -1116,10 +1116,10 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
  char* mandarALeer(char* path,int offset,int size){
  	void *buffer=malloc(string_length(path)+sizeof(int)*3);
  	int tamanioPath=string_length(path);
- 	memcpy(buffer,tamanioPath, sizeof(int));
- 	memcpy(buffer+sizeof(int),path, string_length(path));
- 	memcpy(buffer+sizeof(int)+tamanioPath,offset,sizeof(int));
-	memcpy(buffer+sizeof(int)*2+tamanioPath,size,sizeof(int));
+ 	memcpy(buffer,&tamanioPath, sizeof(int));
+ 	memcpy(buffer+sizeof(int),path, tamanioPath);
+ 	memcpy(buffer+sizeof(int)+tamanioPath,&offset,sizeof(int));
+	memcpy(buffer+sizeof(int)*2+tamanioPath,&size,sizeof(int));
  	sendRemasterizado(socketFS,OBTENER_DATOS,string_length(path)+sizeof(int)*3,buffer);
  	if(recvDeNotificacion(socketFS)==OPERACION_FALLIDA){
  		log_info(loggerKernel,"No se pudo leer el archivo %s.",path);
