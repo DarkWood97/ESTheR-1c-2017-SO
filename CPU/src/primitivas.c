@@ -220,15 +220,18 @@ t_puntero reservarMemoria(t_valor_variable espacio){
 	sendRemasterizado(socketKernel, PIDO_RESERVA, sizeof(int)+sizeof(t_valor_variable), mensajeDeAlocamiento);
 	free(mensajeDeAlocamiento);
 	paquete *paqueteConT_Puntero;
+	t_puntero punteroARetornar;
 	paqueteConT_Puntero = recvRemasterizado(socketKernel);
 	if(paqueteConT_Puntero->tipoMsj != OPERACION_CON_KERNEL_EXITOSA){
 		log_info(loggerProgramas, "No se pudo alocar memoria dinamica para el proceso %d...", pcbEnProceso->pid);
 		log_info(loggerProgramas, "Se prosigue a abortar el proceso %d...", pcbEnProceso->pid);
 		programaEnEjecucionAbortado = true;
+		punteroARetornar = -1;
+	}else{
+		log_info(loggerProgramas, "Se recibio puntero al espacio reservado %d...", *(t_puntero*)paqueteConT_Puntero->mensaje);
+		punteroARetornar = *(t_puntero*)paqueteConT_Puntero->mensaje;
 	}
-	log_info(loggerProgramas, "Se recibio puntero al espacio reservado %d...", *(t_puntero*)paqueteConT_Puntero->mensaje);
-	t_puntero punteroARetornar = *(t_puntero*)paqueteConT_Puntero->mensaje;
-	free(paqueteConT_Puntero);
+	destruirPaquete(paqueteConT_Puntero);
 	return punteroARetornar;
 }
 

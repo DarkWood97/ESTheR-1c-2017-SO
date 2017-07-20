@@ -70,9 +70,10 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 	datosParaEjecucion->algoritmo = string_new();
 	char *nombreAlgoritmo = string_substring_until((char*)paqueteDeArmado->mensaje, tamanioDeNombreAlgori);
 	string_append(&datosParaEjecucion->algoritmo, nombreAlgoritmo);
-	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje+ string_length(nombreAlgoritmo), sizeof(int));
-	memcpy(&datosParaEjecucion->quantumSleep, paqueteDeArmado->mensaje+string_length(nombreAlgoritmo)+sizeof(int), sizeof(int));
-	memcpy(&datosParaEjecucion->tamanioStack, paqueteDeArmado->mensaje+string_length(nombreAlgoritmo)+sizeof(int)*2, sizeof(int));
+	string_append(&datosParaEjecucion->algoritmo, "\0");
+	memcpy(&datosParaEjecucion->quantum, paqueteDeArmado->mensaje+ tamanioDeNombreAlgori, sizeof(int));
+	memcpy(&datosParaEjecucion->quantumSleep, paqueteDeArmado->mensaje+tamanioDeNombreAlgori+sizeof(int), sizeof(int));
+	memcpy(&datosParaEjecucion->tamanioStack, paqueteDeArmado->mensaje+tamanioDeNombreAlgori+sizeof(int)*2, sizeof(int));
 	free(nombreAlgoritmo);
 }
 
@@ -231,9 +232,9 @@ int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
 	loggerProgramas = log_create("./logProgramas.txt", "Programas",0,0);
-	//verificarParametrosInicio(argc);
-	//inicializarCPU(argv[1]);
-	inicializarCPU("Debug/CPU.config");
+	verificarParametrosInicio(argc);
+	inicializarCPU(argv[1]);
+	//inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);

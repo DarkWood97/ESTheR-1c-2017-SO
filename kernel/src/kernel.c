@@ -44,14 +44,17 @@
 
 #define MENSAJE_CODIGO 103
 #define ENVIAR_PID 105
-#define FINALIZAR_PROGRAMA 503
+//#define FINALIZAR_PROGRAMA 503
 #define INICIAR_PROGRAMA 501
 #define ESCRIBIR_DATOS 505
 #define MENSAJE_PCB 2000
+#define ASIGNAR_PAGINAS 502
+#define LIBERAR_PAGINA 506
 /*#define SOY_KERNEL 1002*/
 #define FINALIZAR_PROCESO_MEMORIA 503
-
+#define OPERACION_CON_CPU_FALLIDA -1
 #define OPERACION_CON_MEMORIA_EXITOSA 1
+#define OPERACION_CON_CPU_EXITOSA 1
 #define ESPACIO_INSUFICIENTE -2
 #define FINALIZO_CORRECTAMENTE 101
 #define FINALIZO_INCORRECTAMENTE 102
@@ -75,11 +78,16 @@
 
 
 //------------------------------------------------ESTRUCTURAS--------------------------------------//
+
 typedef struct __attribute__((__packed__)) {
 	uint32_t size;
 	bool estaLibre;
-}heap;
+}heapMetadata;
 
+typedef struct __attribute__((__packed__)){
+	heapMetadata* heapDeBloque;
+	int offset;
+}bloqueHeapMetadata;
 
 typedef struct __attribute__((__packed__)) {
 	int pagina;
@@ -658,7 +666,7 @@ void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketCons
 		memcpy(mensaje,&pidFinalizado,sizeof(int));
 		memcpy(mensaje+sizeof(int),&tamanio,sizeof(int));
 		memcpy(mensaje+sizeof(int)*2,mensajeFinalizado,tamanio);
-		sendRemasterizado(socketConsola,FINALIZAR_PROGRAMA,sizeof(int)*2+tamanio,mensaje);
+		sendRemasterizado(socketConsola,FINALIZAR_PROCESO,sizeof(int)*2+tamanio,mensaje);
 		free(mensajeFinalizado);
 		free(mensaje);
 	}
@@ -672,6 +680,197 @@ void finalizarProcesoEnviadoDeConsola(paquete* paqueteConProceso, int socketCons
 		sendRemasterizado(socketConsola,FINALIZO_INCORRECTAMENTE,tamanio+sizeof(int),mensaje);
 		free(mensaje);
 		free(mensajeConTamanio);
+	}
+}
+
+//-------------------------------------MANEJO DE HEAP----------------------------//
+bool estaLibre(bloqueHeapMetadata* bloqueHeapDePagina){
+	return bloqueHeapDePagina->heapDeBloque->estaLibre;
+}
+
+void liberarHeap(bloqueHeapMetadata *bloqueHeap){
+	free(bloqueHeap);
+}
+
+void chequearHeapMetadata(PCB *pcbConHeap, int numeroPagina){
+	bool esDeLaPagina(paginaHeap *paginaConHeap){
+		return paginaConHeap->pagina == numeroPagina;
+	}
+	paginaHeap *paginaConHeap = list_find(pcbConHeap->tablaHeap->pagina, (void*)esDeLaPagina);
+	if(list_all_satisfy(paginaConHeap->bloqueHeapMetadata, (void*)estaLibre)){
+		void *paqueteDeLiberacion = malloc(sizeof(int)*2);
+		memcpy(paqueteDeLiberacion, &pcbConHeap->pid, sizeof(int));
+		memcpy(paqueteDeLiberacion+sizeof(int), &numeroPagina, sizeof(int));
+		sendRemasterizado(socketMemoria, LIBERAR_PAGINA, sizeof(int)*2, paqueteDeLiberacion);
+		if(recvDeNotificacion(socketMemoria) != OPERACION_CON_MEMORIA_EXITOSA){
+
+		}
+	}else if(list_count_satisfying(paginaConHeap->bloqueHeapMetadata, (void*)estaLibre)>1){
+		bloqueHeapMetadata *bloqueHeapMetadataAnterior;
+		int cantidadDeBloquesDeHeap = list_size(paginaConHeap->bloqueHeapMetadata)-1;
+		for(; cantidadDeBloquesDeHeap>=0; cantidadDeBloquesDeHeap--){
+			bloqueHeapMetadata* bloqueHeapMetadataChequeado = list_get(paginaConHeap->bloqueHeapMetadata, cantidadDeBloquesDeHeap);
+			if((cantidadDeBloquesDeHeap!=list_size(paginaConHeap->bloqueHeapMetadata)-1) && bloqueHeapMetadataAnterior->heapDeBloque->estaLibre && bloqueHeapMetadataChequeado->heapDeBloque->estaLibre){
+				bloqueHeapMetadataChequeado->heapDeBloque->size += (bloqueHeapMetadataAnterior->heapDeBloque->size+sizeof(heapMetadata));
+				list_remove_and_destroy_element(paginaConHeap->bloqueHeapMetadata, cantidadDeBloquesDeHeap+1, (void*)liberarHeap);
+			}
+
+		}
+	}
+
+}
+
+void avisarFinalizacion(PCB *pcbFinalizada){
+	sendRemasterizado(pcbFinalizada->socket, FINALIZAR_PROCESO, sizeof(int), pcbFinalizada->pid);
+	if(recvDeNotificacion(pcbFinalizada->socket) != OPERACION_CON_CONSOLA_EXITOSA){
+
+	}
+}
+
+void liberarDatosDeProceso(int pid, t_puntero punteroADatos, int socketCPU){
+	bool esPCBBuscada(PCB *pcbAChequear){
+		return pcbAChequear->pid == pid;
+	}
+	//punteroADatos -= sizeof(heapMetadata);
+	int pagina, offset;
+	pagina = punteroADatos/tamanioPagina;
+	bool esPaginaBuscada(paginaHeap *paginaAChequear){
+		return paginaAChequear->pagina == pagina;
+	}
+	offset = punteroADatos%tamanioPagina;
+	bool esElOffsetBuscado(bloqueHeapMetadata *bloqueAChequear){
+		return bloqueAChequear->offset == offset;
+	}
+	if(offset<(tamanioPagina-sizeof(heapMetadata))){
+		PCB *pcbDeConPeticion = list_find(colaProcesos->elements, (void*)esPCBBuscada);
+		if(list_any_satisfy(pcbDeConPeticion->tablaHeap->pagina, (void*)esPaginaBuscada)){
+			paginaHeap *paginaConLiberacion = list_find(pcbDeConPeticion->tablaHeap->pagina, (void*)esPaginaBuscada);
+			bloqueHeapMetadata *bloqueDeHeapBuscado = list_find(paginaConLiberacion->bloqueHeapMetadata, (void*)esElOffsetBuscado);
+			bloqueDeHeapBuscado->heapDeBloque->estaLibre = true;
+			paginaConLiberacion->tamanioDisponible += bloqueDeHeapBuscado->heapDeBloque->size;
+			chequearHeapMetadata(pcbDeConPeticion, pagina);
+		}
+	}else{
+		sendDeNotificacion(socketCPU, OPERACION_CON_CPU_FALLIDA);
+	}
+}
+
+
+
+
+void pedirEscrituraAMemoria(int pid, paginaHeap *paginaAEscribir, bloqueHeapMetadata *bloqueAEscibir){
+	void *mensajeDeEscritura = malloc(sizeof(int)*4+sizeof(heapMetadata));
+	int tamanio = sizeof(heapMetadata);
+	int offsetDeEscritura = bloqueAEscibir->offset - sizeof(heapMetadata);
+	memcpy(mensajeDeEscritura, &pid, sizeof(int));
+	memcpy(mensajeDeEscritura+sizeof(int), &paginaAEscribir->pagina, sizeof(int));
+	memcpy(mensajeDeEscritura+sizeof(int)*2, &offsetDeEscritura, sizeof(int));
+	memcpy(mensajeDeEscritura+sizeof(int)*3, &tamanio, sizeof(int));
+	memcpy(mensajeDeEscritura+sizeof(int)*4, bloqueAEscibir->heapDeBloque, tamanio);
+	sendRemasterizado(socketMemoria, ESCRIBIR_DATOS, sizeof(int)*4+sizeof(heapMetadata), mensajeDeEscritura);
+}
+
+
+paginaHeap *pedirPaginaHeap(PCB *pcbConNecesidad){
+	void *mensajeDePeticion = malloc(sizeof(int)*2);
+	int cantidad = 1;
+	memcpy(mensajeDePeticion, &pcbConNecesidad->pid, sizeof(int));
+	memcpy(mensajeDePeticion+sizeof(int), &cantidad, sizeof(int));
+	sendRemasterizado(socketMemoria, ASIGNAR_PAGINAS, sizeof(int)*2, mensajeDePeticion);
+	if(recvDeNotificacion(socketMemoria) == OPERACION_CON_MEMORIA_EXITOSA){
+		int numeroPagina = list_size(pcbConNecesidad->tablaHeap->pagina)-1; //ES POSIBLE QUE EL -1 NO VAYA
+		paginaHeap *paginaHeapAAgregar = malloc(sizeof(paginaHeap));
+		paginaHeapAAgregar->pagina = numeroPagina;
+		paginaHeapAAgregar->tamanioDisponible = tamanioPagina - sizeof(heapMetadata)*2;
+		paginaHeapAAgregar->bloqueHeapMetadata = list_create();
+		bloqueHeapMetadata *bloqueHeapMetadataDelComienzo = malloc(sizeof(bloqueHeapMetadata));
+		bloqueHeapMetadata *bloqueHeapMetadataDelFinal = malloc(sizeof(bloqueHeapMetadata));
+		bloqueHeapMetadataDelComienzo->heapDeBloque = malloc(sizeof(heapMetadata));
+		bloqueHeapMetadataDelFinal->heapDeBloque = malloc(sizeof(heapMetadata));
+		//----CREO EL PRIMER BLOQUE DE HEAP
+		bloqueHeapMetadataDelComienzo->heapDeBloque->estaLibre = true;
+		bloqueHeapMetadataDelComienzo->heapDeBloque->size = paginaHeapAAgregar->tamanioDisponible;
+		bloqueHeapMetadataDelComienzo->offset = numeroPagina*tamanioPagina + sizeof(heapMetadata);
+		list_add(paginaHeapAAgregar->bloqueHeapMetadata, bloqueHeapMetadataDelComienzo);
+		//-----CREO EL ULTIMO BLOQUE DE HEAP
+		bloqueHeapMetadataDelFinal->heapDeBloque->estaLibre = true;
+		bloqueHeapMetadataDelFinal->heapDeBloque->size = 0;
+		bloqueHeapMetadataDelFinal->offset = tamanioPagina - sizeof(heapMetadata);
+		list_add(paginaHeapAAgregar->bloqueHeapMetadata, bloqueHeapMetadataDelFinal);
+		pedirEscrituraAMemoria(pcbConNecesidad->pid, paginaHeapAAgregar, bloqueHeapMetadataDelComienzo);
+		pedirEscrituraAMemoria(pcbConNecesidad->pid, paginaHeapAAgregar, bloqueHeapMetadataDelFinal);
+		//-----AGREGO LA PAGINA CON LOS HEAPS YA CARGADOS A LA TABLA DE HEAP DEL PROCESO
+		list_add(pcbConNecesidad->tablaHeap->pagina, paginaHeapAAgregar);
+		return paginaHeapAAgregar;
+	}else{
+		return NULL;
+	}
+}
+
+bool noTienePaginasHeap(PCB *pcbAChequear, int tamanioAAlocar){
+	bool esMenorAlTamanioAAlocar(paginaHeap *paginaAChequear){
+		return paginaAChequear->tamanioDisponible<tamanioAAlocar;
+	}
+	if((list_size(pcbAChequear->tablaHeap->pagina)-1) == 0){
+		return true;
+	}else if(list_all_satisfy(pcbAChequear->tablaHeap->pagina, (void*)esMenorAlTamanioAAlocar)){
+		return true;
+	}
+	return false;
+}
+
+paginaHeap *buscarPaginaHeapConSuficienteTamanio(PCB *pcbAChequear, int tamanioAAlocar){
+	bool tieneBloqueUtil(bloqueHeapMetadata *bloqueHeapMetadata){
+		return bloqueHeapMetadata->heapDeBloque->size > tamanioAAlocar;
+	}
+	bool tieneBloqueConTamanioSuficiente(paginaHeap* paginaAChequear){
+		return list_any_satisfy(paginaAChequear->bloqueHeapMetadata, (void*)tieneBloqueUtil);
+	}
+	paginaHeap *paginaHeapConSuficienteTamanio = list_find(pcbAChequear->tablaHeap->pagina, (void*)tieneBloqueConTamanioSuficiente);
+	return paginaHeapConSuficienteTamanio;
+}
+
+bloqueHeapMetadata *obtenerBloqueUtil(paginaHeap* paginaConBloque, int tamanioAAlocar){
+	bool tieneBloqueUtil(bloqueHeapMetadata *bloqueHeapMetadata){
+		return bloqueHeapMetadata->heapDeBloque->size > tamanioAAlocar;
+	}
+	return list_find(paginaConBloque->bloqueHeapMetadata, (void*)tieneBloqueUtil);
+}
+
+void alocarMemoria(int pid, int tamanioAAlocar, int socketCPU){
+	bool esPCBBuscada(PCB *pcbAChequear){
+		return pcbAChequear->pid == pid;
+	}
+	PCB *pcbAChequear = list_find(colaProcesos->elements, (void*)esPCBBuscada);
+	paginaHeap *paginaConBloque;
+	bloqueHeapMetadata *bloqueAOcupar;
+	bloqueHeapMetadata *bloqueNuevo;
+	if(tamanioAAlocar>(tamanioPagina-sizeof(heapMetadata)*2)){
+        sendDeNotificacion(socketCPU, OPERACION_CON_CPU_FALLIDA);
+	}else {
+		if(noTienePaginasHeap(pcbAChequear, tamanioAAlocar)){
+			paginaConBloque = pedirPaginaHeap(pcbAChequear);
+			/*if(paginaConBloque != NULL){
+				bloqueHeapMetadata *bloqueAOcupar = list_get(paginaConBloque->bloqueHeapMetadata, 0);
+			}*/
+		}else{
+			paginaConBloque = buscarPaginaHeapConSuficienteTamanio(pcbAChequear, tamanioAAlocar);
+		}
+		if(paginaConBloque != NULL){
+			bloqueAOcupar = obtenerBloqueUtil(paginaConBloque, tamanioAAlocar);
+			bloqueNuevo = malloc(sizeof(bloqueHeapMetadata));
+			bloqueNuevo->heapDeBloque->estaLibre = true;
+			bloqueNuevo->heapDeBloque->size = bloqueAOcupar->heapDeBloque->size - tamanioAAlocar - sizeof(heapMetadata);
+			bloqueNuevo->offset = bloqueAOcupar->offset + tamanioAAlocar + sizeof(heapMetadata);
+			list_add(paginaConBloque->bloqueHeapMetadata, bloqueNuevo);
+			pedirEscrituraAMemoria(pid, paginaConBloque, bloqueNuevo);
+			t_puntero *punteroParaCPU = malloc(sizeof(t_puntero));
+			*punteroParaCPU = paginaConBloque->pagina * tamanioPagina + bloqueNuevo->offset;
+			sendRemasterizado(socketCPU, OPERACION_CON_CPU_EXITOSA, sizeof(t_puntero), punteroParaCPU);
+			free(punteroParaCPU);
+		}else{
+			sendDeNotificacion(socketCPU, OPERACION_CON_CPU_FALLIDA);
+		}
 	}
 }
 
@@ -1191,6 +1390,7 @@ void *manejadorCPU(void* socket){
 	   int tamanio=0;
 	   char* contenido;
 	   void* buffer;
+	   int punteroDeLiberacion;
 
 	   while(estaOcupadaCPU){
 	     paquete *paqueteRecibidoDeCPU;
@@ -1203,11 +1403,15 @@ void *manejadorCPU(void* socket){
 	         //signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
 	         break;
 	       case RESERVAR_HEAP:
-
-	         break;
+	    	   memcpy(&pid, paqueteRecibidoDeCPU->mensaje, sizeof(int));
+	    	   memcpy(&tamanio, paqueteRecibidoDeCPU->mensaje+sizeof(int), sizeof(int));
+	    	   alocarMemoria(pid, tamanio, socketCPU);
+	    	   break;
 	       case LIBERAR_HEAP:
-
-	         break;
+	    	   memcpy(&pid, paqueteRecibidoDeCPU->mensaje, sizeof(int));
+	    	   memcpy(&punteroDeLiberacion, paqueteRecibidoDeCPU->mensaje+sizeof(int), sizeof(t_puntero));
+	    	   liberarDatosDeProceso(pid, punteroDeLiberacion, socketCPU);
+	    	   break;
 	       case PROCESO_ABORTADO:
 	         pcbAfectado = deserializarPCB(paqueteRecibidoDeCPU);
 	         pcbAfectado->estaAbortado=true;
@@ -1338,7 +1542,8 @@ void realizarHandshakeFS(int socket) {
 }
 
 void realizarhandshakeCPU(int socket){
-	void *buffer = malloc(string_length(ALGORITMO)+sizeof(int)*3);
+	int tamanio = string_length(ALGORITMO)+sizeof(int)*3;
+	void *buffer = malloc(tamanio);
 	memcpy(buffer, ALGORITMO, string_length(ALGORITMO));
 	if(string_equals_ignore_case(ALGORITMO, "RR")){
 		memcpy(buffer+string_length(ALGORITMO), &QUANTUM, sizeof(int));
@@ -1348,7 +1553,7 @@ void realizarhandshakeCPU(int socket){
 	}
 	memcpy(buffer+string_length(ALGORITMO)+sizeof(int), &QUANTUM_SLEEP, sizeof(int));
 	memcpy(buffer+string_length(ALGORITMO)+sizeof(int)*2,&STACK_SIZE,sizeof(int));
-	sendRemasterizado(socket, HANDSHAKE_CPU, string_length(ALGORITMO)+sizeof(int)*3, buffer);
+	sendRemasterizado(socket, HANDSHAKE_CPU, tamanio, buffer);
 	free(buffer);
 }
 
@@ -1398,7 +1603,7 @@ int main (int argc, char *argv[]){
 	FD_SET(socketEscuchaConsolas, &socketsCliente);
 	socketMaxCliente = calcularSocketMaximo(socketEscuchaConsolas, socketEscuchaCPU);
 	realizarHandshakeMemoria(socketMemoria);
-	realizarHandshakeFS(socketFS);
+	//realizarHandshakeFS(socketFS);
 
 	//ADMINISTRACION DE CONEXIONES
 	pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);
