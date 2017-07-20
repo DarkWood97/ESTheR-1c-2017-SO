@@ -65,17 +65,20 @@ void realizarHandshake()
 //-------------------FUNCIONES DEL TIEMPO------------------------------
 tiempo obtenerTiempo(char* unTiempo)
 {
-	char** tiempov;
 	tiempo t;
+	int i;
 
-	tiempov = malloc(15);
-	tiempov = string_split(unTiempo, ":");
+	char** tiempov = string_split(unTiempo, ":");
 
 	t.hora = atoi(tiempov[0]);
 	t.minuto = atoi(tiempov[1]);
 	t.segundo = atoi(tiempov[2]);
 
+	for (i=0; i<=3; i++) {
+	    free(tiempov[i]);
+	}
 	free(tiempov);
+
 	return t;
 }
 
@@ -349,8 +352,7 @@ void* administrarPrograma(void* unPrograma)
 
 void crearPrograma(paquete* unPaqueteRecibido){
 	programa* unPrograma = malloc(sizeof(programa));
-	char* tiempo=malloc(1000);
-	tiempo = temporal_get_string_time();
+	char* tiempo = temporal_get_string_time();
 	pthread_t hiloPrograma;
 	int pid =*(int*)unPaqueteRecibido->mensaje;
 	unPrograma->pid = pid;
