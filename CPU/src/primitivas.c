@@ -165,7 +165,7 @@ void finalizar(){
 		list_clean_and_destroy_elements(contextoAFinalizar->vars, liberarElemento);
 		pcbEnProceso->programCounter = contextoAFinalizar->retPos;
 	}
-	free(contextoAFinalizar);
+	//free(contextoAFinalizar);
 }
 
 //---------------------RETORNAR------------------//

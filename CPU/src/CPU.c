@@ -231,9 +231,9 @@ int main(int argc, char *argv[]) {
 	signal (SIGUSR1,chequeameLaSignal);
 	loggerCPU = log_create("./logCPU.txt", "CPU",0,0);
 	loggerProgramas = log_create("./logProgramas.txt", "Programas",0,0);
-	verificarParametrosInicio(argc);
-	inicializarCPU(argv[1]);
-	//inicializarCPU("Debug/CPU.config");
+	//verificarParametrosInicio(argc);
+	//inicializarCPU(argv[1]);
+	inicializarCPU("Debug/CPU.config");
 	log_info(loggerCPU, "CPU inicializada correctamente.");
 	mostrarConfiguracionCPU();
 	//mostrarConfiguracionCPU(cpuDelSistema);
