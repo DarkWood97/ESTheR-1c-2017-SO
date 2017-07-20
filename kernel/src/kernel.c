@@ -12,8 +12,9 @@
 #define HANDSHAKE_CPU 1013
 #define CONSOLA 1005
 #define SOY_KERNEL_MEMORIA 1002
+#define SOY_KERNEL_FS 1003
 #define TAMANIO_PAGINA 1020
-#define SOY_KERNEL_FS
+#define SOY_KERNEL_FS 1003
 #define HANG_UP 0
 
 //OPERACIONES CPU
@@ -56,6 +57,7 @@
 #define FINALIZO_INCORRECTAMENTE 102
 
 //FILE SYSTEM
+#define HANDSHAKE_ACEPTADO 9
 #define GUARDAR_DATOS 403
 #define OBTENER_DATOS 404
 #define CREAR_ARCHIVO 405
@@ -935,7 +937,7 @@ void agregarEntradaTP(int pid, int fd,t_banderas* flags,int fdGlobal){
 bool validarArchivo(char* path){
 	void *buffer=malloc(string_length(path)+sizeof(int));
 	int tamanioPath=string_length(path);
-	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer,tamanioPath, sizeof(int));
 	memcpy(buffer+sizeof(int),path, string_length(path));
 	sendRemasterizado(socketFS,VALIDAR_ARCHIVO,string_length(path),buffer);
 	if(recvDeNotificacion(socketFS)==EXISTE_ARCHIVO){
@@ -948,7 +950,7 @@ bool validarArchivo(char* path){
 bool crearArchivo(char* path){
 	void *buffer=malloc(string_length(path));
 	int tamanioPath=string_length(path);
-	memcpy(buffer,&tamanioPath, sizeof(int));
+	memcpy(buffer,tamanioPath, sizeof(int));
 	memcpy(buffer+sizeof(int),path, string_length(path));
 	sendRemasterizado(socketFS,CREAR_ARCHIVO,string_length(path)+sizeof(int),buffer);
 	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
@@ -1038,7 +1040,7 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
  bool borrarArchivoFS(char* path){
  	void *buffer=malloc(string_length(path)+sizeof(int));
  	int tamanioPath=string_length(path);
- 	memcpy(buffer,&tamanioPath, sizeof(int));
+ 	memcpy(buffer,tamanioPath, sizeof(int));
  	memcpy(buffer+sizeof(int),path, string_length(path));
  	sendRemasterizado(socketFS,BORRAR,string_length(path)+sizeof(int),buffer);
  	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
@@ -1078,10 +1080,10 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
  bool guardarArchivo(char* path,int offset,int size, void* buffer){
  	void *bufferAMandar=malloc(string_length(path)+size+sizeof(int)*3);
  	int tamanioPath=string_length(path);
- 	memcpy(bufferAMandar,&tamanioPath, sizeof(int));
+ 	memcpy(bufferAMandar,tamanioPath, sizeof(int));
  	memcpy(bufferAMandar+sizeof(int),path, string_length(path));
- 	memcpy(bufferAMandar+sizeof(int)+tamanioPath,&offset,sizeof(int));
- 	memcpy(bufferAMandar+sizeof(int)*2+tamanioPath,&size,sizeof(int));
+ 	memcpy(bufferAMandar+sizeof(int)+tamanioPath,offset,sizeof(int));
+ 	memcpy(bufferAMandar+sizeof(int)*2+tamanioPath,size,sizeof(int));
  	memcpy(bufferAMandar+sizeof(int)*3+tamanioPath,buffer,size);
  	sendRemasterizado(socketFS,OBTENER_DATOS,string_length(path)+size+sizeof(int)*3,bufferAMandar);
  	if(recvDeNotificacion(socketFS)==OPERACION_FINALIZADA_CORRECTAMENTE){
@@ -1114,10 +1116,10 @@ int abrirArchivo(int pid,char* path,t_banderas* flags){
  char* mandarALeer(char* path,int offset,int size){
  	void *buffer=malloc(string_length(path)+sizeof(int)*3);
  	int tamanioPath=string_length(path);
- 	memcpy(buffer,&tamanioPath, sizeof(int));
+ 	memcpy(buffer,tamanioPath, sizeof(int));
  	memcpy(buffer+sizeof(int),path, string_length(path));
- 	memcpy(buffer+sizeof(int)+tamanioPath,&offset,sizeof(int));
-	memcpy(buffer+sizeof(int)*2+tamanioPath,&size,sizeof(int));
+ 	memcpy(buffer+sizeof(int)+tamanioPath,offset,sizeof(int));
+	memcpy(buffer+sizeof(int)*2+tamanioPath,size,sizeof(int));
  	sendRemasterizado(socketFS,OBTENER_DATOS,string_length(path)+sizeof(int)*3,buffer);
  	if(recvDeNotificacion(socketFS)==OPERACION_FALLIDA){
  		log_info(loggerKernel,"No se pudo leer el archivo %s.",path);
@@ -1324,6 +1326,16 @@ void realizarHandshakeMemoria(int socket) {
 	}
 	destruirPaquete(paqueteConPaginas);
 }
+void realizarHandshakeFS(int socket) {
+	sendDeNotificacion(socket, SOY_KERNEL_FS);
+	int notificacion = recvDeNotificacion(socket);
+	if(notificacion==HANDSHAKE_ACEPTADO){
+		log_info(loggerKernel, "Se pudo conectar con File System.");
+	}else{
+		log_info(loggerKernel, "Error al conectarse con File System.");
+		exit(-1);
+	}
+}
 
 void realizarhandshakeCPU(int socket){
 	void *buffer = malloc(string_length(ALGORITMO)+sizeof(int)*3);
@@ -1386,7 +1398,7 @@ int main (int argc, char *argv[]){
 	FD_SET(socketEscuchaConsolas, &socketsCliente);
 	socketMaxCliente = calcularSocketMaximo(socketEscuchaConsolas, socketEscuchaCPU);
 	realizarHandshakeMemoria(socketMemoria);
-	//realizarHandshakeFS(socketFS);
+	realizarHandshakeFS(socketFS);
 
 	//ADMINISTRACION DE CONEXIONES
 	pthread_create(&hiloManejadorTeclado, NULL, manejadorTeclado, NULL);

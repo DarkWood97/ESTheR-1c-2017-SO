@@ -8,6 +8,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+//HANDSHAKE
+#define SOY_KERNEL_FS 1003
+
 #define ES_KERNEL 1006
 #define CORTO_KERNEL 2
 #define GUARDAR_DATOS 403
@@ -60,15 +63,20 @@ char* concatenarPath(char* path, char* carpeta){
 
 int abrirBitmap(){
 	log_debug(loggerFS,"Se procede abrir el archivo Bitmap.bin");
-	char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
+	//char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
+	char* cadena="Debug/mnt/SADICA_FS/Metadata/Bitmap.bin";
 	int file= open(cadena,O_RDWR);
 	return file;
 }
 
 int crearBitmap(){
 	log_debug(loggerFS,"Se procede a crear el archivo Bitmap.bin");
-	char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
-	int file = open(cadena,O_RDWR);
+	//char* cadena=concatenarPath("Bitmap.bin","/Metadata/");
+	char* cadena=string_new();
+	cadena="Debug/mnt/SADICA_FS/Metadata/Bitmap.bin";
+	int file= creat(cadena,0777);
+	close(file);
+	file = open(cadena,O_RDWR);
 	int cantidad = ceil(((double)cantidad_bloque)/8.0);
 	char* contenido=string_repeat('\0',cantidad);
 	if(file<0){
@@ -104,7 +112,7 @@ void limpiarBitarray(){
 void inicializarMmap(){
 	int file=abrirBitmap();
 	if(file<0){
-		file=crearBitmap();
+ 		file=crearBitmap();
 		inicializarBitmap(file);
 		limpiarBitarray();
 	}else{
@@ -147,11 +155,12 @@ void obtenerMetadata (t_config *metadata){
 
 
 void metadataFileSystem(){
-//	char* path=malloc(strlen(punto_Montaje)+strlen("/Metadata/Metadata.config")); // CREO QUE NO VA
+//	char* path=string_new(); // CREO QUE NO VA
 //	string_append(&path,punto_Montaje);
 //	string_append(&path,"/Metadata/Metadata.config");
-	char *path="Debug/Metadata.config";
-	t_config* metadata =generarT_Config(path);
+	char *path="Debug/mnt/SADICA_FS/Metadata/Metadata.config";
+	t_config* metadata=malloc(sizeof(t_config));
+	metadata =generarT_Config(path);
 	obtenerMetadata(metadata);
 	config_destroy(metadata);
 }
@@ -490,10 +499,10 @@ int recibirEntero(){
 }
 
 //---------------------------------HANDSHAKE-----------------------------------------
-void recibirHandshakeDeKernel(){
+void recibirHandshakeDeKernel(int socketKernel){
   int quienEs = recvDeNotificacion(socketKernel);
   switch(quienEs){
-    case ES_KERNEL:
+    case SOY_KERNEL_FS:
     	hayKernelConectado = true;
     	sendDeNotificacion(socketKernel, HANDSHAKE_ACEPTADO);
     	break;
@@ -507,11 +516,11 @@ void recibirHandshakeDeKernel(){
 
 int main(int argc, char *argv[]) {
 	loggerFS = log_create("FileSystem.log", "FileSystem", 0, 0);
-	//char *path="Debug/fileSystem.config";
+	char *path="Debug/fileSystem.config";
 	char* datosDeLectura;
-	//inicializarFileSystem(path);
-	verificarParametrosInicio(argc);
-	inicializarFileSystem(argv[1]);
+	inicializarFileSystem(path);
+	//verificarParametrosInicio(argc);
+	//inicializarFileSystem(argv[1]);
 	mostrarConfiguracionesFileSystem();
 	int socketEscuchaFS;
 	socketEscuchaFS = ponerseAEscucharClientes(puerto, 0);
