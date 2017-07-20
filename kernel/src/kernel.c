@@ -51,13 +51,13 @@
 #define ASIGNAR_PAGINAS 502
 #define LIBERAR_PAGINA 506
 /*#define SOY_KERNEL 1002*/
-#define FINALIZAR_PROCESO_MEMORIA 503
+#define FINALIZAR_PROCESO 503
 #define OPERACION_CON_CPU_FALLIDA -1
-#define OPERACION_CON_MEMORIA_EXITOSA 1
-#define OPERACION_CON_CPU_EXITOSA 1
+#define OPERACION_EXITOSA 1
 #define ESPACIO_INSUFICIENTE -2
 #define FINALIZO_CORRECTAMENTE 101
 #define FINALIZO_INCORRECTAMENTE 102
+
 
 //FILE SYSTEM
 #define HANDSHAKE_ACEPTADO 9
@@ -300,7 +300,7 @@ char* cargarEtiquetas(t_metadata_program* metadata_program,int sizeEtiquetasInde
 
 int obtenerCantidadPaginas(char* codigoDePrograma){
   long int tamanioCodigo = string_length(codigoDePrograma);
-  int cantidadPaginas = tamanioCodigo/(tamanioPagina-sizeof(heap)*2)+STACK_SIZE;
+  int cantidadPaginas = tamanioCodigo/(tamanioPagina-sizeof(heapMetadata)*2)+STACK_SIZE;
   if((tamanioCodigo % tamanioPagina) != 0){
     cantidadPaginas++;
   }
@@ -322,7 +322,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 	int sePudo = mandarInicioAMemoria(inicioDePrograma);
 	free(inicioDePrograma);
 	PCB *pcbNuevo = malloc(sizeof(PCB));
-	if(sePudo == OPERACION_CON_MEMORIA_EXITOSA){
+	if(sePudo == OPERACION_EXITOSA){
 		t_metadata_program *metadataDelPrograma = metadata_desde_literal(codigoDePrograma);
 		pcbNuevo->pid = pidActual;
 		pcbNuevo->estado = NUEVO;
@@ -340,6 +340,7 @@ PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
 		pcbNuevo->socket = socketConsolaDuenio;
 		pcbNuevo->estaAbortado = false;
 		pcbNuevo->tablaHeap = malloc(sizeof(tablaHeap));
+		pcbNuevo->tablaHeap->pagina = list_create();
 
 		metadata_destruir(metadataDelPrograma);
 		pidActual++;
@@ -702,7 +703,7 @@ void chequearHeapMetadata(PCB *pcbConHeap, int numeroPagina){
 		memcpy(paqueteDeLiberacion, &pcbConHeap->pid, sizeof(int));
 		memcpy(paqueteDeLiberacion+sizeof(int), &numeroPagina, sizeof(int));
 		sendRemasterizado(socketMemoria, LIBERAR_PAGINA, sizeof(int)*2, paqueteDeLiberacion);
-		if(recvDeNotificacion(socketMemoria) != OPERACION_CON_MEMORIA_EXITOSA){
+		if(recvDeNotificacion(socketMemoria) != OPERACION_EXITOSA){
 
 		}
 	}else if(list_count_satisfying(paginaConHeap->bloqueHeapMetadata, (void*)estaLibre)>1){
@@ -721,8 +722,8 @@ void chequearHeapMetadata(PCB *pcbConHeap, int numeroPagina){
 }
 
 void avisarFinalizacion(PCB *pcbFinalizada){
-	sendRemasterizado(pcbFinalizada->socket, FINALIZAR_PROCESO, sizeof(int), pcbFinalizada->pid);
-	if(recvDeNotificacion(pcbFinalizada->socket) != OPERACION_CON_CONSOLA_EXITOSA){
+	sendRemasterizado(pcbFinalizada->socket, FINALIZAR_PROCESO, sizeof(int), &pcbFinalizada->pid);
+	if(recvDeNotificacion(pcbFinalizada->socket) != OPERACION_EXITOSA){
 
 	}
 }
@@ -777,7 +778,7 @@ paginaHeap *pedirPaginaHeap(PCB *pcbConNecesidad){
 	memcpy(mensajeDePeticion, &pcbConNecesidad->pid, sizeof(int));
 	memcpy(mensajeDePeticion+sizeof(int), &cantidad, sizeof(int));
 	sendRemasterizado(socketMemoria, ASIGNAR_PAGINAS, sizeof(int)*2, mensajeDePeticion);
-	if(recvDeNotificacion(socketMemoria) == OPERACION_CON_MEMORIA_EXITOSA){
+	if(recvDeNotificacion(socketMemoria) == OPERACION_EXITOSA){
 		int numeroPagina = list_size(pcbConNecesidad->tablaHeap->pagina)-1; //ES POSIBLE QUE EL -1 NO VAYA
 		paginaHeap *paginaHeapAAgregar = malloc(sizeof(paginaHeap));
 		paginaHeapAAgregar->pagina = numeroPagina;
@@ -811,7 +812,7 @@ bool noTienePaginasHeap(PCB *pcbAChequear, int tamanioAAlocar){
 	bool esMenorAlTamanioAAlocar(paginaHeap *paginaAChequear){
 		return paginaAChequear->tamanioDisponible<tamanioAAlocar;
 	}
-	if((list_size(pcbAChequear->tablaHeap->pagina)-1) == 0){
+	if((list_size(pcbAChequear->tablaHeap->pagina)) == 0){
 		return true;
 	}else if(list_all_satisfy(pcbAChequear->tablaHeap->pagina, (void*)esMenorAlTamanioAAlocar)){
 		return true;
@@ -866,7 +867,7 @@ void alocarMemoria(int pid, int tamanioAAlocar, int socketCPU){
 			pedirEscrituraAMemoria(pid, paginaConBloque, bloqueNuevo);
 			t_puntero *punteroParaCPU = malloc(sizeof(t_puntero));
 			*punteroParaCPU = paginaConBloque->pagina * tamanioPagina + bloqueNuevo->offset;
-			sendRemasterizado(socketCPU, OPERACION_CON_CPU_EXITOSA, sizeof(t_puntero), punteroParaCPU);
+			sendRemasterizado(socketCPU, OPERACION_EXITOSA, sizeof(t_puntero), punteroParaCPU);
 			free(punteroParaCPU);
 		}else{
 			sendDeNotificacion(socketCPU, OPERACION_CON_CPU_FALLIDA);
@@ -885,7 +886,7 @@ void* manejadorConexionConsola(void* socketAceptado){
 		case MENSAJE_CODIGO:
 			iniciarProceso(paqueteRecibidoDeConsola, socketDeConsola);
 			break;
-		case FINALIZAR_PROGRAMA:
+		case FINALIZAR_PROCESO:
 			finalizarProcesoEnviadoDeConsola(paqueteRecibidoDeConsola, socketDeConsola);
 			break;
 		case HANG_UP:
@@ -1417,7 +1418,7 @@ void *manejadorCPU(void* socket){
 	         pcbAfectado->estaAbortado=true;
 	         pcbAfectado->exitCode=-10;//DEFINIR EXIT CODE
 	         queue_push(colaFinalizado, pcbAfectado);
-	         sendRemasterizado(socketMemoria, FINALIZAR_PROCESO_MEMORIA, sizeof(int), &pcbAfectado->pid);// PROBAR SI FUNCIONA
+	         sendRemasterizado(socketMemoria, FINALIZAR_PROCESO, sizeof(int), &pcbAfectado->pid);// PROBAR SI FUNCIONA
 	         estaOcupadaCPU = false;
 	         break;
 	       case PROCESO_FINALIZADO:
@@ -1562,10 +1563,10 @@ void realizarhandshakeCPU(int socket){
 int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
-	verificarParametrosInicio(argc);
-	inicializarKernel(argv[1]);
-	//char *path = "Debug/kernel.config";
-	//inicializarKernel(path);
+	//verificarParametrosInicio(argc);
+	//inicializarKernel(argv[1]);
+	char *path = "Debug/kernel.config";
+	inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 1;

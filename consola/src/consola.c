@@ -10,6 +10,7 @@
 #define ESPACIO_INSUFICIENTE -2
 #define IMPRIMIR_INFO 605
 #define FINALIZO_INCORRECTAMENTE 686
+#define OPERACION_EXITOSA 1
 
 typedef struct {
 	_ip ip_Kernel;

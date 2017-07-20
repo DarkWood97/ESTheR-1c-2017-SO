@@ -32,3 +32,31 @@
 [INFO] 22:21:27:58 Kernel/(14665:14665): Cerrando socket recibido...
 [INFO] 00:55:04:92 Kernel/(19411:19411): Se conecto una nueva CPU con el socket 7...
 [INFO] 00:56:23:755 Kernel/(19626:19626): Se conecto una nueva CPU con el socket 7...
+[INFO] 17:55:59:948 Kernel/(3510:3510): Se conecto una nueva consola con el socket 7...
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:26 offset:13 	variables a
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:39 offset:13 	variables b
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:52 offset:13 	variables c
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:65 offset:13 	variables d
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:78 offset:13 	variables e
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:92 offset:14 	alocar a 100
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:106 offset:13 	alocar b 50
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:119 offset:13 	alocar c 30
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:132 offset:13 	alocar d 30
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:145 offset:13 	alocar e 20
+
+[INFO] 17:56:00:197 Kernel/(3510:3612): Instruccion inicio:159 offset:4 end
+[DEBUG] 17:56:00:197 Kernel/(3510:3612): PCB creada para el pid: 1 
+[DEBUG] 17:56:00:197 Kernel/(3510:3612): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 17:56:00:201 Kernel/(3510:3547): Se ha agregado la PCB del proceso 1 a la cola de Listo
+[INFO] 17:56:04:33 Kernel/(3510:3510): Se conecto una nueva CPU con el socket 8...
+[INFO] 17:56:34:780 Kernel/(3510:3510): Se recibio una conexion erronea...
+[INFO] 17:56:34:780 Kernel/(3510:3510): Cerrando socket recibido...
