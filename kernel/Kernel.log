@@ -14,3 +14,19 @@
 [INFO] 21:30:55:927 Kernel/(12949:12986): Se ha agregado la PCB del proceso 1 a la cola de Listo
 [INFO] 21:31:00:674 Kernel/(12949:12949): Se recibio una conexion erronea...
 [INFO] 21:31:00:674 Kernel/(12949:12949): Cerrando socket recibido...
+[INFO] 22:21:21:780 Kernel/(14665:14665): Se conecto una nueva CPU con el socket 7...
+[INFO] 22:21:23:843 Kernel/(14665:14665): Se conecto una nueva consola con el socket 8...
+[INFO] 22:21:23:867 Kernel/(14665:14775): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 22:21:23:867 Kernel/(14665:14775): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 22:21:23:867 Kernel/(14665:14775): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 22:21:23:867 Kernel/(14665:14775): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 22:21:23:867 Kernel/(14665:14775): Instruccion inicio:67 offset:4 end
+[DEBUG] 22:21:23:867 Kernel/(14665:14775): PCB creada para el pid: 1 
+[DEBUG] 22:21:23:867 Kernel/(14665:14775): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 22:21:23:867 Kernel/(14665:14699): Se ha agregado la PCB del proceso 1 a la cola de Listo
+[INFO] 22:21:27:58 Kernel/(14665:14665): Se recibio una conexion erronea...
+[INFO] 22:21:27:58 Kernel/(14665:14665): Cerrando socket recibido...
