@@ -528,8 +528,9 @@ int main(int argc, char *argv[]) {
 	mostrarMetadata();
 	inicializarMmap();
 	bool existeArchivo;
+	int socketKernel;
 	while(!hayKernelConectado){
-		int socketKernel = aceptarConexionDeCliente(socketEscuchaFS);
+		socketKernel = aceptarConexionDeCliente(socketEscuchaFS);
 	    recibirHandshakeDeKernel(socketKernel);
 	}
 	while(1){

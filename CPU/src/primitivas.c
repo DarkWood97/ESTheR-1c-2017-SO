@@ -186,27 +186,34 @@ void retornar(t_valor_variable retorno){
 //--------------------WAIT------------//
 void pedirWait(t_nombre_semaforo identificador_semaforo){
 	log_info(loggerProgramas, "El proceso %d pidio wait al semaforo %s...", pcbEnProceso->pid, identificador_semaforo);
-	int tamanio = string_length(identificador_semaforo)+sizeof(int); // Tengo que agregar el barra cero?
-	void *paqueteDeWait = malloc(tamanio);
+	int tamanio = string_length(identificador_semaforo);
+	void *paqueteDeWait = malloc(tamanio+sizeof(int)*2);
 	memcpy(paqueteDeWait, &pcbEnProceso->pid, sizeof(int));
-	memcpy(paqueteDeWait+sizeof(int), identificador_semaforo, string_length(identificador_semaforo));
-	sendRemasterizado(socketKernel, PIDO_SEMAFORO, tamanio, paqueteDeWait);
-	paquete *paqueteParaVerSiMeBloqueo;
-	paqueteParaVerSiMeBloqueo = recvRemasterizado(socketKernel);
-	if(paqueteParaVerSiMeBloqueo->tipoMsj == BLOQUEO_POR_SEMAFORO){
+	memcpy(paqueteDeWait+sizeof(int),&tamanio,sizeof(int));
+	memcpy(paqueteDeWait+sizeof(int)*2, identificador_semaforo, tamanio);
+	sendRemasterizado(socketKernel, PIDO_SEMAFORO, tamanio+sizeof(int)*2, paqueteDeWait);
+	int casoBloqueo = recvDeNotificacion(socketKernel);
+	if(casoBloqueo == BLOQUEO_POR_SEMAFORO){
 		programaEnEjecucionBloqueado = true;
 		log_info(loggerProgramas, "El proceso %d quedo bloqueado por la peticion de semaforo...", pcbEnProceso->pid);
+	}
+	else if(casoBloqueo == NO_BLOQUEO_POR_SEMAFORO){
+		log_info(loggerProgramas, "El proceso %d no quedo bloqueado por la peticion de semaforo...", pcbEnProceso->pid);
+	}
+	else{
+		log_error(loggerProgramas, "Error de recv en operacion wait de PID: %d",pcbEnProceso->pid);
 	}
 }
 //---------------SIGNAL------------//
 
 void pedirSignal(t_nombre_semaforo identificador_semaforo){
 	log_info(loggerProgramas, "El proceso %d dio signal del semaforo %c...", pcbEnProceso->pid, identificador_semaforo);
-	int tamanio = string_length(identificador_semaforo)+sizeof(int); // Tengo que agregar el barra cero?
-	void *mensajeDeSignal = malloc(tamanio);
+	int tamanio = string_length(identificador_semaforo);
+	void *mensajeDeSignal = malloc(tamanio+sizeof(int)*2);
 	memcpy(mensajeDeSignal, &pcbEnProceso->pid, sizeof(int));
-	memcpy(mensajeDeSignal+sizeof(int), identificador_semaforo, string_length(identificador_semaforo));
-	sendRemasterizado(socketKernel, DOY_SEMAFORO, tamanio, mensajeDeSignal);
+	memcpy(mensajeDeSignal+sizeof(int),&tamanio,sizeof(int));
+	memcpy(mensajeDeSignal+sizeof(int)*2, identificador_semaforo, tamanio);
+	sendRemasterizado(socketKernel, DOY_SEMAFORO, tamanio+sizeof(int)*2, mensajeDeSignal);
 	free(mensajeDeSignal);
 }
 

@@ -22,6 +22,8 @@
 #define LIBERAR_HEAP 104
 #define WAIT_SEMAFORO 105
 #define SIGNAL_SEMAFORO 106
+#define BLOQUEO_POR_SEMAFORO 107
+#define NO_BLOQUEO_POR_SEMAFORO 108
 
 #define ABRIR_ARCHIVO 300
 #define NO_SE_PUDO_ABRIR_ARCHIVO 301
@@ -78,7 +80,6 @@
 
 
 //------------------------------------------------ESTRUCTURAS--------------------------------------//
-
 typedef struct __attribute__((__packed__)) {
 	uint32_t size;
 	bool estaLibre;
@@ -107,6 +108,12 @@ typedef struct __attribute__((__packed__))
   int tamanio;
 } direccion;
 
+typedef struct __attribute__((__packed__))
+{
+	char* script;
+	int pid;
+}datosPrograma;
+
 typedef struct __attribute__((__packed__)){
   int posicion;
   t_list* args;
@@ -132,7 +139,7 @@ typedef struct __attribute__((__packed__)) {
 	char* indiceEtiquetas;
 	tablaHeap* tablaHeap;
 	int exitCode;
-	int socket;
+	int socketConsola;
 	int tamanioEtiquetas;
 	bool estaAbortado;
 	int rafagas;
@@ -158,6 +165,21 @@ typedef struct __attribute__((__packed__)) {
 	int cantidadSyscall; //EN CASO DE TENER QUE SABER CUANDO DE CADA UNA OTRA ESTRUCTURA APARTE
 }registroSyscall;
 
+typedef struct __attribute__((__packed__)) {
+	int valorSemaforo;
+	char* nombreSemaforo;
+}semaforo;
+
+typedef struct __attribute__((__packed__)) {
+	int valorVariableCompartida;
+	char* nombreVariableCompartida;
+}variableCompartida;
+
+typedef struct __attribute__((__packed__)) {
+	PCB* unPCB;
+	char* nombreSemaforoBloqueante;
+}pcbBloqueado;
+
 //-------------------------------------------VARAIBLES GLOBALES------------------------------
 
 //LOGGER
@@ -179,11 +201,18 @@ t_queue* colaNuevo;
 t_queue* listaDeCPULibres;
 t_queue* colaProcesos;
 t_list* finalizadosPorConsola;
+t_list* listaProgramas;
 
 //TABLAS FS
 t_list* tablaAdminArchivos;
 t_list* tablaAdminGlobal;
 t_list* registroDeSyscall;
+
+//SEMAFOROS
+t_list* listaSemaforos;
+
+//VARIABLES COMPARTIDAS
+t_list* listaVariablesCompartidas;
 
 
 //VARIABLES DE CONFIGURACION DEL KERNEL
@@ -266,6 +295,159 @@ void mostrarConfiguracionesKernel() {
 	printf("STACK_SIZE=%d\n", STACK_SIZE);
 }
 
+//SEMAFOROS
+void crearSemaforos(char **semIds, char **semInit)
+{
+	int i;
+	for (i = 0; semIds[i] != NULL; i++) {
+		semaforo* unSemaforo = malloc(sizeof(semaforo));
+		unSemaforo->nombreSemaforo = semIds[i];
+		unSemaforo->valorSemaforo = atoi(semInit[i]);
+		list_add(listaSemaforos, unSemaforo);
+	}
+}
+
+void waitSemaforo(void* mensaje,int socketDeCPU){
+	int pid, tamanio;
+	pcbBloqueado* unPCBBloqueado;
+	registroSyscall* unRegistro;
+
+	memcpy(&pid,mensaje,sizeof(int));
+	memcpy(&tamanio,mensaje+sizeof(int),sizeof(int));
+	char* nombreSemaforo = malloc(tamanio);
+	memcpy(nombreSemaforo,mensaje+sizeof(int)*2,tamanio);
+
+	log_info(loggerKernel, "Se recibio un Wait de CPU, semaforo %s",nombreSemaforo);
+
+	bool _obtenerSemaforo(semaforo* unSemaforo){
+		return (strcmp(unSemaforo->nombreSemaforo, nombreSemaforo)==0);
+	}
+
+	bool _mismoPID(PCB* unPCB){
+		return pid == unPCB->pid;
+	}
+
+	bool _obtenerRegistro(registroSyscall* unRegSyscall){
+		return (unRegSyscall->pid) == pid;
+	}
+
+	semaforo* semaforoBuscado = list_find(listaSemaforos,(void*) _obtenerSemaforo);
+
+	if(semaforoBuscado!=NULL){
+		if(semaforoBuscado->valorSemaforo>0){
+			log_info(loggerKernel,"El valor del semaforo: %s es mayor que cero y no se bloquea",nombreSemaforo);
+			sendDeNotificacion(socketDeCPU,NO_BLOQUEO_POR_SEMAFORO);
+		}
+		else{
+			log_info(loggerKernel,"El semaforo: %s se bloquea",nombreSemaforo);
+			PCB* unPCBBuscado = list_remove_by_condition(colaProcesos->elements,(void*) _mismoPID);
+
+			if(unPCBBuscado!=NULL){
+				unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
+				unRegistro->cantidadSyscall++;
+				unPCBBloqueado = malloc(sizeof(pcbBloqueado));
+				unPCBBloqueado->nombreSemaforoBloqueante = string_new();
+				string_append(&unPCBBloqueado->nombreSemaforoBloqueante,nombreSemaforo);
+				unPCBBloqueado->unPCB = unPCBBuscado;
+				unPCBBloqueado->unPCB->estado = BLOQUEADO;
+				queue_push(colaBloqueado,unPCBBloqueado);
+				log_info(loggerKernel,"El programa con el PID: %d ha entrado a la cola de bloqueados",pid);
+				sendDeNotificacion(socketDeCPU,BLOQUEO_POR_SEMAFORO);
+			}
+			else{
+				log_error(loggerKernel,"No se encontro el PCB con el siguiente PID: %d",pid);
+			}
+		}
+		semaforoBuscado->valorSemaforo--;
+	}
+	else{
+		log_error(loggerKernel,"Semaforo: %s inexistente solicitado para operacion Wait",nombreSemaforo);
+	}
+}
+
+void signalSemaforo(void* mensaje)
+{
+	int pid, tamanio, i, cantidadElementos;
+	bool encontrado = false;
+	pcbBloqueado* unPCBBloqueado;
+	registroSyscall* unRegistro;
+
+	memcpy(&pid,mensaje,sizeof(int));
+	memcpy(&tamanio,mensaje+sizeof(int),sizeof(int));
+	char* nombreSemaforo = malloc(tamanio);
+	memcpy(nombreSemaforo,mensaje+sizeof(int)*2,tamanio);
+
+	log_info(loggerKernel, "Se recibio un Signal de CPU, semaforo %s",nombreSemaforo);
+
+	bool _obtenerSemaforo(semaforo* unSemaforo){
+		return (strcmp(unSemaforo->nombreSemaforo, nombreSemaforo)==0);
+	}
+
+	bool _obtenerPCB(PCB* unPCB){
+		return (unPCB->pid) == unPCBBloqueado->unPCB->pid;
+	}
+
+	bool _obtenerRegistro(registroSyscall* unRegSyscall){
+		return (unRegSyscall->pid) == unPCBBloqueado->unPCB->pid;
+	}
+
+	semaforo* semaforoBuscado = list_find(listaSemaforos,(void*) _obtenerSemaforo);
+
+	if(semaforoBuscado!=NULL){
+		if(semaforoBuscado->valorSemaforo<0){
+			t_queue* auxiliar = colaBloqueado;
+			cantidadElementos = queue_size(colaBloqueado);
+			for(i=0;i<cantidadElementos;i++){
+				unPCBBloqueado = queue_pop(colaBloqueado);
+				if(strcmp(unPCBBloqueado->nombreSemaforoBloqueante,nombreSemaforo)==0 && encontrado==false){
+					encontrado = true;
+					PCB* pcbBuscado = list_find(colaProcesos->elements,(void*) _obtenerPCB);
+
+					unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
+					unRegistro->cantidadSyscall++;
+					pcbBuscado->estado = LISTO;
+
+					if (pcbBuscado->tablaHeap!=NULL){
+						unPCBBloqueado->unPCB->tablaHeap = pcbBuscado->tablaHeap;
+					}
+
+					queue_push(colaListo,pcbBuscado);
+
+					log_info(loggerKernel,"El programa con PID: %d salio de cola bloqueados e ingreso a listos por un signal",pid);
+				}
+				else{
+					queue_push(auxiliar,unPCBBloqueado);
+				}
+			}
+			colaBloqueado = auxiliar;
+		}
+	semaforoBuscado->valorSemaforo++;
+	}
+}
+
+//VARIABLES COMPARTIDAS
+void crearVariablesCompartidas(char **sharedVars)
+{
+	int i;
+	for (i = 0; sharedVars[i] != NULL; i++) {
+		variableCompartida* unaVariableCompartida = malloc(sizeof(variableCompartida));
+		unaVariableCompartida->nombreVariableCompartida = sharedVars[i];
+		unaVariableCompartida->valorVariableCompartida = 0;
+		list_add(listaVariablesCompartidas, unaVariableCompartida);
+	}
+}
+
+variableCompartida* obtenerVariableCompartida(variableCompartida* unaVariable)
+{
+	int i;
+	for(i = 0;i<list_size(listaVariablesCompartidas);i++){
+		variableCompartida* unaVariableDeLaLista = list_get(listaVariablesCompartidas,i);
+		if(strcmp(unaVariableDeLaLista->nombreVariableCompartida,unaVariable->nombreVariableCompartida)==0)
+			return unaVariableDeLaLista;
+	}
+	return NULL;
+}
+
 //------------------------------------------ FUNCIONES AUXILIARES PARA PCB------------------------------------
 t_intructions* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
 	t_intructions* code = malloc((sizeof(int)*2)*metadata_program->instrucciones_size);
@@ -299,12 +481,17 @@ char* cargarEtiquetas(t_metadata_program* metadata_program,int sizeEtiquetasInde
 }
 
 int obtenerCantidadPaginas(char* codigoDePrograma){
-  long int tamanioCodigo = string_length(codigoDePrograma);
-  int cantidadPaginas = tamanioCodigo/(tamanioPagina-sizeof(heapMetadata)*2)+STACK_SIZE;
-  if((tamanioCodigo % tamanioPagina) != 0){
-    cantidadPaginas++;
-  }
-  return cantidadPaginas;
+	int tamanioCodigo = string_length(codigoDePrograma);
+  	int cantidadPaginas;
+
+    if((tamanioCodigo % tamanioPagina) != 0){
+    	cantidadPaginas = (tamanioCodigo/tamanioPagina)+STACK_SIZE+1;
+    }
+    else{
+    	cantidadPaginas = (tamanioCodigo/tamanioPagina)+STACK_SIZE;
+    }
+
+    return cantidadPaginas;
 }
 
 int mandarInicioAMemoria(void* inicioDePrograma){
@@ -313,49 +500,43 @@ int mandarInicioAMemoria(void* inicioDePrograma){
 }
 
 //----------------------------------------PCB----------------------------------------------//
-PCB* iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio){
-	long int tamanioCodigo = string_length(codigoDePrograma);
-	int cantidadPaginasCodigo = obtenerCantidadPaginas(codigoDePrograma);
-	void *inicioDePrograma = malloc(sizeof(int)*2);
-	memcpy(inicioDePrograma, &pidActual, sizeof(int));
-	memcpy(inicioDePrograma+sizeof(int), &cantidadPaginasCodigo, sizeof(int));
-	int sePudo = mandarInicioAMemoria(inicioDePrograma);
-	free(inicioDePrograma);
+void iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio)
+{
 	PCB *pcbNuevo = malloc(sizeof(PCB));
-	if(sePudo == OPERACION_EXITOSA){
-		t_metadata_program *metadataDelPrograma = metadata_desde_literal(codigoDePrograma);
-		pcbNuevo->pid = pidActual;
-		pcbNuevo->estado = NUEVO;
-		pcbNuevo->programCounter = metadataDelPrograma->instruccion_inicio;
-		pcbNuevo->rafagas = 0;
-		pcbNuevo->exitCode = 0;
-		pcbNuevo->cantidadPaginasCodigo = ceil((double)tamanioCodigo/(double)tamanioPagina); //ARREGLAR ESTO
-		pcbNuevo->cantidadTIntructions = metadataDelPrograma->instrucciones_size;
-		pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
-		pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
-		pcbNuevo->indiceEtiquetas = cargarEtiquetas(metadataDelPrograma, pcbNuevo->tamanioEtiquetas);
-		pcbNuevo->posicionStackActual = 0;
-		inicializarStack(pcbNuevo);
-		pcbNuevo->tamanioContexto = 1;
-		pcbNuevo->socket = socketConsolaDuenio;
-		pcbNuevo->estaAbortado = false;
-		pcbNuevo->tablaHeap = malloc(sizeof(tablaHeap));
-		pcbNuevo->tablaHeap->pagina = list_create();
+	datosPrograma* programa = malloc(sizeof(datosPrograma));
+	t_metadata_program *metadataDelPrograma = metadata_desde_literal(codigoDePrograma);
+	pcbNuevo->pid = pidActual;
+	pcbNuevo->estado = NUEVO;
+	pcbNuevo->programCounter = metadataDelPrograma->instruccion_inicio;
+	pcbNuevo->rafagas = 0;
+	pcbNuevo->exitCode = 0;
+	pcbNuevo->cantidadPaginasCodigo = ceil((double)string_length(codigoDePrograma)/(double)tamanioPagina);
+	pcbNuevo->cantidadTIntructions = metadataDelPrograma->instrucciones_size;
+	pcbNuevo->indiceCodigo = cargarCodeIndex(codigoDePrograma, metadataDelPrograma);
+	pcbNuevo->tamanioEtiquetas = metadataDelPrograma->etiquetas_size;
+	pcbNuevo->indiceEtiquetas = cargarEtiquetas(metadataDelPrograma, pcbNuevo->tamanioEtiquetas);
+	pcbNuevo->posicionStackActual = 0;
+	inicializarStack(pcbNuevo);
+	pcbNuevo->tamanioContexto = 1;
+	pcbNuevo->socketConsola = socketConsolaDuenio;
+	pcbNuevo->estaAbortado = false;
+	pcbNuevo->tablaHeap = malloc(sizeof(tablaHeap));
+	pcbNuevo->tablaHeap->pagina = list_create();
 
-		metadata_destruir(metadataDelPrograma);
-		pidActual++;
+	programa->pid = pidActual;
+	programa->script = string_new();
+	string_append(&programa->script,codigoDePrograma);
 
-		log_debug(loggerKernel, "PCB creada para el pid: %i ",pcbNuevo->pid);
+	metadata_destruir(metadataDelPrograma);
+	pidActual++;
 
-		queue_push(colaNuevo,pcbNuevo);
-		queue_push(colaProcesos,pcbNuevo);
+	log_info(loggerKernel, "PCB creada para el pid: %d ",pcbNuevo->pid);
 
-		log_debug(loggerKernel, "El pid: %i ha ingresado a la cola de nuevo.",pcbNuevo->pid);
-	}else{
-		free(codigoDePrograma);
-		pcbNuevo = NULL;
-	}
-	return pcbNuevo;
+	list_add(listaProgramas,programa);
+	queue_push(colaNuevo,pcbNuevo);
+	queue_push(colaProcesos,pcbNuevo);
+
+	log_info(loggerKernel, "El pid: %d ha ingresado a la cola de nuevo.",pcbNuevo->pid);
 }
 
 //-----------------------------------DESERIALIZAR PCB------------------------------------//
@@ -557,30 +738,10 @@ void enviarCodigoDeProgramaAMemoria(int pid, char* codigo){
 	}
 }
 
-void enviarDatos(PCB* pcbInicializado,char* codigo, int socketDeConsola){
-	if(pcbInicializado!=NULL){
-		enviarCodigoDeProgramaAMemoria(pcbInicializado->pid, codigo);
-		sendRemasterizado(socketDeConsola, ENVIAR_PID, sizeof(int), &pcbInicializado->pid);
-	}
-	else{
-		char* mensaje = string_new();
-		string_append(&mensaje,"No hay espacio para iniciar el programa.");
-		int tamanio = strlen(mensaje);
-		void* mensajeConTamanio = malloc(sizeof(int)+tamanio);
-		memcpy(mensajeConTamanio,&tamanio,sizeof(int));
-		memcpy(mensajeConTamanio+sizeof(int),mensaje,tamanio);
-		sendRemasterizado(socketDeConsola,ESPACIO_INSUFICIENTE,tamanio+sizeof(int),mensaje);
-		free(pcbInicializado);
-		free(mensaje);
-		free(mensajeConTamanio);
-	}
-}
-
 void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   char* codigo = string_new();
   string_append(&codigo, paqueteConCodigo->mensaje);
-  PCB* pcbInicializado = iniciarPCB(codigo, socketConsola);
-  enviarDatos(pcbInicializado,codigo,socketConsola);
+  iniciarPCB(codigo, socketConsola);
   free(codigo);
 }
 
@@ -722,8 +883,8 @@ void chequearHeapMetadata(PCB *pcbConHeap, int numeroPagina){
 }
 
 void avisarFinalizacion(PCB *pcbFinalizada){
-	sendRemasterizado(pcbFinalizada->socket, FINALIZAR_PROCESO, sizeof(int), &pcbFinalizada->pid);
-	if(recvDeNotificacion(pcbFinalizada->socket) != OPERACION_EXITOSA){
+	sendRemasterizado(pcbFinalizada->socketConsola, FINALIZAR_PROCESO, sizeof(int), &pcbFinalizada->pid);
+	if(recvDeNotificacion(pcbFinalizada->socketConsola) != OPERACION_EXITOSA){
 
 	}
 }
@@ -1012,13 +1173,51 @@ void* manejadorTeclado(){
 	}
 }
 
+char* obtenerCodigoPrograma(int pidAComparar){
+
+	bool _tieneElPid(datosPrograma* programa) {
+		return (programa->pid) == pidAComparar;
+	}
+
+	char* programaABuscar = list_remove_by_condition(listaProgramas,(void*) _tieneElPid);
+
+	return programaABuscar;
+}
+
+void nuevoAListo(PCB* unaPCB){
+	char* codigoPrograma = obtenerCodigoPrograma(unaPCB->pid);
+	int cantidadPaginasCodigo = obtenerCantidadPaginas(codigoPrograma);
+	void *inicioDePrograma = malloc(sizeof(int)*2);
+	memcpy(inicioDePrograma, &unaPCB->pid, sizeof(int));
+	memcpy(inicioDePrograma+sizeof(int), &cantidadPaginasCodigo, sizeof(int));
+	int sePudo = mandarInicioAMemoria(inicioDePrograma);
+	free(inicioDePrograma);
+	if(sePudo == OPERACION_EXITOSA){
+		enviarCodigoDeProgramaAMemoria(unaPCB->pid, codigoPrograma);
+		sendRemasterizado(unaPCB->socketConsola, ENVIAR_PID, sizeof(int), &unaPCB->pid);
+		queue_push(colaListo,unaPCB);
+	}else{
+		char* mensaje = string_new();
+		string_append(&mensaje,"No hay espacio para iniciar el programa.");
+		int tamanio = strlen(mensaje);
+		void* mensajeConTamanio = malloc(sizeof(int)+tamanio);
+		memcpy(mensajeConTamanio,&tamanio,sizeof(int));
+		memcpy(mensajeConTamanio+sizeof(int),mensaje,tamanio);
+		sendRemasterizado(unaPCB->socketConsola,ESPACIO_INSUFICIENTE,tamanio+sizeof(int),mensaje);
+		free(unaPCB); //VER SI SE MUEVE A UNA COLA DE RECHAZADOS O LIBERAR EL PCB CREADO
+		free(mensaje);
+		free(mensajeConTamanio);
+	}
+	free(codigoPrograma);
+}
+
 //PLANIFICACION DEL SISTEMA
 
 void manejarColaNueva(){
 	if(queue_size(colaListo)<GRADO_MULTIPROG){
 		PCB* pcbNueva;
 		pcbNueva=queue_pop(colaNuevo);
-		queue_push(colaListo,pcbNueva);
+		nuevoAListo(pcbNueva);
 		log_info(loggerKernel,"Se ha agregado la PCB del proceso %d a la cola de Listo", pcbNueva->pid);
 	}else{
 		log_info(loggerKernel,"No se ha podido agregar ningun proceso a la cola de listo por grado de multiprogramacion.");
@@ -1398,10 +1597,10 @@ void *manejadorCPU(void* socket){
 	     paqueteRecibidoDeCPU = recvRemasterizado(socketCPU);
 	     switch (paqueteRecibidoDeCPU->tipoMsj) {
 	       case WAIT_SEMAFORO:
-
+	    	   waitSemaforo(paqueteRecibidoDeCPU->mensaje,socketCPU);
 	         break;
 	       case SIGNAL_SEMAFORO:
-	         //signalSemaforo((char*)paqueteRecibidoDeCPU->mensaje);
+	    	   signalSemaforo(paqueteRecibidoDeCPU->mensaje);
 	         break;
 	       case RESERVAR_HEAP:
 	    	   memcpy(&pid, paqueteRecibidoDeCPU->mensaje, sizeof(int));
@@ -1563,10 +1762,10 @@ void realizarhandshakeCPU(int socket){
 int main (int argc, char *argv[]){
 	loggerKernel = log_create("Kernel.log", "Kernel", 0, 0);
 	//PUESTA EN MARCHA
-	//verificarParametrosInicio(argc);
-	//inicializarKernel(argv[1]);
-	char *path = "Debug/kernel.config";
-	inicializarKernel(path);
+	verificarParametrosInicio(argc);
+	inicializarKernel(argv[1]);
+	//char *path = "Debug/kernel.config";
+	//inicializarKernel(path);
 
 	//INICIALIZANDO VARIABLES
 	pidActual = 1;
@@ -1585,6 +1784,9 @@ int main (int argc, char *argv[]){
 	tablaAdminGlobal=list_create();
 
 	finalizadosPorConsola = list_create();
+	listaProgramas = list_create();
+	listaSemaforos = list_create();
+	listaVariablesCompartidas = list_create();
 
 	//INICIALIZANDO COLAS
 	colaBloqueado = queue_create();
