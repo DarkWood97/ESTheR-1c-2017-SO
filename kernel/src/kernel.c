@@ -311,10 +311,13 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 	int pid, tamanio;
 	pcbBloqueado* unPCBBloqueado;
 	registroSyscall* unRegistro;
+	PCB* unPCBBuscado;
+	semaforo* semaforoBuscado;
+	char* nombreSemaforo;
 
 	memcpy(&pid,mensaje,sizeof(int));
 	memcpy(&tamanio,mensaje+sizeof(int),sizeof(int));
-	char* nombreSemaforo = malloc(tamanio);
+	nombreSemaforo = malloc(tamanio);
 	memcpy(nombreSemaforo,mensaje+sizeof(int)*2,tamanio);
 
 	log_info(loggerKernel, "Se recibio un Wait de CPU, semaforo %s",nombreSemaforo);
@@ -331,7 +334,7 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 		return (unRegSyscall->pid) == pid;
 	}
 
-	semaforo* semaforoBuscado = list_find(listaSemaforos,(void*) _obtenerSemaforo);
+	semaforoBuscado = list_find(listaSemaforos,(void*) _obtenerSemaforo);
 
 	if(semaforoBuscado!=NULL){
 		if(semaforoBuscado->valorSemaforo>0){
@@ -340,18 +343,22 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 		}
 		else{
 			log_info(loggerKernel,"El semaforo: %s se bloquea",nombreSemaforo);
-			PCB* unPCBBuscado = list_remove_by_condition(colaProcesos->elements,(void*) _mismoPID);
+			unPCBBuscado = list_remove_by_condition(colaEjecutando->elements,(void*) _mismoPID);
 
 			if(unPCBBuscado!=NULL){
-				unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
-				unRegistro->cantidadSyscall++;
 				unPCBBloqueado = malloc(sizeof(pcbBloqueado));
 				unPCBBloqueado->nombreSemaforoBloqueante = string_new();
 				string_append(&unPCBBloqueado->nombreSemaforoBloqueante,nombreSemaforo);
 				unPCBBloqueado->unPCB = unPCBBuscado;
 				unPCBBloqueado->unPCB->estado = BLOQUEADO;
+
 				queue_push(colaBloqueado,unPCBBloqueado);
+
 				log_info(loggerKernel,"El programa con el PID: %d ha entrado a la cola de bloqueados",pid);
+
+				unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
+				unRegistro->cantidadSyscall++;
+
 				sendDeNotificacion(socketDeCPU,BLOQUEO_POR_SEMAFORO);
 			}
 			else{
@@ -371,10 +378,14 @@ void signalSemaforo(void* mensaje)
 	bool encontrado = false;
 	pcbBloqueado* unPCBBloqueado;
 	registroSyscall* unRegistro;
+	t_queue* auxiliar;
+	semaforo* semaforoBuscado;
+	PCB* pcbBuscado;
+	char* nombreSemaforo;
 
 	memcpy(&pid,mensaje,sizeof(int));
 	memcpy(&tamanio,mensaje+sizeof(int),sizeof(int));
-	char* nombreSemaforo = malloc(tamanio);
+	nombreSemaforo = malloc(tamanio);
 	memcpy(nombreSemaforo,mensaje+sizeof(int)*2,tamanio);
 
 	log_info(loggerKernel, "Se recibio un Signal de CPU, semaforo %s",nombreSemaforo);
@@ -391,20 +402,17 @@ void signalSemaforo(void* mensaje)
 		return (unRegSyscall->pid) == unPCBBloqueado->unPCB->pid;
 	}
 
-	semaforo* semaforoBuscado = list_find(listaSemaforos,(void*) _obtenerSemaforo);
+	semaforoBuscado = list_find(listaSemaforos,(void*) _obtenerSemaforo);
 
 	if(semaforoBuscado!=NULL){
 		if(semaforoBuscado->valorSemaforo<0){
-			t_queue* auxiliar = colaBloqueado;
+			auxiliar = colaBloqueado;
 			cantidadElementos = queue_size(colaBloqueado);
 			for(i=0;i<cantidadElementos;i++){
 				unPCBBloqueado = queue_pop(colaBloqueado);
 				if(strcmp(unPCBBloqueado->nombreSemaforoBloqueante,nombreSemaforo)==0 && encontrado==false){
 					encontrado = true;
-					PCB* pcbBuscado = list_find(colaProcesos->elements,(void*) _obtenerPCB);
-
-					unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
-					unRegistro->cantidadSyscall++;
+					pcbBuscado = list_find(colaProcesos->elements,(void*) _obtenerPCB);
 					pcbBuscado->estado = LISTO;
 
 					if (pcbBuscado->tablaHeap!=NULL){
@@ -414,6 +422,10 @@ void signalSemaforo(void* mensaje)
 					queue_push(colaListo,pcbBuscado);
 
 					log_info(loggerKernel,"El programa con PID: %d salio de cola bloqueados e ingreso a listos por un signal",pid);
+
+					unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
+					unRegistro->cantidadSyscall++;
+
 				}
 				else{
 					queue_push(auxiliar,unPCBBloqueado);
