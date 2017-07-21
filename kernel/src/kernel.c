@@ -227,8 +227,8 @@ int QUANTUM_SLEEP;
 char* ALGORITMO;
 int GRADO_MULTIPROG;
 char** SEM_IDS;
-char** SEM_UNIT;
-char** SHERED_VARS;
+char** SEM_INIT;
+char** SHARED_VARS;
 int STACK_SIZE;
 
 //--------------------------------------------CONFIGURACION INICIAL DEL KERNEL---------------------------------
@@ -265,8 +265,8 @@ void crearKernel(t_config *configuracion) {
 	string_append(&ALGORITMO, config_get_string_value(configuracion,"ALGORITMO"));
 	GRADO_MULTIPROG = config_get_int_value(configuracion,"GRADO_MULTIPROG");
 	SEM_IDS = config_get_array_value(configuracion, "SEM_IDS");
-	SEM_UNIT = config_get_array_value(configuracion, "SEM_INIT");
-	SHERED_VARS = config_get_array_value(configuracion, "SHARED_VARS");
+	SEM_INIT = config_get_array_value(configuracion, "SEM_INIT");
+	SHARED_VARS = config_get_array_value(configuracion, "SHARED_VARS");
 	STACK_SIZE = config_get_int_value(configuracion, "STACK_SIZE");
 }
 
@@ -289,14 +289,14 @@ void mostrarConfiguracionesKernel() {
 	printf("SEM_IDS=");
 	imprimirArrayDeChar(SEM_IDS);
 	printf("SEM_INIT=");
-	imprimirArrayDeInt(SEM_UNIT);
+	imprimirArrayDeInt(SEM_INIT);
 	printf("SHARED_VARS=");
-	imprimirArrayDeChar(SHERED_VARS);
+	imprimirArrayDeChar(SHARED_VARS);
 	printf("STACK_SIZE=%d\n", STACK_SIZE);
 }
 
 //SEMAFOROS
-void crearSemaforos(char **semIds, char **semInit)
+void crearSemaforos(char** semIds, char** semInit)
 {
 	int i;
 	for (i = 0; semIds[i] != NULL; i++) {
@@ -438,7 +438,7 @@ void signalSemaforo(void* mensaje)
 }
 
 //VARIABLES COMPARTIDAS
-void crearVariablesCompartidas(char **sharedVars)
+void crearVariablesCompartidas(char** sharedVars)
 {
 	int i;
 	for (i = 0; sharedVars[i] != NULL; i++) {
@@ -1808,6 +1808,10 @@ int main (int argc, char *argv[]){
 	colaListo = queue_create();
 	colaNuevo = queue_create();
 	listaDeCPULibres=queue_create();
+
+	//CREAR SEMAFOROS Y VARIABLES COMPARTIDAS
+	crearSemaforos(SEM_IDS, SEM_INIT);
+	crearVariablesCompartidas(SHARED_VARS);
 
 	//CONEXIONES
 	socketEscuchaCPU = ponerseAEscucharClientes(PUERTO_CPU, 0);
