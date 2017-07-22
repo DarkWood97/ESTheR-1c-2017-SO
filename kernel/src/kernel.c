@@ -1878,6 +1878,7 @@ int main (int argc, char *argv[]){
 	listaProgramas = list_create();
 	listaSemaforos = list_create();
 	listaVariablesCompartidas = list_create();
+	registroDeSyscall = list_create();
 
 	//INICIALIZANDO COLAS
 	colaBloqueado = queue_create();
