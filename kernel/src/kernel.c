@@ -1649,8 +1649,8 @@ void enviarPCB(int socketCPU, PCB* unProcesoParaCPU){
 }
 
 //HILO
-void *manejadorCPU(void* socket){
-  int socketCPU = *(int*)socket;
+void *manejadorCPU(void* socketAceptado){
+  int socketCPU = *(int*)socketAceptado;
   bool estaOcupadaCPU = false;
   while(1){
 	  PCB* procesoParaCPU;
@@ -1940,6 +1940,7 @@ int main (int argc, char *argv[]){
 							log_info(loggerKernel, "Se conecto una nueva CPU con el socket %d...", socketAChequear);
 							realizarhandshakeCPU(socketAChequear);
 							pthread_create(&hiloManejadorCPU, NULL, manejadorCPU, (void*)socketCPU);
+							FD_CLR(socketAChequear, &socketsCliente);
 							break;
 						default:
 							log_info(loggerKernel, "Se recibio una conexion erronea...");
