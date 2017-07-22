@@ -36,8 +36,8 @@ void asignar(t_puntero direccion_variable, t_valor_variable valor){
 t_valor_variable obtenerValorCompartida(t_nombre_compartida variable){
   char* nombreDeLaVariable = string_new();//malloc(string_length(variable)+1);
   log_info(loggerProgramas, "El proceso %d pidio el valor de la variable compartida %s...", pcbEnProceso->pid, variable);
-  string_append(&nombreDeLaVariable,"\0");
-  free(nombreDeLaVariable);
+  string_append(&nombreDeLaVariable, variable);
+  //string_append(&nombreDeLaVariable,"\0"); NO HACE FALTA, VER!!
   return consultarVariableCompartida(nombreDeLaVariable);
 }
 
@@ -46,7 +46,7 @@ t_valor_variable obtenerValorCompartida(t_nombre_compartida variable){
 t_valor_variable asignarValorCompartida(t_nombre_compartida variable, t_valor_variable valor){
   char* nombreDeVariableAModificar = string_new();
   string_append(&nombreDeVariableAModificar, variable);
-  string_append(&nombreDeVariableAModificar,"\0");
+  //string_append(&nombreDeVariableAModificar,"\0"); NO HACE FALTA, VER!!
   enviarModificacionDeValor(nombreDeVariableAModificar, valor);
   free(nombreDeVariableAModificar);
   return recibirValorCompartida();
@@ -187,6 +187,7 @@ void retornar(t_valor_variable retorno){
 void pedirWait(t_nombre_semaforo identificador_semaforo){
 	log_info(loggerProgramas, "El proceso %d pidio wait al semaforo %s...", pcbEnProceso->pid, identificador_semaforo);
 	int tamanio = string_length(identificador_semaforo);
+	//VER LO DEL /0
 	void *paqueteDeWait = malloc(tamanio+sizeof(int)*2);
 	memcpy(paqueteDeWait, &pcbEnProceso->pid, sizeof(int));
 	memcpy(paqueteDeWait+sizeof(int),&tamanio,sizeof(int));
@@ -209,6 +210,7 @@ void pedirWait(t_nombre_semaforo identificador_semaforo){
 void pedirSignal(t_nombre_semaforo identificador_semaforo){
 	log_info(loggerProgramas, "El proceso %d dio signal del semaforo %c...", pcbEnProceso->pid, identificador_semaforo);
 	int tamanio = string_length(identificador_semaforo);
+	//VER LO DEL /0
 	void *mensajeDeSignal = malloc(tamanio+sizeof(int)*2);
 	memcpy(mensajeDeSignal, &pcbEnProceso->pid, sizeof(int));
 	memcpy(mensajeDeSignal+sizeof(int),&tamanio,sizeof(int));

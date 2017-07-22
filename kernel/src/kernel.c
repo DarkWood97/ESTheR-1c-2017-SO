@@ -18,12 +18,16 @@
 #define HANG_UP 0
 
 //OPERACIONES CPU
+#define PETICION_VARIABLE_COMPARTIDA_KERNEL 100
+#define PETICION_CAMBIO_VALOR_KERNEL 101
+#define DATOS_VARIABLE_COMPARTIDA_KERNEL 102
 #define RESERVAR_HEAP 103
 #define LIBERAR_HEAP 104
 #define WAIT_SEMAFORO 105
 #define SIGNAL_SEMAFORO 106
 #define BLOQUEO_POR_SEMAFORO 107
 #define NO_BLOQUEO_POR_SEMAFORO 108
+#define OPERACION_VARIABLE_COMPARTIDA_FALLIDA 109
 
 #define ABRIR_ARCHIVO 300
 #define NO_SE_PUDO_ABRIR_ARCHIVO 301
@@ -162,7 +166,9 @@ typedef struct __attribute__((__packed__)) {
 
 typedef struct __attribute__((__packed__)) {
 	int pid;
-	int cantidadSyscall; //EN CASO DE TENER QUE SABER CUANDO DE CADA UNA OTRA ESTRUCTURA APARTE
+	int cantidadWait;
+	int cantidadSignal;
+	int cantidadSyscall; //EN CASO DE TENER QUE SABER CUANDO DE CADA UNA OTRA ESTRUCTURA APARTE <- NO!! PONGAMOSLE INTs A LA ESTRUCTURA
 }registroSyscall;
 
 typedef struct __attribute__((__packed__)) {
@@ -295,6 +301,48 @@ void mostrarConfiguracionesKernel() {
 	printf("STACK_SIZE=%d\n", STACK_SIZE);
 }
 
+bool finalizarProceso(int pid, int exitCode){
+  bool esPCBProceso(PCB *pcbABuscar){
+    return pcbABuscar->pid == pid;
+  }
+
+  PCB *pcbAFinalizar = list_find(colaProcesos->elements, (void*)esPCBProceso);
+  if(pcbAFinalizar != NULL){
+    switch (pcbAFinalizar->estado) {
+      case NUEVO:
+        list_remove_and_destroy_by_condition(colaNuevo->elements, (void*)esPCBProceso, free);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de nuevos...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de nuevos...", pid);
+        break;
+      case LISTO:
+        list_remove_and_destroy_by_condition(colaListo->elements, (void*)esPCBProceso, free);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de listos...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de listos...", pid);
+        break;
+      case EJECUTANDO:
+         //ACA HABRIA QUE ESPERAR A QUE CPU LO DEVUELVA
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de ejecutando...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de ejecutando...", pid);
+        break;
+      case BLOQUEADO:
+        list_remove_and_destroy_by_condition(colaBloqueado->elements, (void*)esPCBProceso, free);
+        log_info(loggerKernel, "El proceso %d se encuentra en la cola de bloqueados...", pid);
+        log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
+        break;
+      default:
+        log_info(loggerKernel, "El proceso %d no se encuentra en ninguna de las colas activas, el proceso ya ha sido finalizado...", pid);
+        break;
+    }
+    pcbAFinalizar->estado = FINALIZADO;
+    pcbAFinalizar->exitCode = exitCode;
+    return true;
+  }else{
+    puts("El proceso %d no existe, por lo tanto no se puede finalizar...");
+    log_info(loggerKernel, "Se pidio la finalizacion de un proceso que no existe...");
+    return false;
+  }
+}
+
 //SEMAFOROS
 void crearSemaforos(char** semIds, char** semInit)
 {
@@ -308,7 +356,7 @@ void crearSemaforos(char** semIds, char** semInit)
 }
 
 void waitSemaforo(void* mensaje,int socketDeCPU){
-	int pid, tamanio;
+	int pid, tamanio, exitCode;
 	pcbBloqueado* unPCBBloqueado;
 	registroSyscall* unRegistro;
 	PCB* unPCBBuscado;
@@ -358,6 +406,7 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 
 				unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
 				unRegistro->cantidadSyscall++;
+				unRegistro->cantidadWait++;
 
 				sendDeNotificacion(socketDeCPU,BLOQUEO_POR_SEMAFORO);
 			}
@@ -368,13 +417,15 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 		semaforoBuscado->valorSemaforo--;
 	}
 	else{
-		log_error(loggerKernel,"Semaforo: %s inexistente solicitado para operacion Wait",nombreSemaforo);
+		log_error(loggerKernel,"Semaforo: %s inexistente solicitado para operacion Wait... se finaliza programa",nombreSemaforo);
+		exitCode = -10; //Exit Code para semaforos inexistentes
+		finalizarProceso(pid, exitCode);
 	}
 }
 
 void signalSemaforo(void* mensaje)
 {
-	int pid, tamanio, i, cantidadElementos;
+	int pid, tamanio, i, cantidadElementos, exitCode;
 	bool encontrado = false;
 	pcbBloqueado* unPCBBloqueado;
 	registroSyscall* unRegistro;
@@ -425,6 +476,7 @@ void signalSemaforo(void* mensaje)
 
 					unRegistro = list_find(registroDeSyscall,(void*) _obtenerRegistro);
 					unRegistro->cantidadSyscall++;
+					unRegistro->cantidadSignal++;
 
 				}
 				else{
@@ -434,6 +486,11 @@ void signalSemaforo(void* mensaje)
 			colaBloqueado = auxiliar;
 		}
 	semaforoBuscado->valorSemaforo++;
+	}
+	else{
+		log_error(loggerKernel,"El programa con PID: %d envio un semaforo: %s inexistente.. se finalizo el programa",pid,nombreSemaforo);
+		exitCode = -10; //Exit Code para semaforos inexistentes
+		finalizarProceso(pid, exitCode);
 	}
 }
 
@@ -449,16 +506,65 @@ void crearVariablesCompartidas(char** sharedVars)
 	}
 }
 
-variableCompartida* obtenerVariableCompartida(variableCompartida* unaVariable)
+variableCompartida* obtenerVariableCompartida(char* unaVariable)
 {
 	int i;
 	for(i = 0;i<list_size(listaVariablesCompartidas);i++){
 		variableCompartida* unaVariableDeLaLista = list_get(listaVariablesCompartidas,i);
-		if(strcmp(unaVariableDeLaLista->nombreVariableCompartida,unaVariable->nombreVariableCompartida)==0)
+		if(strcmp(unaVariableDeLaLista->nombreVariableCompartida,unaVariable)==0)
 			return unaVariableDeLaLista;
 	}
 	return NULL;
 }
+
+void obtenerValorVariableCompartida(void* mensaje,int socketCPU){
+	int pid, tamanio, exitCode;
+	char* nombreVariableCompartida;
+
+	memcpy(&pid,mensaje,sizeof(int));
+	memcpy(&tamanio,mensaje+sizeof(int),sizeof(int));
+	nombreVariableCompartida = malloc(tamanio);
+	memcpy(nombreVariableCompartida,mensaje+sizeof(int)*2,tamanio);
+
+	variableCompartida* variableCompartidaBuscada = obtenerVariableCompartida(nombreVariableCompartida);
+
+	if(variableCompartidaBuscada!=NULL){
+		log_info(loggerKernel,"Se obtuvo la variable compartida asociada al PID: %d",pid);
+		sendRemasterizado(socketCPU,DATOS_VARIABLE_COMPARTIDA_KERNEL,sizeof(int),&variableCompartidaBuscada->valorVariableCompartida);
+	}
+	else{
+		log_error(loggerKernel,"Variable Compartida recibida inexistente, se finaliza el programa con PID: %d",pid);
+		exitCode = -11; //ExitCode = -11 para errores con Variables Compartidas
+		finalizarProceso(pid,exitCode);
+		sendRemasterizado(socketCPU,OPERACION_VARIABLE_COMPARTIDA_FALLIDA,0,NULL);
+	}
+}
+
+void asignarValorVariableCompartida(void* mensaje,int socketCPU){
+	int pid, tamanio, exitCode, valorNuevo;
+	char* nombreVariableCompartida;
+
+	memcpy(&pid,mensaje,sizeof(int));
+	memcpy(&tamanio,mensaje+sizeof(int),sizeof(int));
+	nombreVariableCompartida = malloc(tamanio);
+	memcpy(nombreVariableCompartida,mensaje+sizeof(int)*2,tamanio);
+	memcpy(&valorNuevo,mensaje+sizeof(int)*2+tamanio,sizeof(int));
+
+	variableCompartida* variableCompartidaBuscada = obtenerVariableCompartida(nombreVariableCompartida);
+
+	if(variableCompartidaBuscada!=NULL){
+		log_info(loggerKernel,"Se obtuvo la variable compartida asociada al PID: %d",pid);
+		variableCompartidaBuscada->valorVariableCompartida = valorNuevo;
+		sendRemasterizado(socketCPU,DATOS_VARIABLE_COMPARTIDA_KERNEL,sizeof(int),&variableCompartidaBuscada->valorVariableCompartida);
+	}
+	else{
+		log_error(loggerKernel,"Variable Compartida recibida inexistente, se finaliza el programa con PID: %d",pid);
+		exitCode = -11; //ExitCode = -11 para errores con Variables Compartidas
+		finalizarProceso(pid,exitCode);
+		sendRemasterizado(socketCPU,OPERACION_VARIABLE_COMPARTIDA_FALLIDA,0,NULL);
+	}
+}
+
 
 //------------------------------------------ FUNCIONES AUXILIARES PARA PCB------------------------------------
 t_intructions* cargarCodeIndex(char* buffer,t_metadata_program* metadata_program) {
@@ -497,10 +603,10 @@ int obtenerCantidadPaginas(char* codigoDePrograma){
   	int cantidadPaginas;
 
     if((tamanioCodigo % tamanioPagina) != 0){
-    	cantidadPaginas = (tamanioCodigo/tamanioPagina)+STACK_SIZE+1;
+    	cantidadPaginas = (tamanioCodigo/tamanioPagina)+STACK_SIZE+1; //CREO QUE ES ASI, NO SE RESTA EL SIZEOF(HEAPMETADATA)*2 ¡¡VER!!
     }
     else{
-    	cantidadPaginas = (tamanioCodigo/tamanioPagina)+STACK_SIZE;
+    	cantidadPaginas = (tamanioCodigo/tamanioPagina)+STACK_SIZE;	  //CREO QUE ES ASI, NO SE RESTA EL SIZEOF(HEAPMETADATA)*2 ¡¡VER!!
     }
 
     return cantidadPaginas;
@@ -517,6 +623,8 @@ void iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio)
 	PCB *pcbNuevo = malloc(sizeof(PCB));
 	datosPrograma* programa = malloc(sizeof(datosPrograma));
 	t_metadata_program *metadataDelPrograma = metadata_desde_literal(codigoDePrograma);
+	registroSyscall* unRegistro = malloc(sizeof(registroSyscall));
+
 	pcbNuevo->pid = pidActual;
 	pcbNuevo->estado = NUEVO;
 	pcbNuevo->programCounter = metadataDelPrograma->instruccion_inicio;
@@ -538,6 +646,13 @@ void iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio)
 	programa->pid = pidActual;
 	programa->script = string_new();
 	string_append(&programa->script,codigoDePrograma);
+
+	unRegistro->cantidadSignal = 0;
+	unRegistro->cantidadWait = 0;
+	unRegistro->cantidadSyscall = 0;
+	unRegistro->pid = pidActual;
+
+	list_add(registroDeSyscall,unRegistro);
 
 	metadata_destruir(metadataDelPrograma);
 	pidActual++;
@@ -755,48 +870,6 @@ void iniciarProceso(paquete* paqueteConCodigo, int socketConsola){
   string_append(&codigo, paqueteConCodigo->mensaje);
   iniciarPCB(codigo, socketConsola);
   free(codigo);
-}
-
-bool finalizarProceso(int pid, int exitCode){
-  bool esPCBProceso(PCB *pcbABuscar){
-    return pcbABuscar->pid == pid;
-  }
-
-  PCB *pcbAFinalizar = list_find(colaProcesos->elements, (void*)esPCBProceso);
-  if(pcbAFinalizar != NULL){
-    switch (pcbAFinalizar->estado) {
-      case NUEVO:
-        list_remove_and_destroy_by_condition(colaNuevo->elements, (void*)esPCBProceso, free);
-        log_info(loggerKernel, "El proceso %d se encuentra en la cola de nuevos...", pid);
-        log_info(loggerKernel, "El proceso %d fue removido de la cola de nuevos...", pid);
-        break;
-      case LISTO:
-        list_remove_and_destroy_by_condition(colaListo->elements, (void*)esPCBProceso, free);
-        log_info(loggerKernel, "El proceso %d se encuentra en la cola de listos...", pid);
-        log_info(loggerKernel, "El proceso %d fue removido de la cola de listos...", pid);
-        break;
-      case EJECUTANDO:
-         //ACA HABRIA QUE ESPERAR A QUE CPU LO DEVUELVA
-        log_info(loggerKernel, "El proceso %d se encuentra en la cola de ejecutando...", pid);
-        log_info(loggerKernel, "El proceso %d fue removido de la cola de ejecutando...", pid);
-        break;
-      case BLOQUEADO:
-        list_remove_and_destroy_by_condition(colaBloqueado->elements, (void*)esPCBProceso, free);
-        log_info(loggerKernel, "El proceso %d se encuentra en la cola de bloqueados...", pid);
-        log_info(loggerKernel, "El proceso %d fue removido de la cola de bloqueados...", pid);
-        break;
-      default:
-        log_info(loggerKernel, "El proceso %d no se encuentra en ninguna de las colas activas, el proceso ya ha sido finalizado...", pid);
-        break;
-    }
-    pcbAFinalizar->estado = FINALIZADO;
-    pcbAFinalizar->exitCode = exitCode;
-    return true;
-  }else{
-    puts("El proceso %d no existe, por lo tanto no se puede finalizar...");
-    log_info(loggerKernel, "Se pidio la finalizacion de un proceso que no existe...");
-    return false;
-  }
 }
 
 void recibirPCBDeCPU(paquete *paqueteConPCB){
@@ -1614,6 +1687,12 @@ void *manejadorCPU(void* socket){
 	       case SIGNAL_SEMAFORO:
 	    	   signalSemaforo(paqueteRecibidoDeCPU->mensaje);
 	         break;
+	       case PETICION_VARIABLE_COMPARTIDA_KERNEL:
+	    	   obtenerValorVariableCompartida(paqueteRecibidoDeCPU->mensaje,socketCPU);
+	    	 break;
+	       case PETICION_CAMBIO_VALOR_KERNEL:
+	    	   asignarValorVariableCompartida(paqueteRecibidoDeCPU->mensaje,socketCPU);
+	    	 break;
 	       case RESERVAR_HEAP:
 	    	   memcpy(&pid, paqueteRecibidoDeCPU->mensaje, sizeof(int));
 	    	   memcpy(&tamanio, paqueteRecibidoDeCPU->mensaje+sizeof(int), sizeof(int));

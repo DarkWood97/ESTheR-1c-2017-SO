@@ -78,7 +78,7 @@ t_valor_variable recibirValorCompartida(){
 	if(paqueteDeVariableCompartida->tipoMsj == DATOS_VARIABLE_COMPARTIDA_KERNEL){
 		valorVariableCompartida = *(t_valor_variable*)paqueteDeVariableCompartida->mensaje;
 		log_info(loggerCPU, "Se recibio el valor de la variable compartida %d...", valorVariableCompartida);
-	}else{
+	}else if(paqueteDeVariableCompartida->tipoMsj == OPERACION_VARIABLE_COMPARTIDA_FALLIDA){
 		log_info(loggerCPU, "No se recibio correctamente el valor de la variable compartida de kernel...");
 		exit(-1);
 	}
@@ -87,20 +87,25 @@ t_valor_variable recibirValorCompartida(){
 }
 
 t_valor_variable consultarVariableCompartida(char* nombreDeLaVariable){
-	void *mensajeDeVarCompartida = malloc(sizeof(int)+string_length(nombreDeLaVariable));
+	int tamanioNombreVariable = string_length(nombreDeLaVariable);
+	void *mensajeDeVarCompartida = malloc(sizeof(int)*2+tamanioNombreVariable);
 	memcpy(mensajeDeVarCompartida, &pcbEnProceso->pid, sizeof(int));
-	memcpy(mensajeDeVarCompartida+sizeof(int), nombreDeLaVariable, string_length(nombreDeLaVariable));
-	sendRemasterizado(socketKernel, PETICION_VARIABLE_COMPARTIDA_KERNEL, string_length(nombreDeLaVariable)+sizeof(int), mensajeDeVarCompartida);
+	memcpy(mensajeDeVarCompartida+sizeof(int), &tamanioNombreVariable, sizeof(int));
+	memcpy(mensajeDeVarCompartida+sizeof(int)*2, nombreDeLaVariable, tamanioNombreVariable);
+	sendRemasterizado(socketKernel, PETICION_VARIABLE_COMPARTIDA_KERNEL, sizeof(int)*2+tamanioNombreVariable, mensajeDeVarCompartida);
 	free(mensajeDeVarCompartida);
+	free(nombreDeLaVariable);
 	return recibirValorCompartida();
 }
 
 void enviarModificacionDeValor(char* nombreDeVariableAModificar, t_valor_variable valor){
-	int tamanioDelMensaje = string_length(nombreDeVariableAModificar)+sizeof(t_valor_variable)+sizeof(int);
+	int tamanioNombreVariable = string_length(nombreDeVariableAModificar);
+	int tamanioDelMensaje = tamanioNombreVariable+sizeof(t_valor_variable)+sizeof(int)*2;
 	void *buffer = malloc(tamanioDelMensaje);
 	memcpy(buffer, &pcbEnProceso->pid, sizeof(int));
-	memcpy(buffer+sizeof(int), nombreDeVariableAModificar, string_length(nombreDeVariableAModificar));
-	memcpy(buffer+sizeof(int)+string_length(nombreDeVariableAModificar), &valor, sizeof(t_valor_variable));
+	memcpy(buffer+sizeof(int),&tamanioNombreVariable,sizeof(int));
+	memcpy(buffer+sizeof(int)*2, nombreDeVariableAModificar, tamanioNombreVariable);
+	memcpy(buffer+sizeof(int)*2+tamanioNombreVariable, &valor, sizeof(t_valor_variable));
 	sendRemasterizado(socketKernel, PETICION_CAMBIO_VALOR_KERNEL, tamanioDelMensaje, buffer);
 	free(buffer);
 }
