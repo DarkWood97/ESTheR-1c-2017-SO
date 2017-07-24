@@ -95,6 +95,7 @@ t_list *paginasPorProcesos;
 int cantidadPaginasDeTabla;
 int cantidadPaginasLibres;
 cache *cacheDeMemoria;
+int socketKernel;
 
 //-----VALORES DE MEMORIA--------//
 int PUERTO;

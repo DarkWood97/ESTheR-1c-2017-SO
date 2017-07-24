@@ -78,7 +78,7 @@ void armarDatosDeKernel(paquete *paqueteDeArmado){
 }
 
 void realizarHandshakeConKernel(){
-	sendDeNotificacion(socketKernel, HANDSHAKE_KERNEL);
+	sendRemasterizado(socketKernel, HANDSHAKE_KERNEL, 0, NULL);
 	paquete *paqueteConConfigsDeKernel = recvRemasterizado(socketKernel);
 	if(paqueteConConfigsDeKernel->tipoMsj == DATOS_CONFIG_KERNEL){
 		armarDatosDeKernel(paqueteConConfigsDeKernel);
@@ -92,7 +92,7 @@ void realizarHandshakeConKernel(){
 
 
 void realizarHandshakeConMemoria(){
-	sendDeNotificacion(socketMemoria, HANDSHAKE_MEMORIA);
+	sendRemasterizado(socketMemoria, HANDSHAKE_MEMORIA, 0, NULL);
 	paquete *paqueteConTamPagina;
 	paqueteConTamPagina = recvRemasterizado(socketMemoria);
 	if(paqueteConTamPagina->tipoMsj == TAMANIO_PAGINA_MEMORIA){
@@ -104,6 +104,7 @@ void realizarHandshakeConMemoria(){
 	}
 	destruirPaquete(paqueteConTamPagina);
 }
+
 
 //-------------RECIBO PCB DE KERNEL----------//
 void recibirPCBDeKernel(){

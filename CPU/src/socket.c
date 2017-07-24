@@ -208,11 +208,15 @@ paquete *recvRemasterizado(int deQuien){
     perror("Error al recibir mensaje");
     exit(-1);
   }
-  paqueteConMensaje->mensaje = malloc(paqueteConMensaje->tamMsj);
-  if(recv(deQuien, paqueteConMensaje->mensaje,paqueteConMensaje->tamMsj, 0)==-1){
-    perror("Error al recibir mensaje");
-    exit(-1);
-  }
+  if(paqueteConMensaje->tamMsj != 0){
+ 	  paqueteConMensaje->mensaje = malloc(paqueteConMensaje->tamMsj);
+ 	   if(recv(deQuien, paqueteConMensaje->mensaje,paqueteConMensaje->tamMsj, 0)==-1){
+ 	     perror("Error al recibir mensaje");
+ 	     exit(-1);
+ 	   }
+   }else{
+ 	  paqueteConMensaje->mensaje = NULL;
+   }
   return paqueteConMensaje;
 }
 

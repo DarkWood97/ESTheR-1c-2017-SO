@@ -398,7 +398,6 @@ void copiarTablaInvertidaADump(){
 	free(cadenaAuxiliarDeCopiado);
 }
 
-
 void dumpEstructurasDeMemoria(){
 	copiarTituloDeEstructuras();
     pthread_mutex_lock(&mutexTablaInvertida);
@@ -652,6 +651,7 @@ void escribirDatos(paquete *paqueteDeEscritura ,int socketConPeticionDeEscritura
 		sendDeNotificacion(socketConPeticionDeEscritura, OPERACION_FALLIDA);
 	}
 }
+
 //-----------------------------------------LEER DATOS DE MEMORIA------------------------------//
 
 void leerDatos(paquete* paqueteDeLectura, int socketConPeticionDeLectura){ //Aca agrego el socket dependiendo el hilo que sea
@@ -792,7 +792,7 @@ void *manejadorTeclado(){
 	}
 }
 //-------------------------------------------MANEJADOR KERNEL------------------------------------//
-void *manejadorConexionKernel(void* socket){
+/*void *manejadorConexionKernel(void* socket){
 	while(1){
 		paquete *paqueteRecibidoDeKernel;
 		int socketKernel = *(int*)socket;
@@ -835,9 +835,9 @@ void *manejadorConexionKernel(void* socket){
 		}
 		destruirPaquete(paqueteRecibidoDeKernel);
 	}
-}
+}*/
 //--------------------------------------------MANEJADOR CPU--------------------------------------//
-void *manejadorConexionCPU (void *socket){
+/*void *manejadorConexionCPU (void *socket){
   while(1){
 	  paquete *paqueteRecibidoDeCPU;
 	  int socketCPU = *(int*)socket;
@@ -861,18 +861,19 @@ void *manejadorConexionCPU (void *socket){
 	  }
 	  destruirPaquete(paqueteRecibidoDeCPU);
   }
-}
+}*/
 //------------------------------------------FIN DE FUNCIONES MANEJADORAS DE HILOS------------------------//
+
 
 //----------------------------------------MAIN--------------------------------------------//
 int main(int argc, char *argv[]) {
 	loggerMemoria = log_create("Memoria.log","Memoria",0,0);
 	pthread_mutex_init(&mutexTablaInvertida,NULL);
-	verificarParametrosInicio(argc);
-	//char* path = "Debug/memoria.config";
-	inicializarMemoria(argv[1]);
+	//verificarParametrosInicio(argc);
+	char* path = "Debug/memoria.config";
+	//inicializarMemoria(argv[1]);
 	//paquete paqueteDeRecepcion, paqDePaginas;
-	//inicializarMemoria(path);
+	inicializarMemoria(path);
 	log_info(loggerMemoria, "Levantando memoria desde archivo de configuracion...");
 	mostrarConfiguracionesMemoria();
 	memoriaSistema = malloc(MARCOS*MARCOS_SIZE);
@@ -880,8 +881,11 @@ int main(int argc, char *argv[]) {
 	crearEstructuraAdministrativa();
 	log_info(loggerMemoria,"Se han inicializado las estructuras administrativas de memoria...");
 	int socketEscuchaMemoria,socketClienteChequeado,socketAceptaClientes;
+/*
 	int* socketCPU;
 	pthread_t hiloManejadorKernel, hiloManejadorTeclado,hiloManejadorCPU; //Declaro hilos para manejar las conexiones
+*/
+	pthread_t hiloManejadorTeclado;
 
 	fd_set aceptarConexiones, fd_setAuxiliar;
 	FD_ZERO(&aceptarConexiones);
@@ -894,47 +898,79 @@ int main(int argc, char *argv[]) {
 	//fd_setAuxiliar = aceptarConexiones;
 	pthread_create(&hiloManejadorTeclado,NULL,manejadorTeclado,NULL); //Creo un hilo para atender las peticiones provenientes de la consola de memoria
 	log_info(loggerMemoria,"Conexion a consola memoria exitosa...\n");
+
 	while (1) { //Chequeo nuevas conexiones y las voy separando a partir del handshake recibido (CPU o Kernel).
-		fd_setAuxiliar = aceptarConexiones;
-		if(select(socketMaximo+1,&fd_setAuxiliar,NULL,NULL,NULL)==-1){
-			perror("Error de select en memoria.");
-			exit(-1);
-		}
-		log_info(loggerMemoria, "Se recibio una conexion de un socket cliente...");
-		for(socketClienteChequeado = 0; socketClienteChequeado<=socketMaximo; socketClienteChequeado++){
-			if(FD_ISSET(socketClienteChequeado,&fd_setAuxiliar)){
-				if(socketClienteChequeado == socketEscuchaMemoria){
-					socketAceptaClientes = aceptarConexionDeCliente(socketEscuchaMemoria);
-					FD_SET(socketAceptaClientes,&aceptarConexiones);
-					socketMaximo = calcularSocketMaximo(socketAceptaClientes,socketMaximo);
-					log_info(loggerMemoria,"Registro nueva conexion de socket: %d\n",socketAceptaClientes);
-				}else{
-						int quienEs = recvDeNotificacion(socketClienteChequeado);
-						switch(quienEs){
-							case ES_CPU:
-								socketCPU = malloc(sizeof(int));
-								*socketCPU = socketClienteChequeado;
-								pthread_create(&hiloManejadorCPU,NULL,manejadorConexionCPU,(void *)socketCPU);
-								sendRemasterizado(socketClienteChequeado, TAMANIO_PAGINA_PARA_CPU, sizeof(int), &MARCOS_SIZE);
-								log_info(loggerMemoria,"Se registro nueva CPU...");
-								FD_CLR(socketClienteChequeado,&aceptarConexiones);
-								break;
-							case ES_KERNEL:
-								sendRemasterizado(socketClienteChequeado, TAMANIO_PAGINA_PARA_KERNEL, sizeof(int), &MARCOS_SIZE);
-								int* socketKernel = malloc(sizeof(int));
-								*socketKernel = socketClienteChequeado;
-								log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
-								log_info(loggerMemoria, "Handshake con kernel realizado.");
-								pthread_create(&hiloManejadorKernel,NULL,manejadorConexionKernel,(void*)socketKernel);
-								FD_CLR(socketClienteChequeado,&aceptarConexiones);
-								break;
-							default:
-								puts("Conexion erronea");
-								FD_CLR(socketClienteChequeado,&aceptarConexiones);
-								close(socketClienteChequeado);
+			fd_setAuxiliar = aceptarConexiones;
+			if(select(socketMaximo+1,&fd_setAuxiliar,NULL,NULL,NULL)==-1){
+				perror("Error de select en memoria.");
+				exit(-1);
+			}
+			log_info(loggerMemoria, "Se recibio una conexion de un socket cliente...");
+			for(socketClienteChequeado = 0; socketClienteChequeado<=socketMaximo; socketClienteChequeado++){
+				if(FD_ISSET(socketClienteChequeado,&fd_setAuxiliar)){
+					if(socketClienteChequeado == socketEscuchaMemoria){
+						socketAceptaClientes = aceptarConexionDeCliente(socketEscuchaMemoria);
+						FD_SET(socketAceptaClientes,&aceptarConexiones);
+						socketMaximo = calcularSocketMaximo(socketAceptaClientes,socketMaximo);
+						log_info(loggerMemoria,"Registro nueva conexion de socket: %d\n",socketAceptaClientes);
+					}else{
+							paquete *paqueteDeCliente = recvRemasterizado(socketClienteChequeado);
+	            if(paqueteDeCliente->tipoMsj == ES_CPU){
+	                sendRemasterizado(socketClienteChequeado, TAMANIO_PAGINA_PARA_CPU, sizeof(int), &MARCOS_SIZE);
+									log_info(loggerMemoria,"Se registro nueva CPU...");
+	            }else if(paqueteDeCliente->tipoMsj == ES_KERNEL){
+	              socketKernel = socketClienteChequeado;
+	              sendRemasterizado(socketClienteChequeado, TAMANIO_PAGINA_PARA_KERNEL, sizeof(int), &MARCOS_SIZE);
+	              log_info(loggerMemoria,"Se registro conexion de Kernel...\n");
+	              log_info(loggerMemoria, "Handshake con kernel realizado.");
+	            }else if(paqueteDeCliente->tipoMsj == 0){
+	              if(socketClienteChequeado == socketKernel){
+	                log_info(loggerMemoria, "Se ha cortado la conexion con el kernel...");
+	                log_info(loggerMemoria, "Cerrando memoria...");
+	                close(socketKernel);
+	                exit(0);
+	              }else{
+	                close(socketClienteChequeado);
+	                log_info(loggerMemoria, "Se ha desconectado una CPU...");
+	              }
+	            }else{
+	              log_info(loggerMemoria, "Se recibio una peticion de un socket ya conectado");
+	              switch (paqueteDeCliente->tipoMsj) {
+	                case INICIALIZAR_PROGRAMA:
+	                  log_info(loggerMemoria, "Ser recibio una peticion para inicializar un programa...");
+	                  inicializarProceso(paqueteDeCliente,socketClienteChequeado);
+	                  break;
+	                case ASIGNAR_PAGINAS:
+	                  log_info(loggerMemoria, "Se recibio una peticion para asignar paginas...");
+	                  asignarPaginasAProceso(paqueteDeCliente, socketClienteChequeado);
+	                  break;
+	                case LEER_DATOS:
+	                  log_info(loggerMemoria, "Se recibio una peticion de lectura...");
+	                  leerDatos(paqueteDeCliente, socketClienteChequeado);
+	                  break;
+	                case ESCRIBIR_DATOS:
+	                  log_info(loggerMemoria, "Se recibio una peticion de escritura...");
+	                  escribirDatos(paqueteDeCliente, socketClienteChequeado);
+	                  break;
+	                case LIBERAR_PAGINA:
+	                  log_info(loggerMemoria, "Se recibio una peticion para liberar una pagina...");
+	                  liberarPagina(paqueteDeCliente, socketClienteChequeado);
+	                  break;
+	                case FINALIZAR_PROGRAMA:
+	                  log_info(loggerMemoria, "Se recibio una peticion para finalizar un programa...");
+	                  finalizarProceso(paqueteDeCliente, socketClienteChequeado);
+	                  break;
+	                default:
+	                  //perror("No se recibio correctamente el mensaje");
+	                  log_error(loggerMemoria, "No se reconoce la peticion hecha por el socket %d...", socketClienteChequeado);
+	                  FD_CLR(socketClienteChequeado, &aceptarConexiones);
+	                  close(socketClienteChequeado);
+	              }
+	            }
+	            destruirPaquete(paqueteDeCliente);
 					}
 				}
 			}
-		}
 	}
+
 }

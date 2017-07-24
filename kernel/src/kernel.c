@@ -1821,7 +1821,7 @@ void *manejadorCPU(void* socketAceptado){
 
 //--------------------------------------HANDSHAKES-----------------------------------//
 void realizarHandshakeMemoria(int socket) {
-	sendDeNotificacion(socket, SOY_KERNEL_MEMORIA);
+	sendRemasterizado(socket, SOY_KERNEL_MEMORIA, 0, NULL);
 	paquete* paqueteConPaginas = recvRemasterizado(socket);
 	if(paqueteConPaginas->tipoMsj == TAMANIO_PAGINA){
 		tamanioPagina = *(int*)paqueteConPaginas->mensaje;
