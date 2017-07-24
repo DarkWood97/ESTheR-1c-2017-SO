@@ -60,3 +60,87 @@
 [INFO] 17:56:04:33 Kernel/(3510:3510): Se conecto una nueva CPU con el socket 8...
 [INFO] 17:56:34:780 Kernel/(3510:3510): Se recibio una conexion erronea...
 [INFO] 17:56:34:780 Kernel/(3510:3510): Cerrando socket recibido...
+[INFO] 00:20:59:154 Kernel/(3751:3751): Se conecto una nueva CPU con el socket 7...
+[INFO] 00:21:02:951 Kernel/(3751:3751): Se conecto una nueva consola con el socket 8...
+[INFO] 00:21:02:978 Kernel/(3751:3830): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 00:21:02:978 Kernel/(3751:3830): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 00:21:02:978 Kernel/(3751:3830): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 00:21:02:978 Kernel/(3751:3830): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 00:21:02:978 Kernel/(3751:3830): Instruccion inicio:67 offset:4 end
+[INFO] 00:21:02:978 Kernel/(3751:3830): PCB creada para el pid: 1 
+[INFO] 00:21:02:978 Kernel/(3751:3830): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 00:23:32:830 Kernel/(3893:3893): Se conecto una nueva CPU con el socket 7...
+[INFO] 00:23:34:72 Kernel/(3893:3893): Se conecto una nueva consola con el socket 8...
+[INFO] 00:23:34:94 Kernel/(3893:3956): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 00:23:34:94 Kernel/(3893:3956): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 00:23:34:94 Kernel/(3893:3956): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 00:23:34:94 Kernel/(3893:3956): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 00:23:34:94 Kernel/(3893:3956): Instruccion inicio:67 offset:4 end
+[INFO] 00:23:34:94 Kernel/(3893:3956): PCB creada para el pid: 1 
+[INFO] 00:23:34:94 Kernel/(3893:3956): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 00:24:37:872 Kernel/(4007:4007): Se conecto una nueva CPU con el socket 7...
+[INFO] 00:24:39:329 Kernel/(4007:4007): Se conecto una nueva consola con el socket 8...
+[INFO] 00:24:39:359 Kernel/(4007:4069): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 00:24:39:359 Kernel/(4007:4069): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 00:24:39:359 Kernel/(4007:4069): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 00:24:39:359 Kernel/(4007:4069): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 00:24:39:359 Kernel/(4007:4069): Instruccion inicio:67 offset:4 end
+[INFO] 00:24:39:359 Kernel/(4007:4069): PCB creada para el pid: 1 
+[INFO] 00:24:39:359 Kernel/(4007:4069): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 00:29:52:671 Kernel/(4324:4324): Se conecto una nueva CPU con el socket 7...
+[INFO] 00:29:53:120 Kernel/(4324:4324): Se conecto una nueva consola con el socket 8...
+[INFO] 00:29:53:147 Kernel/(4324:4384): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 00:29:53:147 Kernel/(4324:4384): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 00:29:53:147 Kernel/(4324:4384): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 00:29:53:147 Kernel/(4324:4384): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 00:29:53:147 Kernel/(4324:4384): Instruccion inicio:67 offset:4 end
+[INFO] 00:29:53:147 Kernel/(4324:4384): PCB creada para el pid: 1 
+[INFO] 00:29:53:147 Kernel/(4324:4384): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 00:29:54:83 Kernel/(4324:4373): Se ha agregado la PCB del proceso 1 a la cola de Listo
+[INFO] 00:29:55:86 Kernel/(4324:4381): Se recibio la pcb por finalizacion de rafaga
+[INFO] 00:30:27:432 Kernel/(4425:4425): Se conecto una nueva CPU con el socket 7...
+[INFO] 00:30:28:522 Kernel/(4425:4425): Se conecto una nueva consola con el socket 8...
+[INFO] 00:30:28:558 Kernel/(4425:4486): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 00:30:28:558 Kernel/(4425:4486): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 00:30:28:558 Kernel/(4425:4486): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 00:30:28:558 Kernel/(4425:4486): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 00:30:28:558 Kernel/(4425:4486): Instruccion inicio:67 offset:4 end
+[INFO] 00:30:28:558 Kernel/(4425:4486): PCB creada para el pid: 1 
+[INFO] 00:30:28:558 Kernel/(4425:4486): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 00:31:19:362 Kernel/(4425:4481): Se recibio la pcb por finalizacion de rafaga
+[INFO] 00:31:24:220 Kernel/(4425:4472): Se ha agregado la PCB del proceso 1 a la cola de Listo
+[INFO] 00:33:13:776 Kernel/(4577:4577): Se conecto una nueva CPU con el socket 7...
+[INFO] 00:33:16:961 Kernel/(4577:4577): Se conecto una nueva consola con el socket 8...
+[INFO] 00:33:20:817 Kernel/(4577:4766): Instruccion inicio:25 offset:16 	variables a, b
+
+[INFO] 00:33:20:817 Kernel/(4577:4766): Instruccion inicio:41 offset:7 	a = 3
+
+[INFO] 00:33:20:817 Kernel/(4577:4766): Instruccion inicio:48 offset:7 	b = 5
+
+[INFO] 00:33:20:817 Kernel/(4577:4766): Instruccion inicio:55 offset:12 	a = b + 12
+
+[INFO] 00:33:20:817 Kernel/(4577:4766): Instruccion inicio:67 offset:4 end
+[INFO] 00:33:20:817 Kernel/(4577:4766): PCB creada para el pid: 1 
+[INFO] 00:33:20:817 Kernel/(4577:4766): El pid: 1 ha ingresado a la cola de nuevo.
+[INFO] 00:33:23:496 Kernel/(4577:4698): Se ha agregado la PCB del proceso 1 a la cola de Listo
+[INFO] 00:34:19:273 Kernel/(4577:4763): Se recibio la pcb por finalizacion de rafaga

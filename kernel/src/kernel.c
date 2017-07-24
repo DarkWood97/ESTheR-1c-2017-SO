@@ -355,6 +355,18 @@ void crearSemaforos(char** semIds, char** semInit)
 	}
 }
 
+PCB* obtenerPCBPrograma(int pidAComparar,t_list* unaLista){
+	int i;
+	for(i=0;i<list_size(unaLista);i++){
+		PCB* unPCB = list_get(unaLista,i);
+		if(unPCB->pid==pidAComparar){
+			return list_remove(unaLista,i);
+		}
+	}
+
+	return NULL;
+}
+
 void waitSemaforo(void* mensaje,int socketDeCPU){
 	int pid, tamanio, exitCode;
 	pcbBloqueado* unPCBBloqueado;
@@ -374,10 +386,6 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 		return (strcmp(unSemaforo->nombreSemaforo, nombreSemaforo)==0);
 	}
 
-	bool _mismoPID(PCB* unPCB){
-		return pid == unPCB->pid;
-	}
-
 	bool _obtenerRegistro(registroSyscall* unRegSyscall){
 		return (unRegSyscall->pid) == pid;
 	}
@@ -391,7 +399,7 @@ void waitSemaforo(void* mensaje,int socketDeCPU){
 		}
 		else{
 			log_info(loggerKernel,"El semaforo: %s se bloquea",nombreSemaforo);
-			unPCBBuscado = list_remove_by_condition(colaEjecutando->elements,(void*) _mismoPID);
+			unPCBBuscado = obtenerPCBPrograma(pid,colaEjecutando->elements);
 
 			if(unPCBBuscado!=NULL){
 				unPCBBloqueado = malloc(sizeof(pcbBloqueado));
@@ -660,8 +668,8 @@ void iniciarPCB(char *codigoDePrograma, int socketConsolaDuenio)
 	log_info(loggerKernel, "PCB creada para el pid: %d ",pcbNuevo->pid);
 
 	list_add(listaProgramas,programa);
-	queue_push(colaNuevo,pcbNuevo);
 	queue_push(colaProcesos,pcbNuevo);
+	queue_push(colaNuevo,pcbNuevo);
 
 	log_info(loggerKernel, "El pid: %d ha ingresado a la cola de nuevo.",pcbNuevo->pid);
 }
@@ -1259,14 +1267,16 @@ void* manejadorTeclado(){
 }
 
 char* obtenerCodigoPrograma(int pidAComparar){
-
-	bool _tieneElPid(datosPrograma* programa) {
-		return (programa->pid) == pidAComparar;
+	int i;
+	for(i=0;i<list_size(listaProgramas);i++){
+		datosPrograma* unPrograma = list_get(listaProgramas,i);
+		if(unPrograma->pid==pidAComparar){
+			datosPrograma* unProgramaBuscado = list_remove(listaProgramas,i);
+			return unProgramaBuscado->script;
+		}
 	}
 
-	char* programaABuscar = list_remove_by_condition(listaProgramas,(void*) _tieneElPid);
-
-	return programaABuscar;
+	return NULL;
 }
 
 void nuevoAListo(PCB* unaPCB){
@@ -1276,7 +1286,6 @@ void nuevoAListo(PCB* unaPCB){
 	memcpy(inicioDePrograma, &unaPCB->pid, sizeof(int));
 	memcpy(inicioDePrograma+sizeof(int), &cantidadPaginasCodigo, sizeof(int));
 	int sePudo = mandarInicioAMemoria(inicioDePrograma);
-	free(inicioDePrograma);
 	if(sePudo == OPERACION_EXITOSA){
 		enviarCodigoDeProgramaAMemoria(unaPCB->pid, codigoPrograma);
 		sendRemasterizado(unaPCB->socketConsola, ENVIAR_PID, sizeof(int), &unaPCB->pid);
@@ -1294,6 +1303,7 @@ void nuevoAListo(PCB* unaPCB){
 		free(mensajeConTamanio);
 	}
 	free(codigoPrograma);
+	free(inicioDePrograma);
 }
 
 //PLANIFICACION DEL SISTEMA
